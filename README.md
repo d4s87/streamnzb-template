@@ -18,4 +18,4 @@ Designed around:
 
 ## Import
 
-The latest StreamNZB share code is available in `profile.txt`.
+The latest StreamNZB V2 share code is available in profile.txt. This file always points to the current version of the template.

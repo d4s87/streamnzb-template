@@ -53,7 +53,7 @@ If you use a different TV, Dolby Vision display, AVR, soundbar or other audio se
 
 `profile.txt` and `formatter.txt` on the `main` branch are the canonical versions.
 
-Future V2 changes will update these files rather than create new download links, so existing links will continue pointing to the latest version.
+Future changes will update these files rather than create new download links, so existing links will continue pointing to the latest version.
 
 ## Credits
 

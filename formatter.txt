@@ -1,7 +1,7 @@
-**Name Template:**
+---Name Template---
 {{if .Resolution}}{{replace (replace (replace .Resolution "2160p" "4K ") "1440p" "2K ") "1080p" "FHD "}}{{end}}{{if .Quality}}〈{{smallcaps (replace .Quality "BluRay REMUX" "REMUX")}}〉{{end}}{{if .Avail}} 💚 ɴᴢʙ{{end}}
 
-**Description Template:**
+---Description Template:---
 {{if .Content}}{{if .Library}}☁︎ {{else}}✎ {{end}}{{truncate 24 .ParsedTitle}}{{end}}{{if .Country}} · {{.Country}}{{end}}{{if .Year}} · {{translate "0123456789" "₀₁₂₃₄₅₆₇₈₉" .Year}}{{end}}{{if .Season}} · s{{translate "0123456789" "₀₁₂₃₄₅₆₇₈₉" .Season}}{{end}}{{if .Episode}} · ᴇ{{translate "0123456789" "₀₁₂₃₄₅₆₇₈₉" .Episode}}{{end}}
 {{if .Codec}}▣ {{upper .Codec}}{{end}}{{if .HDR}} ✦ {{join .HDR " · "}}{{end}}
 {{if .Audio}}♬ {{join .Audio " · "}}{{end}}{{if .Channels}} ♯ {{join .Channels " · "}}{{end}}

@@ -29,7 +29,7 @@ Or access the share code directly:
 
 **[Raw profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-The raw URL remains unchanged when the profile is updated, so it can always be used to retrieve the latest V2 version.
+The raw URL remains unchanged when the profile is updated, so it can always be used to retrieve the latest version.
 
 ## Formatter
 

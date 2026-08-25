@@ -1,21 +1,60 @@
 # StreamNZB Template
 
-My custom StreamNZB filtering, scoring and formatter profile.
+My custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-## Current version
+## Current Version
 
 **V2**
 
-Designed around:
-- SeaDex anime prioritization
-- Release-group tiers
-- Adaptive quality filtering
-- Smart 4K filtering
-- NZB availability scoring
-- Resolution + quality result limits
+The profile is designed around:
 
-> ⚠️ The profile contains hardware-specific rules tuned for a Samsung QN90A without an AVR/soundbar. Review HDR, Dolby Vision and audio rules before importing.
+- SeaDex Best / Alternative prioritization
+- Movie, Show and Anime release-group tiers
+- Crunchyroll and HIDIVE detection for Anime WEB releases
+- Smart 4K Anime and BluRay filtering
+- Suspicious 4K upscale detection
+- Adaptive low-quality filtering
+- NZB availability and library scoring
+- Same-release failover
+- Grouped resolution + quality result limits
+- Hardware-specific HDR and audio preferences
 
-## Import
+## Profile
 
-The latest StreamNZB V2 share code is available in profile.txt. This file always points to the current version of the template.
+The latest V2 StreamNZB share code is always available here:
+
+**[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
+
+Or access the share code directly:
+
+**[Raw profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
+
+The raw URL remains unchanged when the profile is updated, so it can always be used to retrieve the latest V2 version.
+
+## Formatter
+
+The latest formatter is available here:
+
+**[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**
+
+Or directly:
+
+**[Raw formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt)**
+
+## Important: Hardware-Specific Rules
+
+This profile is tuned for a **Samsung QN90A without an AVR or soundbar**.
+
+The Samsung QN90A does not support Dolby Vision, so the profile contains custom DV/HDR handling. Audio scoring has also been adjusted for a TV-speaker setup, including reduced weighting for lossless audio and Atmos.
+
+If you use a different TV, Dolby Vision display, AVR, soundbar or other audio setup, review these rules and scores before importing the profile.
+
+## Updating
+
+`profile.txt` and `formatter.txt` on the `main` branch are the canonical versions.
+
+Future V2 changes will update these files rather than create new download links, so existing links will continue pointing to the latest version.
+
+## Credits
+
+The filtering and scoring logic takes inspiration from the wider media automation community, including **TRaSH Guides, Vidhin and Tamtaro**, adapted for StreamNZB and Usenet.

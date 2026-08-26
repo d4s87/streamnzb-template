@@ -20,15 +20,15 @@ The profile is designed around:
 
 ## Profile
 
-The latest V2 StreamNZB share code is always available here:
+The latest V3 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
-Or access the share code directly:
+For the recommended linked import, use this URL in StreamNZB:
 
 **[Raw profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-The raw URL remains unchanged when the profile is updated, so it can always be used to retrieve the latest version.
+Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
 ## Formatter
 
@@ -36,9 +36,11 @@ The latest formatter is available here:
 
 **[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**
 
-Or directly:
+For the recommended linked import, use:
 
 **[Raw formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt)**
+
+The formatter can also remain linked and be manually refreshed when a new version is published.
 
 ## Important: Hardware-Specific Rules
 
@@ -52,7 +54,9 @@ If you use a different TV, Dolby Vision display, AVR, soundbar or other audio se
 
 `profile.txt` and `formatter.txt` on the `main` branch are the canonical versions.
 
-Future changes will update these files rather than create new download links, so existing links will continue pointing to the latest version.
+If you imported them by URL, use StreamNZB's **Refresh** action to check for updates. StreamNZB will show the proposed changes before anything is applied; updates are never applied automatically.
+
+GitHub's raw-file CDN may take a few minutes to reflect a newly published update.
 
 ## Credits
 

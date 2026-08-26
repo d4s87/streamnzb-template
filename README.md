@@ -2,9 +2,7 @@
 
 My custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-## Current Version
-
-**V3** 
+**Current version: V3**
 
 V3 restructures the release-group logic using StreamNZB's new reusable Define rules. The ranking philosophy remains the same as V2, but the profile is significantly easier to maintain and update.
 

@@ -42,3 +42,9 @@ assert "?<=remux" not in library
 assert "?!-" not in library
 assert "|Remux|" not in library
 print("All v2.3 golden compatibility tests passed.")
+
+# Case-insensitive duplicate normalization must preserve one spelling only.
+deduped=m.dedupe_casefold(["SiGMA","SIGMA","SbR","sbR","playWEB"])
+assert len([x for x in deduped if x.casefold()=="sigma"]) == 1
+assert len([x for x in deduped if x.casefold()=="sbr"]) == 1
+assert "playWEB" in deduped

@@ -2,13 +2,14 @@
 
 My custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V3**
+**Current version: V4**
 
-V3 separates release-group classification from profile scoring using StreamNZB's shared Define Libraries. The ranking philosophy remains the same as V2, while Vidhin-backed release-group definitions are maintained independently and can be updated without modifying the profile.
+V4 expands the shared Define Library and replaces the previous compressed Anime T1/T2/T3 model with the full Vidhin Anime release-group hierarchy. Movie and Show release-group classification remains separated from profile scoring through StreamNZB's shared Define Libraries, allowing Vidhin-backed definitions to be maintained independently of the profile.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
-- Movie, Show and Anime release-group tiers
+- Movie and Show release-group tiers
+- Full Anime WEB T1–T6 and BluRay T1–T8 release-group tiers
 - Crunchyroll and HIDIVE detection for Anime WEB releases
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
@@ -20,7 +21,7 @@ The profile is designed around:
 
 ## Profile
 
-The latest V3 StreamNZB share code is always available here:
+The latest V4 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
@@ -30,23 +31,49 @@ For the recommended linked import, use this URL in StreamNZB:
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
-V3 requires the Define Library described below. Import the library before using the profile.
+V4 requires the Define Library described below. Import the library before using the profile.
 
 ## Define Library
 
-V3 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
+V4 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 33 Define rules covering Movie, Show and Anime release-group classifications, including the LQ classifications used by the profile.
+The library currently provides 49 Define rules covering Movie, Show and Anime release-group classifications, including the LQ classifications used by the profile.
+
+Anime classifications follow the full Vidhin hierarchy:
+- Anime WEB: T1–T6
+- Anime BluRay: T1–T8
+
+Separate Anime Movie and Anime Show Defines are provided for every tier.
 
 The definitions are synchronized with [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex) through GitHub Actions. Upstream changes are reviewed through a pull request before becoming part of the library.
 
 Matching note: Release-group names are generally matched case-insensitively by the generated StreamNZB Define Library. Upstream case-specific distinctions may be normalized when they do not cause cross-tier ambiguity.
 
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.
+
+## Anime Scoring
+
+V4 uses the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
+
+WEB release groups are scored as follows:
+- T1: +500
+- T2: +400
+- T3: +300
+- T4: +200
+- T5: +100
+- T6: +50
+
+BluRay release groups use the same T1–T6 scores, with the additional lower tiers:
+- T7: +25
+- T8: +10
+
+`LazyRemux` and `UltraRemux` require a narrow profile-side exception because StreamNZB may interpret `Remux` in their release-group names as the `remux` trait. They remain classified by the Define Library as their corresponding Anime BluRay tiers.
+
+The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8 hierarchy. Known Anime release groups can therefore pass the 4K release-group trust check regardless of tier, while unknown 4K Anime groups remain filtered.
 
 ## Formatter
 
@@ -71,6 +98,7 @@ If you use a different TV, Dolby Vision display, AVR, soundbar or other audio se
 ## Updating
 
 `profile.txt`, `formatter.txt` and `generated/streamnzb-defines.txt` on the `main` branch are the canonical versions.
+
 - `profile.txt` — filtering and scoring policy
 - `formatter.txt` — result presentation
 - `generated/streamnzb-defines.txt` — Vidhin-backed release-group classifications

@@ -102,3 +102,7 @@ assert 'releaseName matches "(?i)(?:^|[-._ ])Feranki1980$"' in lib
 
 assert len(lq)==2
 print("All v2.4 compatibility and LQ generation tests passed.")
+
+# Canonical casing must be deterministic even when input is an unordered set.
+assert m.dedupe_casefold({"SiGMA","SIGMA"}) == ["SIGMA"]
+assert m.dedupe_casefold({"sbR","SbR"}) == ["SbR"]

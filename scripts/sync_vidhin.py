@@ -1,199 +1,221 @@
 #!/usr/bin/env python3
-"""Track Vidhin release-group regexes used by StreamNZB Define rules.
+"""
+Vidhin -> StreamNZB semantic change detector (v2).
 
-V1 is intentionally conservative: it snapshots the exact upstream regex records
-that feed each StreamNZB Define. It does not rewrite profile.txt.
+Reads Vidhin regexes.json, resolves the explicitly mapped upstream rules,
+and stores both raw patterns and a conservative semantic token view.
+
+Important:
+- It does NOT modify profile.txt.
+- It never merges Radarr and Sonarr unless mapping explicitly requests it.
+- Semantic extraction is conservative. Tokens containing regex operators are
+  preserved as regex tokens instead of being "simplified" into guessed names.
 """
 from __future__ import annotations
-
-import argparse
-import datetime as dt
-import hashlib
-import json
-import sys
-import urllib.request
-from collections import defaultdict
+import argparse, datetime as dt, json, re, sys, urllib.request
 from pathlib import Path
-from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MAPPING = ROOT / "scripts" / "vidhin_mapping.json"
-DEFAULT_SNAPSHOT = ROOT / "generated" / "vidhin-defines.json"
+DEFAULT_BASELINE = ROOT / "generated" / "vidhin-defines.json"
 DEFAULT_REPORT = ROOT / "generated" / "vidhin-sync-report.md"
 
+def load_json_url(url: str):
+    req = urllib.request.Request(url, headers={"User-Agent": "streamnzb-template-vidhin-sync/2"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r)
 
-def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as fh:
-        return json.load(fh)
+def load_json(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
 
+def records(data):
+    if isinstance(data, list):
+        return data
+    for key in ("regexes", "data", "items"):
+        if isinstance(data, dict) and isinstance(data.get(key), list):
+            return data[key]
+    raise ValueError("Unsupported upstream JSON structure")
 
-def fetch_json(url: str) -> Any:
-    req = urllib.request.Request(url, headers={"User-Agent": "streamnzb-vidhin-sync/1"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return json.load(response)
+def name_of(rec):
+    for k in ("name", "title", "label"):
+        if isinstance(rec.get(k), str):
+            return rec[k]
+    return None
 
+def pattern_of(rec):
+    for k in ("regex", "pattern", "expression"):
+        if isinstance(rec.get(k), str):
+            return rec[k]
+    return None
 
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def index_upstream(records: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
-    by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for record in records:
-        name = record.get("name")
-        pattern = record.get("pattern")
-        if isinstance(name, str) and isinstance(pattern, str):
-            by_name[name].append({"pattern": pattern, "score": record.get("score")})
-    return dict(by_name)
-
-
-def build_snapshot(mapping: dict[str, Any], upstream: list[dict[str, Any]]) -> dict[str, Any]:
-    indexed = index_upstream(upstream)
-    targets: dict[str, Any] = {}
-    missing: list[str] = []
-
-    for target, source_names in mapping["targets"].items():
-        source_records = []
-        for source_name in source_names:
-            records = indexed.get(source_name, [])
-            if not records:
-                missing.append(source_name)
-                continue
-            # Keep duplicates: Vidhin intentionally uses several records with the same name.
-            source_records.append({"name": source_name, "records": records})
-
-        canonical = json.dumps(source_records, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-        targets[target] = {
-            "sources": source_records,
-            "sha256": sha256_text(canonical),
-        }
-
-    if missing:
-        unique = sorted(set(missing))
-        raise RuntimeError("Mapped upstream rule(s) missing: " + ", ".join(unique))
-
-    return {
-        "schema_version": 1,
-        "mapping_schema_version": mapping.get("schema_version", 1),
-        "upstream_url": mapping["upstream_url"],
-        "generated_at_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
-        "targets": targets,
-    }
-
-
-def compare(old: dict[str, Any] | None, new: dict[str, Any]) -> list[tuple[str, str]]:
-    if old is None:
-        return [(name, "baseline") for name in new["targets"]]
-
-    changes: list[tuple[str, str]] = []
-    old_targets = old.get("targets", {})
-    new_targets = new.get("targets", {})
-    for name in sorted(set(old_targets) | set(new_targets)):
-        if name not in old_targets:
-            changes.append((name, "added target"))
-        elif name not in new_targets:
-            changes.append((name, "removed target"))
-        elif old_targets[name].get("sha256") != new_targets[name].get("sha256"):
-            changes.append((name, "upstream regex changed"))
-    return changes
-
-
-def source_pattern_diff(old_target: dict[str, Any], new_target: dict[str, Any]) -> list[str]:
-    def flatten(target: dict[str, Any]) -> dict[str, list[str]]:
-        out: dict[str, list[str]] = {}
-        for source in target.get("sources", []):
-            out[source["name"]] = [r["pattern"] for r in source.get("records", [])]
-        return out
-
-    old = flatten(old_target)
-    new = flatten(new_target)
-    lines: list[str] = []
-    for source in sorted(set(old) | set(new)):
-        if old.get(source) == new.get(source):
+def split_top_level_alternation(s: str):
+    out, buf = [], []
+    depth = 0
+    cls = False
+    esc = False
+    for ch in s:
+        if esc:
+            buf.append(ch); esc = False; continue
+        if ch == "\\":
+            buf.append(ch); esc = True; continue
+        if cls:
+            buf.append(ch)
+            if ch == "]": cls = False
             continue
-        lines.append(f"- `{source}`: {len(old.get(source, []))} pattern(s) → {len(new.get(source, []))} pattern(s)")
-    return lines
+        if ch == "[":
+            buf.append(ch); cls = True; continue
+        if ch == "(":
+            depth += 1; buf.append(ch); continue
+        if ch == ")":
+            depth = max(0, depth-1); buf.append(ch); continue
+        if ch == "|" and depth == 0:
+            out.append("".join(buf)); buf = []; continue
+        buf.append(ch)
+    out.append("".join(buf))
+    return [x for x in out if x]
 
+def candidate_group_body(pattern: str):
+    # Find useful alternation-bearing groups. Prefer the innermost/largest
+    # non-lookaround group; this avoids treating context guards as group names.
+    groups = []
+    stack = []
+    esc = False
+    cls = False
+    for i,ch in enumerate(pattern):
+        if esc: esc=False; continue
+        if ch=="\\": esc=True; continue
+        if cls:
+            if ch=="]": cls=False
+            continue
+        if ch=="[": cls=True; continue
+        if ch=="(":
+            stack.append(i)
+        elif ch==")" and stack:
+            start=stack.pop()
+            body=pattern[start+1:i]
+            # Strip common group prefixes.
+            body2=re.sub(r'^\?(?:i:|:)', '', body)
+            if "|" in body2 and not body.startswith(("?<=", "?<!", "?=", "?!")):
+                groups.append(body2)
+    if not groups:
+        return None
+    # Prefer group with most top-level alternatives.
+    return max(groups, key=lambda x: len(split_top_level_alternation(x)))
 
-def render_report(old: dict[str, Any] | None, new: dict[str, Any], changes: list[tuple[str, str]]) -> str:
-    lines = [
-        "# Vidhin sync report",
-        "",
-        f"Upstream: `{new['upstream_url']}`",
-        f"Checked: `{new['generated_at_utc']}`",
-        "",
-    ]
-    if old is None:
-        lines += [
-            "Initial baseline created.",
-            "",
-            f"Tracked StreamNZB Defines: **{len(new['targets'])}**",
-            "",
-            "No profile changes are made by this v1 sync.",
-        ]
-        return "\n".join(lines) + "\n"
+def semantic_tokens(pattern: str):
+    body = candidate_group_body(pattern)
+    if not body:
+        return []
+    toks = split_top_level_alternation(body)
+    cleaned=[]
+    for t in toks:
+        t=t.strip()
+        # Remove anchors/boundary wrappers only; preserve regex semantics inside token.
+        t=re.sub(r'^\^+', '', t)
+        t=re.sub(r'\$+$', '', t)
+        t=t.strip()
+        if t:
+            cleaned.append(t)
+    # deterministic, case-sensitive preservation
+    return sorted(set(cleaned), key=lambda x: (x.casefold(), x))
 
-    if not changes:
-        lines += ["No mapped Vidhin regex changes detected.", ""]
-        return "\n".join(lines)
+def resolve(mapping, upstream):
+    by_name={}
+    for rec in records(upstream):
+        n=name_of(rec); p=pattern_of(rec)
+        if n and p:
+            by_name.setdefault(n, []).append(p)
 
-    lines += [f"Changed Define mappings: **{len(changes)}**", ""]
-    for target, reason in changes:
-        lines.append(f"## {target}")
-        lines.append("")
-        lines.append(f"Status: **{reason}**")
-        if target in old.get("targets", {}) and target in new.get("targets", {}):
-            lines.extend(source_pattern_diff(old["targets"][target], new["targets"][target]))
-        lines.append("")
+    result={}
+    missing=[]
+    for define, sources in mapping["defines"].items():
+        raw=[]
+        for src in sources:
+            pats=by_name.get(src, [])
+            if not pats:
+                missing.append(f"{define}: {src}")
+            raw.extend({"source":src, "pattern":p, "tokens":semantic_tokens(p)} for p in pats)
+        result[define]={"sources":sources, "records":raw}
+    if missing:
+        raise RuntimeError("Mapped upstream rule(s) missing:\n- " + "\n- ".join(missing))
+    return result
+
+def token_union(entry):
+    vals=set()
+    for r in entry.get("records", []):
+        vals.update(r.get("tokens", []))
+    return vals
+
+def raw_patterns(entry):
+    return {(r["source"], r["pattern"]) for r in entry.get("records", [])}
+
+def report_diff(old, new):
+    lines=["# Vidhin sync report", ""]
+    changed=0
+    all_defs=sorted(set(old)|set(new))
+    for d in all_defs:
+        o=old.get(d, {"records":[]}); n=new.get(d, {"records":[]})
+        ot, nt=token_union(o), token_union(n)
+        add=sorted(nt-ot, key=str.casefold)
+        rem=sorted(ot-nt, key=str.casefold)
+        raw_changed=raw_patterns(o)!=raw_patterns(n)
+        if not add and not rem and not raw_changed:
+            continue
+        changed += 1
+        lines += [f"## {d}", ""]
+        if add or rem:
+            if add:
+                lines.append("**Added semantic tokens**")
+                lines += [f"- `+ {x}`" for x in add]
+                lines.append("")
+            if rem:
+                lines.append("**Removed semantic tokens**")
+                lines += [f"- `- {x}`" for x in rem]
+                lines.append("")
+        if raw_changed and not (add or rem):
+            lines += ["Raw upstream regex changed, but the conservative semantic token set did not.", ""]
+    if not changed:
+        lines += ["No mapped Vidhin changes detected.", ""]
     lines += [
-        "## Review required",
+        "---",
+        f"Tracked StreamNZB Defines: **{len(new)}**",
         "",
-        "This workflow only tracks upstream changes. Review the changed Vidhin patterns before updating StreamNZB Define memberships.",
-        "",
+        "> This workflow does not modify `profile.txt`. Semantic tokens are review aids; raw upstream regex is retained in the baseline.",
+        ""
     ]
-    return "\n".join(lines)
+    return "\n".join(lines), changed
 
+def main():
+    ap=argparse.ArgumentParser()
+    ap.add_argument("--mapping", type=Path, default=DEFAULT_MAPPING)
+    ap.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
+    ap.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    args=ap.parse_args()
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mapping", type=Path, default=DEFAULT_MAPPING)
-    parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
-    parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    parser.add_argument("--source-file", type=Path, help="Use local regexes.json instead of downloading upstream")
-    parser.add_argument("--dry-run", action="store_true", help="Do not update snapshot/report files")
-    args = parser.parse_args()
+    mapping=load_json(args.mapping)
+    upstream=load_json_url(mapping["upstream_url"])
+    current=resolve(mapping, upstream)
 
-    mapping = load_json(args.mapping)
-    upstream = load_json(args.source_file) if args.source_file else fetch_json(mapping["upstream_url"])
-    if not isinstance(upstream, list):
-        raise RuntimeError("Upstream regexes.json must contain a JSON array")
+    old={}
+    if args.baseline.exists():
+        prev=load_json(args.baseline)
+        old=prev.get("defines", prev)
 
-    old = load_json(args.snapshot) if args.snapshot.exists() else None
-    new = build_snapshot(mapping, upstream)
-    changes = compare(old, new)
-    report = render_report(old, new, changes)
+    report, changed=report_diff(old, current)
+    args.report.parent.mkdir(parents=True, exist_ok=True)
 
-    # Do not rewrite generated files when nothing changed; otherwise the
-    # timestamp alone would create a pointless GitHub PR every scheduled run.
-    should_write = old is None or bool(changes)
-    if not args.dry_run and should_write:
-        args.snapshot.parent.mkdir(parents=True, exist_ok=True)
-        args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.snapshot.write_text(json.dumps(new, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if changed or not args.baseline.exists():
+        payload={
+            "schema_version": 2,
+            "upstream_url": mapping["upstream_url"],
+            "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "defines": current,
+        }
+        args.baseline.write_text(json.dumps(payload, indent=2, ensure_ascii=False)+"\n", encoding="utf-8")
         args.report.write_text(report, encoding="utf-8")
-
-    if old is None:
-        print(f"Created baseline for {len(new['targets'])} Define mappings.")
-    elif changes:
-        print(f"Detected changes in {len(changes)} Define mapping(s).")
+        print(f"{changed} mapped Define(s) changed.")
     else:
         print("No mapped Vidhin changes detected.")
-    return 0
 
-
-if __name__ == "__main__":
-    try:
-        raise SystemExit(main())
-    except Exception as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+if __name__=="__main__":
+    main()

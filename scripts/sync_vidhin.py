@@ -74,8 +74,14 @@ def clean_token(t):
     # Strip common regex boundary/context fragments around a group name.
     t=re.sub(r"^\?:","",t)
     t=re.sub(r"^\^|\$$","",t)
+    # Vidhin lookaround/context fragments are not release-group names.
+    if t.startswith("?"):
+        return None
     # Vidhin uses Not-Vodes as contextual exclusion syntax; it is not a release group.
     if t == "Not-Vodes":
+        return None
+    # "Remux" can appear as contextual regex structure in Anime rules, not as a group.
+    if t == "Remux":
         return None
     # Reject obvious structural wrapper fragments.
     if t.startswith("\\[") or t.startswith("-") or "\\b" in t:

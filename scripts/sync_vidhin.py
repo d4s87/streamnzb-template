@@ -11,7 +11,7 @@ LIBRARY=ROOT/"generated"/"streamnzb-defines.txt"
 
 def jload(p): return json.loads(Path(p).read_text(encoding="utf-8"))
 def fetch(url):
-    req=urllib.request.Request(url,headers={"User-Agent":"streamnzb-template-vidhin-sync/2.3"})
+    req=urllib.request.Request(url,headers={"User-Agent":"streamnzb-template-vidhin-sync/2.4"})
     with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
 def rows(data):
     if isinstance(data,list): return data
@@ -122,6 +122,101 @@ def dedupe_casefold(tokens):
             seen[key]=token
     return sorted(seen.values(), key=lambda x:(x.casefold(),x))
 
+def split_top_level(text, sep="|"):
+    out=[]; buf=[]; depth=0; cls=False; esc=False
+    for ch in text:
+        if esc:
+            buf.append(ch); esc=False; continue
+        if ch=="\\":
+            buf.append(ch); esc=True; continue
+        if cls:
+            buf.append(ch)
+            if ch=="]": cls=False
+            continue
+        if ch=="[":
+            buf.append(ch); cls=True; continue
+        if ch=="(":
+            depth+=1; buf.append(ch); continue
+        if ch==")":
+            depth=max(0,depth-1); buf.append(ch); continue
+        if ch==sep and depth==0:
+            out.append("".join(buf)); buf=[]; continue
+        buf.append(ch)
+    out.append("".join(buf))
+    return [x for x in out if x]
+
+def js_regex_parts(pattern):
+    if not pattern.startswith("/"):
+        return pattern, ""
+    esc=False; cls=False; last=None
+    for i in range(1,len(pattern)):
+        ch=pattern[i]
+        if esc:
+            esc=False; continue
+        if ch=="\\":
+            esc=True; continue
+        if cls:
+            if ch=="]": cls=False
+            continue
+        if ch=="[":
+            cls=True; continue
+        if ch=="/":
+            last=i
+    if last is None:
+        return pattern, ""
+    return pattern[1:last], pattern[last+1:]
+
+def matching_paren(text, open_idx):
+    depth=0; esc=False; cls=False
+    for i in range(open_idx,len(text)):
+        ch=text[i]
+        if esc:
+            esc=False; continue
+        if ch=="\\":
+            esc=True; continue
+        if cls:
+            if ch=="]": cls=False
+            continue
+        if ch=="[":
+            cls=True; continue
+        if ch=="(":
+            depth+=1
+        elif ch==")":
+            depth-=1
+            if depth==0: return i
+    return None
+
+def normalize_lq_term(term):
+    term=term.strip()
+    term=re.sub(r"^\\b","",term)
+    term=re.sub(r"\\b$","",term)
+    # Keep the tested StreamNZB forms deterministic/readable.
+    term=term.replace("jennaortega(UHD)?","jennaortega(?:UHD)?")
+    term=term.replace("VISIONPLUSHDR(-X|1000)?","VISIONPLUSHDR(?:-X|1000)?")
+    term=term.replace("YTS(.(MX|LT|AG))?","YTS(?:\\.(?:MX|LT|AG))?")
+    term=term.replace("Pahe(\\.(ph|in))?","Pahe(?:\\.(?:ph|in))?")
+    return term
+
+def lq_pattern_terms(pattern):
+    """Extract the group alternatives from Vidhin's simple Radarr/Sonarr LQ regexes."""
+    body,flags=js_regex_parts(pattern)
+    case_sensitive="i" not in flags
+    terms=[]
+    for branch in split_top_level(body):
+        branch=branch.strip()
+        if branch.startswith(r"\b("):
+            open_idx=branch.find("(")
+            close_idx=matching_paren(branch,open_idx)
+            if close_idx is None:
+                raise ValueError(f"Unbalanced LQ source regex: {pattern}")
+            inner=branch[open_idx+1:close_idx]
+            terms.extend(normalize_lq_term(x) for x in split_top_level(inner))
+        else:
+            term=normalize_lq_term(branch)
+            if term:
+                terms.append(term)
+    return dedupe_casefold(terms),case_sensitive
+
 def target_cfgs(mapping):
     tg=mapping.get("targets")
     if not isinstance(tg,dict): raise KeyError("mapping.targets missing")
@@ -138,19 +233,30 @@ def resolve(mapping,upstream):
     out={}; missing=[]
     for target,cfg in target_cfgs(mapping).items():
         recs=[]
+        mode=cfg.get("mode","standard")
         for src in cfg["sources"]:
             pats=by.get(src,[])
             if not pats: missing.append(f"{target}: {src}")
             for pat in pats:
-                recs.append({"source":src,"pattern":pat,"tokens":semantic_tokens(pat)})
+                if mode=="lq":
+                    tt,case_sensitive=lq_pattern_terms(pat)
+                    recs.append({
+                        "source":src,"pattern":pat,"tokens":tt,
+                        "case_sensitive":case_sensitive
+                    })
+                else:
+                    recs.append({"source":src,"pattern":pat,"tokens":semantic_tokens(pat)})
         toks=set()
         for r in recs: toks.update(r["tokens"])
         toks.update(cfg.get("add_tokens",[]))
         toks.difference_update(cfg.get("remove_tokens",[]))
         out[target]={
             "sources":cfg["sources"],"scope":cfg["scope"],"field":cfg["field"],
-            "records":recs,"tokens":dedupe_casefold(toks)
+            "mode":mode,"records":recs,"tokens":dedupe_casefold(toks)
         }
+        if mode=="lq":
+            out[target]["extra_exact_groups"]=cfg.get("extra_exact_groups",[])
+            out[target]["release_name_fallbacks"]=cfg.get("release_name_fallbacks",[])
     if missing: raise RuntimeError("Mapped upstream rule(s) missing:\n- "+"\n- ".join(missing))
     return out
 
@@ -197,17 +303,39 @@ def apply_web_precedence(current,mapping):
         e.setdefault("effective_tokens",list(e["tokens"]))
     return current
 
+def render_lq_condition(entry):
+    conditions=[]
+    for exact in entry.get("extra_exact_groups",[]):
+        conditions.append(f'group == "{exact}"')
+    for rec in entry.get("records",[]):
+        rt=rec.get("tokens",[])
+        if not rt: continue
+        body="|".join(rt).replace('"','\\"')
+        prefix="" if rec.get("case_sensitive",False) else "(?i)"
+        if rec.get("case_sensitive",False) and len(rt)==1 and re.fullmatch(r"[A-Za-z0-9_.+-]+",rt[0]):
+            conditions.append(f'group == "{rt[0]}"')
+        else:
+            conditions.append(f'group matches "{prefix}^({body})$"')
+    for fallback in entry.get("release_name_fallbacks",[]):
+        esc=re.escape(fallback).replace(r"\.","\\.")
+        conditions.append(f'releaseName matches "(?i)(?:^|[-._ ]){esc}$"')
+    return " or ".join(conditions)
+
 def render(current,mapping):
     current=apply_web_precedence(current,mapping)
     lines=["# Generated from Vidhin05/Releases-Regex.",
            "# Review artifact only; profile.txt is not modified.",""]
     for name in sorted(current):
-        e=current[name]; body="|".join(e["effective_tokens"]).replace('"','\\"')
-        field=e["field"]
-        if field=="releaseName":
-            cond=f'releaseName matches "(?i)(?:^|[-._ ])(?:{body})$"'
+        e=current[name]
+        if e.get("mode")=="lq":
+            cond=render_lq_condition(e)
         else:
-            cond=f'group matches "(?i)^({body})$"'
+            body="|".join(e["effective_tokens"]).replace('"','\\"')
+            field=e["field"]
+            if field=="releaseName":
+                cond=f'releaseName matches "(?i)(?:^|[-._ ])(?:{body})$"'
+            else:
+                cond=f'group matches "(?i)^({body})$"'
         lines.append(f'{name} [{e["scope"]}]: define if {cond}')
     return "\n".join(lines)+"\n"
 

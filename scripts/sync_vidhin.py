@@ -74,6 +74,9 @@ def clean_token(t):
     # Strip common regex boundary/context fragments around a group name.
     t=re.sub(r"^\?:","",t)
     t=re.sub(r"^\^|\$$","",t)
+    # Vidhin uses Not-Vodes as contextual exclusion syntax; it is not a release group.
+    if t == "Not-Vodes":
+        return None
     # Reject obvious structural wrapper fragments.
     if t.startswith("\\[") or t.startswith("-") or "\\b" in t:
         return None

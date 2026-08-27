@@ -111,7 +111,16 @@ def semantic_tokens(pattern):
         out.add(m.group(1))
     # Contextual Vodes should normalize to Vodes, never Not-Vodes.
     if "Vodes" in classifier: out.add("Vodes")
-    return sorted(out,key=lambda x:(x.casefold(),x))
+    return dedupe_casefold(out)
+
+def dedupe_casefold(tokens):
+    """Deduplicate tokens case-insensitively while preserving first spelling."""
+    seen={}
+    for token in tokens:
+        key=token.casefold()
+        if key not in seen:
+            seen[key]=token
+    return sorted(seen.values(), key=lambda x:(x.casefold(),x))
 
 def target_cfgs(mapping):
     tg=mapping.get("targets")
@@ -140,7 +149,7 @@ def resolve(mapping,upstream):
         toks.difference_update(cfg.get("remove_tokens",[]))
         out[target]={
             "sources":cfg["sources"],"scope":cfg["scope"],"field":cfg["field"],
-            "records":recs,"tokens":sorted(toks,key=lambda x:(x.casefold(),x))
+            "records":recs,"tokens":dedupe_casefold(toks)
         }
     if missing: raise RuntimeError("Mapped upstream rule(s) missing:\n- "+"\n- ".join(missing))
     return out
@@ -162,7 +171,7 @@ def read_old(path):
                     if pat:
                         tt=semantic_tokens(pat); toks.update(tt)
                         recs.append({"source":sn,"pattern":pat,"tokens":tt})
-            conv[target]={"records":recs,"tokens":sorted(toks,key=str.casefold)}
+            conv[target]={"records":recs,"tokens":dedupe_casefold(toks)}
         return conv
     return {}
 
@@ -182,7 +191,7 @@ def apply_web_precedence(current,mapping):
         seen=set()
         for _,name in sorted(items):
             eff=set(current[name]["tokens"])-seen
-            current[name]["effective_tokens"]=sorted(eff,key=lambda x:(x.casefold(),x))
+            current[name]["effective_tokens"]=dedupe_casefold(eff)
             seen.update(eff)
     for name,e in current.items():
         e.setdefault("effective_tokens",list(e["tokens"]))

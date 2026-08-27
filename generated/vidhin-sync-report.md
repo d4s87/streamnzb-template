@@ -1,10 +1,155 @@
 # Vidhin sync report
 
-Upstream: `https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json`
-Checked: `2026-08-27T11:59:16+00:00`
+## Movies LQ Groups
 
-Initial baseline created.
+**Added release-group tokens**
+- `+ 24xHD`
+- `+ 41RGB`
+- `+ 4K4U`
+- `+ AOC`
+- `+ AROMA`
+- `+ aXXo`
+- `+ AZAZE`
+- `+ BARC0DE`
+- `+ BAUCKLEY`
+- `+ BdC`
+- `+ beAst`
+- `+ BTM`
+- `+ C1NEM4`
+- `+ C4K`
+- `+ CDDHD`
+- `+ CHAOS`
+- `+ CHD`
+- `+ CHX`
+- `+ CiNE`
+- `+ CLEANUP`
+- `+ COLLECTiVE`
+- `+ CREATiVE24`
+- `+ CrEwSaDe`
+- `+ CTFOH`
+- `+ d3g`
+- `+ DDR`
+- `+ DepraveD`
+- `+ DNL`
+- `+ DRX`
+- `+ EPiC`
+- `+ EuReKA`
+- `+ EVO`
+- `+ FaNGDiNG0`
+- `+ Feranki1980`
+- `+ FGT`
+- `+ FMD`
+- `+ FRDS`
+- `+ FS`
+- `+ FZHD`
+- `+ GalaxyRG`
+- `+ GHD`
+- `+ GHOSTS`
+- `+ GPTHD`
+- `+ HDHUB4U`
+- `+ HDS`
+- `+ HDT`
+- `+ HDTime`
+- `+ HDWinG`
+- `+ HiQVE`
+- `+ iNTENSO`
+- `+ iPlanet`
+- `+ iVy`
+- `+ jennaortega(?:UHD)?`
+- `+ JFF`
+- `+ KC`
+- `+ KiNGDOM`
+- `+ KIRA`
+- `+ L0SERNIGHT`
+- `+ LAMA`
+- `+ Leffe`
+- `+ Liber8`
+- `+ LiGaS`
+- `+ LUCY`
+- `+ MarkII`
+- `+ MeGusta`
+- `+ Mesc`
+- `+ mHD`
+- `+ mSD`
+- `+ MT`
+- `+ MTeam`
+- `+ MySiLU`
+- `+ NhaNc3`
+- `+ nHD`
+- `+ nikt0`
+- `+ nSD`
+- `+ OFT`
+- `+ Pahe(?:\.(?:ph|in))?`
+- `+ PATOMiEL`
+- `+ PRODJi`
+- `+ PSA`
+- `+ PTNK`
+- `+ RARBG`
+- `+ RBB`
+- `+ RDN`
+- `+ Rifftrax`
+- `+ RU4HD`
+- `+ SANTi`
+- `+ SasukeducK`
+- `+ Scene`
+- `+ SHD`
+- `+ ShieldBearer`
+- `+ STUTTERSHIT`
+- `+ SUNSCREEN`
+- `+ SyncUP`
+- `+ TBS`
+- `+ TEKNO3D`
+- `+ TG`
+- `+ Tigole`
+- `+ TIKO`
+- `+ VIDEOHOLE`
+- `+ VISIONPLUSHDR(?:-X|1000)?`
+- `+ WAF`
+- `+ WiKi`
+- `+ worldmkv`
+- `+ x0r`
+- `+ x265-E`
+- `+ XLF`
+- `+ YIFY`
+- `+ YTS(?:\.(?:MX|LT|AG))?`
+- `+ Zero00`
+- `+ Zeus`
 
-Tracked StreamNZB Defines: **31**
+## Shows LQ Groups
 
-No profile changes are made by this v1 sync.
+**Added release-group tokens**
+- `+ BRiNK`
+- `+ BTM`
+- `+ CHX`
+- `+ CTFOH`
+- `+ d3g`
+- `+ DepraveD`
+- `+ EVO`
+- `+ Feranki1980`
+- `+ FGT`
+- `+ FMD`
+- `+ GHOSTS`
+- `+ HiQVE`
+- `+ iNTENSO`
+- `+ iVy`
+- `+ JFF`
+- `+ KC`
+- `+ MeGusta`
+- `+ nhanc3`
+- `+ OFT`
+- `+ Pahe(?:\.(?:ph|in))?`
+- `+ PSA`
+- `+ SasukeducK`
+- `+ SHD`
+- `+ ShieldBearer`
+- `+ TBS`
+- `+ TG`
+- `+ VIDEOHOLE`
+- `+ worldmkv`
+- `+ XLF`
+- `+ Zero00`
+
+---
+Tracked StreamNZB Defines: **33**
+
+> `profile.txt` is not modified. Generated Defines require review.

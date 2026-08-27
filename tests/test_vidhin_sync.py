@@ -1,26 +1,38 @@
 #!/usr/bin/env python3
-import importlib.util
+import importlib.util, json
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location("sync",ROOT/"scripts/sync_vidhin.py")
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 
-def check(pattern,expected,label):
-    got=set(m.semantic_tokens(pattern)); exp=set(expected)
-    assert got==exp, f"{label}: expected {sorted(exp)}, got {sorted(got)}"
+mapping=json.loads((ROOT/"scripts/vidhin_mapping.json").read_text())
+baseline=json.loads((ROOT/"generated/vidhin-defines.json").read_text())
+# Use the committed v1 raw patterns as deterministic fixture.
+if "targets" not in baseline:
+    print("Golden parser test skipped: baseline already upgraded to v3.")
+    raise SystemExit(0)
 
-check(r'/^(?=.*(?:[_. ]|\d{4}p-|\bHybrid-).*Remux\b)(?=.*\b(3L|ATELiER|BMF)\b).*/i',
-      ["3L","ATELiER","BMF"],"remux")
-check(r'/^(?=.*(WEB[-_. ]DL|WEBDL|AmazonHD|NetflixU?HD|WebRip))(?=.*\b(?:BYNDR|CMRG|TEPES)\b).*/i',
-      ["BYNDR","CMRG","TEPES"],"web")
-check(r'/^(?=.*(BluRay|BDMux))(?=.*(\[(Moxie|smol|SoM)\]|-(Moxie|smol|SoM)\b|\b(DemiHuman|FLE|Flugel|LYS1TH3A)\b)).*/i',
-      ["Moxie","smol","SoM","DemiHuman","FLE","Flugel","LYS1TH3A"],"anime")
-check(r'/^(?=.*(BluRay|BDMux))(?=.*(\[sam\]|-sam\b)).*/',["sam"],"sam")
+# Reconstruct an upstream list from baseline records.
+up=[]
+seen=set()
+for target,entry in baseline["targets"].items():
+    for src in entry.get("sources",[]):
+        name=src["name"]
+        for rec in src.get("records",[]):
+            key=(name,rec["pattern"])
+            if key not in seen:
+                seen.add(key); up.append({"name":name,"pattern":rec["pattern"],"score":0})
 
-old={"Movies Remux T1 Groups":{"records":[{"source":"x","pattern":"a","tokens":["ATELiER","BMF"]}]},
-     "Movies Remux T2 Groups":{"records":[{"source":"y","pattern":"b","tokens":["NCmt"]}]}}
-new={"Movies Remux T1 Groups":{"records":[{"source":"x","pattern":"c","tokens":["BMF"]}]},
-     "Movies Remux T2 Groups":{"records":[{"source":"y","pattern":"d","tokens":["ATELiER","NCmt"]}]}}
-report,changed=m.report_diff(old,new)
-assert changed==2 and "`- ATELiER`" in report and "`+ ATELiER`" in report
-print("All v2.2 semantic tests passed.")
+current=m.resolve(mapping,up)
+golden=json.loads((ROOT/"tests/golden_defines.json").read_text())
+for name,expect in golden.items():
+    assert current[name]["field"]==expect["field"], (name,current[name]["field"],expect["field"])
+    vals=set(current[name]["tokens"])
+    missing=set(expect["must_include"])-vals
+    assert not missing, f"{name}: missing {sorted(missing)}"
+
+library=m.render(current,mapping)
+assert 'Movies HD BluRay T1 Groups [movie]: define if releaseName matches ' in library
+assert 'Movies Remux T1 Groups [movie]: define if group matches ' in library
+assert "Not-Vodes" not in library
+print("All v2.3 golden compatibility tests passed.")

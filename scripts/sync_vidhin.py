@@ -109,8 +109,15 @@ def semantic_tokens(pattern):
         out.add(m.group(1))
     for m in re.finditer(r"(?<![A-Za-z0-9])-([A-Za-z0-9][A-Za-z0-9_.+-]*)\\b",classifier):
         out.add(m.group(1))
-    # Contextual Vodes should normalize to Vodes, never Not-Vodes.
-    if "Vodes" in classifier: out.add("Vodes")
+    # Vodes is a real group only when Vidhin explicitly matches Vodes.
+    # Do not derive it from the separate "Not-Vodes" group.
+    has_positive_vodes = (
+        re.search(r"\\\[Vodes\\\]", classifier) is not None
+        or re.search(r"(?<!Not\)-Vodes\\b", classifier) is not None
+        or re.search(r"(?<![A-Za-z0-9-])Vodes(?:\\b|$)", classifier) is not None
+    )
+    if has_positive_vodes:
+        out.add("Vodes")
     return dedupe_casefold(out)
 
 def dedupe_casefold(tokens):

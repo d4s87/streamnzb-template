@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "upstream_url": "https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json",
   "targets": {
     "Movies UHD BluRay T1 Groups": {
@@ -272,6 +272,32 @@
       "scope": "anime_show",
       "field": "releaseName",
       "anime": true
+    },
+    "Movies LQ Groups": {
+      "sources": [
+        "LQ (Radarr)"
+      ],
+      "scope": "movie",
+      "field": "mixed",
+      "mode": "lq",
+      "extra_exact_groups": [
+        "E"
+      ],
+      "release_name_fallbacks": [
+        "24xHD",
+        "E"
+      ]
+    },
+    "Shows LQ Groups": {
+      "sources": [
+        "LQ (Sonarr)"
+      ],
+      "scope": "series",
+      "field": "mixed",
+      "mode": "lq",
+      "release_name_fallbacks": [
+        "Feranki1980"
+      ]
     }
   }
 }

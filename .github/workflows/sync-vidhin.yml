@@ -1,0 +1,45 @@
+name: Sync Vidhin release groups
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-vidhin-release-groups
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Track mapped Vidhin rules
+        run: python scripts/sync_vidhin.py
+
+      - name: Create or update sync PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/vidhin-sync
+          delete-branch: true
+          add-paths: |
+            generated/vidhin-defines.json
+            generated/vidhin-sync-report.md
+          commit-message: "chore: sync Vidhin release-group rules"
+          title: "Sync Vidhin release-group rules"
+          body-path: generated/vidhin-sync-report.md
+          labels: |
+            automation
+            streamnzb

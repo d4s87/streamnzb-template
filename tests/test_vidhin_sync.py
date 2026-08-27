@@ -34,5 +34,6 @@ for name,expect in golden.items():
 library=m.render(current,mapping)
 assert 'Movies HD BluRay T1 Groups [movie]: define if releaseName matches ' in library
 assert 'Movies Remux T1 Groups [movie]: define if group matches ' in library
+assert m.clean_token("Not-Vodes") is None
 assert "Not-Vodes" not in library
 print("All v2.3 golden compatibility tests passed.")

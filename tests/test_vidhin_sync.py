@@ -99,10 +99,75 @@ assert "x265-E" in lib
 assert "Shows LQ Groups [series]: define if " in lib
 assert 'group == "iVy"' in lib
 assert 'releaseName matches "(?i)(?:^|[-._ ])Feranki1980$"' in lib
-
 assert len(lq)==2
-print("All v2.4 compatibility and LQ generation tests passed.")
+
+# Anime Vodes regression tests.
+#
+# Vidhin treats Vodes and Not-Vodes as separate release groups:
+#   Anime Web T1 -> Vodes
+#   Anime Web T2 -> Not-Vodes
+#
+# Not-Vodes must never cause a Vodes token to leak into T2.
+anime_vodes_upstream=[
+    {
+        "name":"Anime Web T1",
+        "pattern":(
+            r"/^(?=.*(WEB-DL))"
+            r"(?=.*(\[(Arid|smol|SoM|Vodes)\]|"
+            r"-(Arid|smol|SoM)\b|"
+            r"\b(Arg0|LostYears|SCY|ZeroBuild)\b|"
+            r"(?<!Not)-Vodes\b)).*/i"
+        ),
+        "score":0
+    },
+    {
+        "name":"Anime Web T2",
+        "pattern":(
+            r"/^(?=.*(WEB-DL))"
+            r"(?=.*(\[(Asakura|Cyan|Not-Vodes|Pizza)\]|"
+            r"-(Asakura|Cyan|Not-Vodes|Pizza)\b|"
+            r"\b(BlackRose|MTBB|Okay-Subs)\b)).*/i"
+        ),
+        "score":0
+    }
+]
+
+anime_vodes_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Anime Shows WEB T1 Groups":{
+            "sources":["Anime Web T1"],
+            "scope":"anime_show",
+            "field":"releaseName",
+            "anime":True
+        },
+        "Anime Shows WEB T2 Groups":{
+            "sources":["Anime Web T2"],
+            "scope":"anime_show",
+            "field":"releaseName",
+            "anime":True
+        }
+    }
+}
+
+anime_vodes=m.resolve(anime_vodes_mapping,anime_vodes_upstream)
+
+t1=set(anime_vodes["Anime Shows WEB T1 Groups"]["tokens"])
+t2=set(anime_vodes["Anime Shows WEB T2 Groups"]["tokens"])
+
+assert "Vodes" in t1
+assert "Vodes" not in t2
+assert "Not-Vodes" not in t1
+assert "Not-Vodes" not in t2
+
+anime_vodes_library=m.render(anime_vodes,anime_vodes_mapping)
+
+assert "Vodes" in anime_vodes_library
+assert "Not-Vodes" not in anime_vodes_library
 
 # Canonical casing must be deterministic even when input is an unordered set.
 assert m.dedupe_casefold({"SiGMA","SIGMA"}) == ["SIGMA"]
 assert m.dedupe_casefold({"sbR","SbR"}) == ["SbR"]
+
+print("All v2.4 compatibility, LQ and Anime tier tests passed.")

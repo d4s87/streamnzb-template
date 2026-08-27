@@ -114,13 +114,15 @@ def semantic_tokens(pattern):
     return dedupe_casefold(out)
 
 def dedupe_casefold(tokens):
-    """Deduplicate tokens case-insensitively while preserving first spelling."""
+    """Deduplicate case-insensitively with deterministic canonical spelling."""
     seen={}
-    for token in tokens:
+    # Sort first so callers may safely pass sets without causing casing churn
+    # between Python processes/runs.
+    for token in sorted(tokens, key=lambda x:(x.casefold(),x)):
         key=token.casefold()
         if key not in seen:
             seen[key]=token
-    return sorted(seen.values(), key=lambda x:(x.casefold(),x))
+    return list(seen.values())
 
 def split_top_level(text, sep="|"):
     out=[]; buf=[]; depth=0; cls=False; esc=False

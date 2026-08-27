@@ -26,6 +26,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Test semantic parser
+        run: python tests/test_vidhin_sync.py
+
       - name: Track mapped Vidhin rules
         run: python scripts/sync_vidhin.py
 
@@ -37,6 +40,7 @@ jobs:
           add-paths: |
             generated/vidhin-defines.json
             generated/vidhin-sync-report.md
+            generated/streamnzb-defines.txt
           commit-message: "chore: sync Vidhin release-group rules"
           title: "Sync Vidhin release-group rules"
           body-path: generated/vidhin-sync-report.md

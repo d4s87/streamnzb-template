@@ -44,6 +44,8 @@ The library currently provides 33 Define rules covering Movie, Show and Anime re
 
 The definitions are synchronized with [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex) through GitHub Actions. Upstream changes are reviewed through a pull request before becoming part of the library.
 
+Matching note: Release-group names are generally matched case-insensitively by the generated StreamNZB Define Library. Upstream case-specific distinctions may be normalized when they do not cause cross-tier ambiguity.
+
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.
 
 ## Formatter

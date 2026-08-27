@@ -1,3 +1,48 @@
+# Changelog
+
+## Version History
+
+- **V1** — Initial StreamNZB filtering, scoring and formatter profile.
+- **V2** — Major expansion and refinement of the monolithic profile.
+- **V3** — Introduced the shared linked Define Library architecture and Vidhin synchronization.
+- **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
+
+## V4
+
+### Changed
+
+* Expanded the shared Define Library from 33 to 49 reusable release-group classifications.
+* Replaced the compressed Anime T1/T2/T3 model with the full Vidhin Anime tier hierarchy:
+
+  * WEB T1–T6
+  * BluRay T1–T8
+* Expanded Anime Movie and Show release-group scoring from 12 to 28 rules.
+* Updated Anime tier scores to:
+
+  * T1: +500
+  * T2: +400
+  * T3: +300
+  * T4: +200
+  * T5: +100
+  * T6: +50
+  * BluRay T7: +25
+  * BluRay T8: +10
+* Updated `Reject bad 4K Anime` to recognize the complete Anime WEB and BluRay tier hierarchy.
+* Added handling for `LazyRemux` and `UltraRemux`, which StreamNZB may classify with the `remux` trait because of their release-group names while not exposing the expected BluRay trait.
+* Preserved the existing non-Anime Movie/Show tier structure and overall V3 ranking and filtering philosophy.
+
+### Validation
+
+* Validated Anime WEB tiers T1–T6 and BluRay tiers T1–T8 against representative release names.
+* Verified `LazyRemux` as Anime BluRay T4 and `UltraRemux` as Anime BluRay T5.
+* Verified known low-tier 4K Anime groups remain eligible while unknown 4K Anime release groups are rejected.
+
+### Notes
+
+* V4 requires the linked StreamNZB Define Library containing all 49 Define rules.
+* Anime release-group classifications remain synchronized with `Vidhin05/Releases-Regex` through the repository's existing GitHub Actions workflow.
+* `Define` rules classify releases only; scoring and filtering behaviour remains controlled by the profile.
+
 ## V3
 
 ### Changed
@@ -20,3 +65,34 @@
 - `Define` rules do not score, reject, limit, or appear in `.MatchedRules`.
 - V3 requires the shared Define Library to be imported before using `profile.txt`.
 - This version requires a StreamNZB build with shared Define Library and `matched()` support.
+
+## V2
+
+### Changed
+- Expanded and refined the original StreamNZB filtering and scoring profile.
+- Improved release-group prioritization and quality-based ranking.
+- Added more advanced filtering and scoring logic for Movies, Shows and Anime.
+- Added smart filtering for 4K releases and low-quality results.
+- Refined Anime handling, including release-group tiers and streaming-source preferences.
+- Improved result limiting and fallback behaviour.
+- Continued tuning HDR, Dolby Vision and audio preferences for the target hardware setup.
+
+### Notes
+- V2 predates the shared StreamNZB Define Library architecture.
+- Release-group regexes and classifications were embedded directly in the profile rules.
+- At this stage, GitHub was used to distribute the linked `profile.txt` and `formatter.txt`; there was no separately linked or automatically synchronized Define Library.
+- V2 formed the behavioral foundation that was later refactored into V3 without intentionally changing its overall ranking and filtering philosophy.
+
+## V1
+
+### Added
+- Initial public version of the custom StreamNZB profile.
+- Introduced the core filtering and scoring approach for Usenet results.
+- Added release-group prioritization for Movies, Shows and Anime.
+- Added quality, resolution, HDR/Dolby Vision and audio preferences.
+- Added the custom StreamNZB formatter.
+
+### Notes
+- V1 used profile-local filtering, scoring and release-group regexes.
+- GitHub distribution consisted of the linked `profile.txt` and `formatter.txt`.
+- Shared Define Libraries and automated Vidhin synchronization were not yet part of the setup.

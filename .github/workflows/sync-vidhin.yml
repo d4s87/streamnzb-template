@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Test semantic parser
+      - name: Test generator against accepted baseline
         run: python tests/test_vidhin_sync.py
 
       - name: Track mapped Vidhin rules

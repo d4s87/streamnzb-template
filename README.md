@@ -60,4 +60,4 @@ GitHub's raw-file CDN may take a few minutes to reflect a newly published update
 
 ## Credits
 
-The filtering and scoring logic takes inspiration from the wider media automation community, including **TRaSH Guides, Vidhin and Tamtaro**, adapted for StreamNZB and Usenet.
+The filtering and scoring logic takes inspiration from the wider media automation community, including **[TRaSH Guides](https://trash-guides.info/), [Vidhin](https://github.com/Vidhin05/Releases-Regex) and [Tamtaro SEL Template](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)**, adapted for StreamNZB and Usenet.

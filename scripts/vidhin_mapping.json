@@ -151,8 +151,7 @@
     },
     "Anime Movies BluRay T1 Groups": {
       "sources": [
-        "Anime BD T1",
-        "Anime BD T2"
+        "Anime BD T1"
       ],
       "scope": "anime_movie",
       "field": "releaseName",
@@ -160,34 +159,63 @@
     },
     "Anime Movies BluRay T2 Groups": {
       "sources": [
-        "Anime BD T3",
+        "Anime BD T2"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies BluRay T3 Groups": {
+      "sources": [
+        "Anime BD T3"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies BluRay T4 Groups": {
+      "sources": [
         "Anime BD T4"
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true,
-      "add_tokens": [
-        "LazyRemux",
-        "NAN0",
-        "PMR"
-      ]
+      "anime": true
     },
-    "Anime Movies BluRay T3 Groups": {
+    "Anime Movies BluRay T5 Groups": {
       "sources": [
-        "Anime BD T5",
+        "Anime BD T5"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies BluRay T6 Groups": {
+      "sources": [
         "Anime BD T6"
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true,
-      "add_tokens": [
-        "UltraRemux"
-      ]
+      "anime": true
+    },
+    "Anime Movies BluRay T7 Groups": {
+      "sources": [
+        "Anime BD T7"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies BluRay T8 Groups": {
+      "sources": [
+        "Anime BD T8"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
     },
     "Anime Shows BluRay T1 Groups": {
       "sources": [
-        "Anime BD T1",
-        "Anime BD T2"
+        "Anime BD T1"
       ],
       "scope": "anime_show",
       "field": "releaseName",
@@ -195,34 +223,63 @@
     },
     "Anime Shows BluRay T2 Groups": {
       "sources": [
-        "Anime BD T3",
+        "Anime BD T2"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows BluRay T3 Groups": {
+      "sources": [
+        "Anime BD T3"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows BluRay T4 Groups": {
+      "sources": [
         "Anime BD T4"
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true,
-      "add_tokens": [
-        "LazyRemux",
-        "NAN0",
-        "PMR"
-      ]
+      "anime": true
     },
-    "Anime Shows BluRay T3 Groups": {
+    "Anime Shows BluRay T5 Groups": {
       "sources": [
-        "Anime BD T5",
+        "Anime BD T5"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows BluRay T6 Groups": {
+      "sources": [
         "Anime BD T6"
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true,
-      "add_tokens": [
-        "UltraRemux"
-      ]
+      "anime": true
+    },
+    "Anime Shows BluRay T7 Groups": {
+      "sources": [
+        "Anime BD T7"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows BluRay T8 Groups": {
+      "sources": [
+        "Anime BD T8"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
     },
     "Anime Movies WEB T1 Groups": {
       "sources": [
-        "Anime Web T1",
-        "Anime Web T2"
+        "Anime Web T1"
       ],
       "scope": "anime_movie",
       "field": "releaseName",
@@ -230,8 +287,7 @@
     },
     "Anime Movies WEB T2 Groups": {
       "sources": [
-        "Anime Web T3",
-        "Anime Web T4"
+        "Anime Web T2"
       ],
       "scope": "anime_movie",
       "field": "releaseName",
@@ -239,7 +295,30 @@
     },
     "Anime Movies WEB T3 Groups": {
       "sources": [
-        "Anime Web T5",
+        "Anime Web T3"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies WEB T4 Groups": {
+      "sources": [
+        "Anime Web T4"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies WEB T5 Groups": {
+      "sources": [
+        "Anime Web T5"
+      ],
+      "scope": "anime_movie",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Movies WEB T6 Groups": {
+      "sources": [
         "Anime Web T6"
       ],
       "scope": "anime_movie",
@@ -248,8 +327,7 @@
     },
     "Anime Shows WEB T1 Groups": {
       "sources": [
-        "Anime Web T1",
-        "Anime Web T2"
+        "Anime Web T1"
       ],
       "scope": "anime_show",
       "field": "releaseName",
@@ -257,8 +335,7 @@
     },
     "Anime Shows WEB T2 Groups": {
       "sources": [
-        "Anime Web T3",
-        "Anime Web T4"
+        "Anime Web T2"
       ],
       "scope": "anime_show",
       "field": "releaseName",
@@ -266,7 +343,30 @@
     },
     "Anime Shows WEB T3 Groups": {
       "sources": [
-        "Anime Web T5",
+        "Anime Web T3"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows WEB T4 Groups": {
+      "sources": [
+        "Anime Web T4"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows WEB T5 Groups": {
+      "sources": [
+        "Anime Web T5"
+      ],
+      "scope": "anime_show",
+      "field": "releaseName",
+      "anime": true
+    },
+    "Anime Shows WEB T6 Groups": {
+      "sources": [
         "Anime Web T6"
       ],
       "scope": "anime_show",

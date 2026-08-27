@@ -112,10 +112,10 @@ def semantic_tokens(pattern):
     # Vodes is a real group only when Vidhin explicitly matches Vodes.
     # Do not derive it from the separate "Not-Vodes" group.
     has_positive_vodes = (
-        re.search(r"\\\[Vodes\\\]", classifier) is not None
-        or re.search(r"(?<!Not\)-Vodes\\b", classifier) is not None
-        or re.search(r"(?<![A-Za-z0-9-])Vodes(?:\\b|$)", classifier) is not None
+        r"\[Vodes\]" in classifier
+        or r"(?<!Not)-Vodes\b" in classifier       
     )
+
     if has_positive_vodes:
         out.add("Vodes")
     return dedupe_casefold(out)

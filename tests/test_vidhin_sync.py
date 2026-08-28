@@ -326,6 +326,7 @@ metadata_new={
 metadata_report,metadata_changed=m.report(
     metadata_old,
     metadata_new,
+    mapping,
 )
 
 assert metadata_changed==1, (
@@ -338,4 +339,244 @@ assert "`scope`: `\"anime\"` → `null`" in metadata_report
 
 assert "**Raw release-name regex changed**" not in metadata_report
 
-print("All v2.4 compatibility, LQ and Anime tier tests passed.")
+# ---------------------------------------------------------------------------
+# Tier movement reporting
+# ---------------------------------------------------------------------------
+
+def tier_entry(tokens):
+    return {
+        "records": [],
+        "tokens": tokens,
+    }
+
+
+# Promotion: T2 -> T1.
+movement_mapping={
+    "targets":{
+        "T1":{
+            "sources":["T1"],
+            "scope":"anime_movie",
+            "field":"releaseName",
+            "tier_family":"Anime Movies WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":1,
+        },
+        "T2":{
+            "sources":["T2"],
+            "scope":"anime_movie",
+            "field":"releaseName",
+            "tier_family":"Anime Movies WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":2,
+        },
+    }
+}
+
+old={
+    "T1":tier_entry([]),
+    "T2":tier_entry(["MTBB"]),
+}
+
+new={
+    "T1":tier_entry(["MTBB"]),
+    "T2":tier_entry([]),
+}
+
+movements=m.detect_tier_movements(old,new,movement_mapping)
+
+assert len(movements)==1
+assert movements[0]["family"]=="Anime WEB"
+assert movements[0]["token"]=="MTBB"
+assert movements[0]["old_tier"]==2
+assert movements[0]["new_tier"]==1
+
+movement_report,_=m.report(old,new,movement_mapping)
+
+assert "## Tier movements" in movement_report
+assert "### Anime WEB" in movement_report
+assert "`MTBB`: T2 → T1" in movement_report
+
+
+# Demotion: T1 -> T3.
+demotion_mapping={
+    "targets":{
+        "T1":{
+            "sources":["T1"],
+            "scope":"movie",
+            "field":"group",
+            "tier_family":"Movies WEB",
+            "tier":1,
+        },
+        "T3":{
+            "sources":["T3"],
+            "scope":"movie",
+            "field":"group",
+            "tier_family":"Movies WEB",
+            "tier":3,
+        },
+    }
+}
+
+old={
+    "T1":tier_entry(["Example"]),
+    "T3":tier_entry([]),
+}
+
+new={
+    "T1":tier_entry([]),
+    "T3":tier_entry(["Example"]),
+}
+
+movements=m.detect_tier_movements(old,new,demotion_mapping)
+
+assert len(movements)==1
+assert movements[0]["old_tier"]==1
+assert movements[0]["new_tier"]==3
+
+
+# A newly added token is not a tier movement.
+old={
+    "T1":tier_entry([]),
+    "T2":tier_entry([]),
+}
+
+new={
+    "T1":tier_entry(["NewGroup"]),
+    "T2":tier_entry([]),
+}
+
+assert m.detect_tier_movements(
+    old,new,movement_mapping
+)==[]
+
+
+# A removed token is not a tier movement.
+old={
+    "T1":tier_entry(["RemovedGroup"]),
+    "T2":tier_entry([]),
+}
+
+new={
+    "T1":tier_entry([]),
+    "T2":tier_entry([]),
+}
+
+assert m.detect_tier_movements(
+    old,new,movement_mapping
+)==[]
+
+
+# Remaining in the same tier is not a movement.
+old={
+    "T1":tier_entry(["SameGroup"]),
+    "T2":tier_entry([]),
+}
+
+new={
+    "T1":tier_entry(["SameGroup"]),
+    "T2":tier_entry([]),
+}
+
+assert m.detect_tier_movements(
+    old,new,movement_mapping
+)==[]
+
+
+# Case-only spelling changes are not movements.
+old={
+    "T1":tier_entry(["MTBB"]),
+    "T2":tier_entry([]),
+}
+
+new={
+    "T1":tier_entry(["mtbb"]),
+    "T2":tier_entry([]),
+}
+
+assert m.detect_tier_movements(
+    old,new,movement_mapping
+)==[]
+
+
+# Anime Movie/Show mirrors must collapse into one reported movement.
+mirror_mapping={
+    "targets":{
+        "Movie T1":{
+            "sources":["Anime Web T1"],
+            "scope":"anime_movie",
+            "field":"releaseName",
+            "tier_family":"Anime Movies WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":1,
+        },
+        "Movie T2":{
+            "sources":["Anime Web T2"],
+            "scope":"anime_movie",
+            "field":"releaseName",
+            "tier_family":"Anime Movies WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":2,
+        },
+        "Show T1":{
+            "sources":["Anime Web T1"],
+            "scope":"anime_show",
+            "field":"releaseName",
+            "tier_family":"Anime Shows WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":1,
+        },
+        "Show T2":{
+            "sources":["Anime Web T2"],
+            "scope":"anime_show",
+            "field":"releaseName",
+            "tier_family":"Anime Shows WEB",
+            "tier_report_family":"Anime WEB",
+            "tier":2,
+        },
+    }
+}
+
+old={
+    "Movie T1":tier_entry([]),
+    "Movie T2":tier_entry(["MTBB"]),
+    "Show T1":tier_entry([]),
+    "Show T2":tier_entry(["MTBB"]),
+}
+
+new={
+    "Movie T1":tier_entry(["MTBB"]),
+    "Movie T2":tier_entry([]),
+    "Show T1":tier_entry(["MTBB"]),
+    "Show T2":tier_entry([]),
+}
+
+movements=m.detect_tier_movements(
+    old,new,mirror_mapping
+)
+
+assert len(movements)==1
+assert movements[0]["family"]=="Anime WEB"
+assert movements[0]["token"]=="MTBB"
+assert movements[0]["old_tier"]==2
+assert movements[0]["new_tier"]==1
+
+
+# Ambiguous multi-tier placement must not be reported as a movement.
+old={
+    "T1":tier_entry(["Ambiguous"]),
+    "T2":tier_entry(["Ambiguous"]),
+}
+
+new={
+    "T1":tier_entry(["Ambiguous"]),
+    "T2":tier_entry([]),
+}
+
+assert m.detect_tier_movements(
+    old,new,movement_mapping
+)==[]
+
+print(
+    "All v2.4 compatibility, LQ, Anime tier and "
+    "tier-movement tests passed."
+)

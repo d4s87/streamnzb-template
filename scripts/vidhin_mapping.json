@@ -155,7 +155,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 1
     },
     "Anime Movies BluRay T2 Groups": {
       "sources": [
@@ -163,7 +166,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 2
     },
     "Anime Movies BluRay T3 Groups": {
       "sources": [
@@ -171,7 +177,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 3
     },
     "Anime Movies BluRay T4 Groups": {
       "sources": [
@@ -179,7 +188,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 4
     },
     "Anime Movies BluRay T5 Groups": {
       "sources": [
@@ -187,7 +199,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 5
     },
     "Anime Movies BluRay T6 Groups": {
       "sources": [
@@ -195,7 +210,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 6
     },
     "Anime Movies BluRay T7 Groups": {
       "sources": [
@@ -203,7 +221,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 7
     },
     "Anime Movies BluRay T8 Groups": {
       "sources": [
@@ -211,7 +232,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 8
     },
     "Anime Shows BluRay T1 Groups": {
       "sources": [
@@ -219,7 +243,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 1
     },
     "Anime Shows BluRay T2 Groups": {
       "sources": [
@@ -227,7 +254,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 2
     },
     "Anime Shows BluRay T3 Groups": {
       "sources": [
@@ -235,7 +265,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 3
     },
     "Anime Shows BluRay T4 Groups": {
       "sources": [
@@ -243,7 +276,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 4
     },
     "Anime Shows BluRay T5 Groups": {
       "sources": [
@@ -251,7 +287,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 5
     },
     "Anime Shows BluRay T6 Groups": {
       "sources": [
@@ -259,7 +298,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 6
     },
     "Anime Shows BluRay T7 Groups": {
       "sources": [
@@ -267,7 +309,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 7
     },
     "Anime Shows BluRay T8 Groups": {
       "sources": [
@@ -275,7 +320,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 8
     },
     "Anime Movies WEB T1 Groups": {
       "sources": [
@@ -283,7 +331,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 1
     },
     "Anime Movies WEB T2 Groups": {
       "sources": [
@@ -291,7 +342,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 2
     },
     "Anime Movies WEB T3 Groups": {
       "sources": [
@@ -299,7 +353,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 3
     },
     "Anime Movies WEB T4 Groups": {
       "sources": [
@@ -307,7 +364,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 4
     },
     "Anime Movies WEB T5 Groups": {
       "sources": [
@@ -315,7 +375,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 5
     },
     "Anime Movies WEB T6 Groups": {
       "sources": [
@@ -323,7 +386,10 @@
       ],
       "scope": "anime_movie",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 6
     },
     "Anime Shows WEB T1 Groups": {
       "sources": [
@@ -331,7 +397,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 1
     },
     "Anime Shows WEB T2 Groups": {
       "sources": [
@@ -339,7 +408,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 2
     },
     "Anime Shows WEB T3 Groups": {
       "sources": [
@@ -347,7 +419,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 3
     },
     "Anime Shows WEB T4 Groups": {
       "sources": [
@@ -355,7 +430,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 4
     },
     "Anime Shows WEB T5 Groups": {
       "sources": [
@@ -363,7 +441,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 5
     },
     "Anime Shows WEB T6 Groups": {
       "sources": [
@@ -371,7 +452,10 @@
       ],
       "scope": "anime_show",
       "field": "releaseName",
-      "anime": true
+      "anime": true,
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 6
     },
     "Anime LQ Groups": {
       "sources": [

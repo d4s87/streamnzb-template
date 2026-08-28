@@ -368,6 +368,10 @@ def resolve(mapping,upstream):
             "sources":cfg["sources"],"scope":cfg["scope"],"field":cfg["field"],
             "mode":mode,"records":recs,"tokens":dedupe_casefold(toks)
         }
+
+        for field in ("tier_family","tier_report_family","tier"):
+            if field in cfg:
+                out[target][field]=cfg[field]
         if mode=="lq":
             out[target]["extra_exact_groups"]=cfg.get("extra_exact_groups",[])
             out[target]["release_name_fallbacks"]=cfg.get("release_name_fallbacks",[])
@@ -548,14 +552,124 @@ def render(current,mapping):
         )
     return "\n".join(lines)+"\n"
 
-def report(old,new):
+def tier_locations(data,mapping):
+    """
+    Return the tier location of each release-group token.
+
+    Tokens are keyed case-insensitively. Multiple StreamNZB targets may
+    intentionally mirror the same upstream tier (for example Anime Movies
+    and Anime Shows), so identical tier locations are deduplicated.
+    """
+    locations={}
+
+    for name,cfg in target_cfgs(mapping).items():
+        family=cfg.get("tier_report_family",cfg.get("tier_family"))
+        tier=cfg.get("tier")
+
+        if not family or tier is None or name not in data:
+            continue
+
+        for token in toks(data[name]):
+            key=(family,token.casefold())
+
+            locations.setdefault(key,{
+                "tiers":set(),
+                "tokens":set(),
+            })
+
+            locations[key]["tiers"].add(tier)
+            locations[key]["tokens"].add(token)
+
+    return locations
+
+
+def detect_tier_movements(old,new,mapping):
+    """
+    Detect unambiguous release-group movements inside a tier family.
+
+    New/removed groups, case-only spelling changes, cross-family changes,
+    and ambiguous multi-tier locations are not reported as movements.
+    """
+    old_locations=tier_locations(old,mapping)
+    new_locations=tier_locations(new,mapping)
+
+    movements=[]
+
+    for key in sorted(
+        set(old_locations) & set(new_locations),
+        key=lambda x:(x[0].casefold(),x[1]),
+    ):
+        family,_=key
+        old_location=old_locations[key]
+        new_location=new_locations[key]
+
+        if len(old_location["tiers"])!=1:
+            continue
+
+        if len(new_location["tiers"])!=1:
+            continue
+
+        old_tier=next(iter(old_location["tiers"]))
+        new_tier=next(iter(new_location["tiers"]))
+
+        if old_tier==new_tier:
+            continue
+
+        token=sorted(
+            new_location["tokens"],
+            key=lambda x:(x.casefold(),x),
+        )[0]
+
+        movements.append({
+            "family":family,
+            "token":token,
+            "old_tier":old_tier,
+            "new_tier":new_tier,
+        })
+
+    return movements
+
+def report(old,new,mapping):
     lines=["# Vidhin sync report",""]; changed=0
+
+    movements=detect_tier_movements(old,new,mapping)
+
+    if movements:
+        lines += ["## Tier movements",""]
+
+        families={}
+
+        for movement in movements:
+            families.setdefault(
+                movement["family"],[]
+            ).append(movement)
+
+        for family in sorted(families,key=str.casefold):
+            lines += [f"### {family}",""]
+
+            for movement in sorted(
+                families[family],
+                key=lambda x:(
+                    x["token"].casefold(),
+                    x["token"],
+                ),
+            ):
+                lines.append(
+                    f'- `{movement["token"]}`: '
+                    f'T{movement["old_tier"]} → '
+                    f'T{movement["new_tier"]}'
+                )
+
+            lines.append("")
 
     metadata_fields=(
         "sources",
         "scope",
         "field",
         "mode",
+        "tier_family",
+        "tier_report_family",
+        "tier",
     )
 
     for name in sorted(set(old)|set(new)):
@@ -712,110 +826,6 @@ def report(old,new):
     ]
 
     return "\n".join(lines),changed
-    lines=["# Vidhin sync report",""]; changed=0
-
-    for name in sorted(set(old)|set(new)):
-        old_entry=old.get(name,{})
-        new_entry=new.get(name,{})
-
-        a=toks(old_entry)
-        b=toks(new_entry)
-
-        add=sorted(b-a,key=str.casefold)
-        rem=sorted(a-b,key=str.casefold)
-
-        oldraw={
-            (r.get("source"),r.get("pattern"))
-            for r in old_entry.get("records",[])
-        }
-        newraw={
-            (r.get("source"),r.get("pattern"))
-            for r in new_entry.get("records",[])
-        }
-
-        raw=oldraw!=newraw
-
-        if not add and not rem and not raw:
-            continue
-
-        changed+=1
-        lines += [f"## {name}",""]
-
-        old_mode=old_entry.get("mode")
-        new_mode=new_entry.get("mode")
-
-        is_raw_release_name=(
-            old_mode=="raw_release_name"
-            or new_mode=="raw_release_name"
-        )
-
-        if is_raw_release_name:
-            if not old_entry and new_entry:
-                lines += [
-                    "**Raw release-name regex added**",
-                    "",
-                ]
-            elif old_entry and not new_entry:
-                lines += [
-                    "**Raw release-name regex removed**",
-                    "",
-                ]
-            elif raw:
-                lines += [
-                    "**Raw release-name regex changed**",
-                    "",
-                ]
-
-            sources=sorted({
-                r.get("source")
-                for r in new_entry.get("records",[])
-                if r.get("source")
-            })
-
-            if sources:
-                lines += [
-                    "**Upstream source(s)**",
-                    *[f"- `{source}`" for source in sources],
-                    "",
-                ]
-
-        else:
-            if add:
-                lines += [
-                    "**Added release-group tokens**",
-                    *[f"- `+ {x}`" for x in add],
-                    "",
-                ]
-
-            if rem:
-                lines += [
-                    "**Removed release-group tokens**",
-                    *[f"- `- {x}`" for x in rem],
-                    "",
-                ]
-
-            if raw and not(add or rem):
-                lines += [
-                    "Raw upstream regex changed, but the extracted "
-                    "release-group set did not.",
-                    "",
-                ]
-
-    if not changed:
-        lines += [
-            "No mapped Vidhin changes detected.",
-            "",
-        ]
-
-    lines += [
-        "---",
-        f"Tracked StreamNZB Defines: **{len(new)}**",
-        "",
-        "> `profile.txt` is not modified. Generated Defines require review.",
-        "",
-    ]
-
-    return "\n".join(lines),changed
 
 def main():
     ap=argparse.ArgumentParser()
@@ -831,7 +841,7 @@ def main():
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
     old=read_old(a.baseline)
-    text,changed=report(old,cur)
+    text,changed=report(old,cur,mapping)
     a.library.parent.mkdir(parents=True,exist_ok=True)
     a.library.write_text(render(cur,mapping),encoding="utf-8")
     if changed or not a.baseline.exists():

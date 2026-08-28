@@ -2,7 +2,7 @@
   "schema_version": 3,
   "mapping_schema_version": 3,
   "upstream_url": "https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json",
-  "generated_at_utc": "2026-08-28T19:05:53+00:00",
+  "generated_at_utc": "2026-08-28T21:33:40+00:00",
   "defines": {
     "Movies UHD BluRay T1 Groups": {
       "sources": [
@@ -417,7 +417,9 @@
         "TOMMY",
         "XEPA",
         "ZoroSenpai"
-      ]
+      ],
+      "tier_family": "Movies WEB",
+      "tier": 1
     },
     "Movies WEB T2 Groups": {
       "sources": [
@@ -471,7 +473,9 @@
         "SMURF",
         "TOMMY",
         "XEBEC"
-      ]
+      ],
+      "tier_family": "Movies WEB",
+      "tier": 2
     },
     "Movies WEB T3 Groups": {
       "sources": [
@@ -509,7 +513,9 @@
         "SiGMA",
         "SLiGNOME",
         "SwAgLaNdEr"
-      ]
+      ],
+      "tier_family": "Movies WEB",
+      "tier": 3
     },
     "Shows BluRay T1 Groups": {
       "sources": [
@@ -704,7 +710,9 @@
         "TOMMY",
         "ViSUM",
         "XEPA"
-      ]
+      ],
+      "tier_family": "Shows WEB",
+      "tier": 1
     },
     "Shows WEB T2 Groups": {
       "sources": [
@@ -816,7 +824,9 @@
         "TVSmash",
         "WELP",
         "XEBEC"
-      ]
+      ],
+      "tier_family": "Shows WEB",
+      "tier": 2
     },
     "Shows WEB T3 Groups": {
       "sources": [
@@ -858,7 +868,9 @@
         "SwAgLaNdEr",
         "T4H",
         "ViSiON"
-      ]
+      ],
+      "tier_family": "Shows WEB",
+      "tier": 3
     },
     "Anime Movies BluRay T1 Groups": {
       "sources": [
@@ -898,7 +910,10 @@
         "sam",
         "smol",
         "SoM"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 1
     },
     "Anime Movies BluRay T2 Groups": {
       "sources": [
@@ -961,7 +976,10 @@
         "WAP",
         "YURI",
         "ZeroBuild"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 2
     },
     "Anime Movies BluRay T3 Groups": {
       "sources": [
@@ -1049,7 +1067,10 @@
         "Sylvar",
         "uba",
         "ZR"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 3
     },
     "Anime Movies BluRay T4 Groups": {
       "sources": [
@@ -1139,7 +1160,10 @@
         "Vanilla",
         "Virtuality",
         "VULCAN"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 4
     },
     "Anime Movies BluRay T5 Groups": {
       "sources": [
@@ -1219,7 +1243,10 @@
         "WBDP",
         "WSE",
         "Yuki"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 5
     },
     "Anime Movies BluRay T6 Groups": {
       "sources": [
@@ -1267,7 +1294,10 @@
         "Tsundere",
         "Yoghurt",
         "YURASUKA"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 6
     },
     "Anime Movies BluRay T7 Groups": {
       "sources": [
@@ -1355,7 +1385,10 @@
         "SEV",
         "THORA",
         "Vivid"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 7
     },
     "Anime Movies BluRay T8 Groups": {
       "sources": [
@@ -1393,7 +1426,10 @@
         "Nep[ ._-]Blanc",
         "Prof",
         "Shirσ"
-      ]
+      ],
+      "tier_family": "Anime Movies BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 8
     },
     "Anime Shows BluRay T1 Groups": {
       "sources": [
@@ -1433,7 +1469,10 @@
         "sam",
         "smol",
         "SoM"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 1
     },
     "Anime Shows BluRay T2 Groups": {
       "sources": [
@@ -1496,7 +1535,10 @@
         "WAP",
         "YURI",
         "ZeroBuild"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 2
     },
     "Anime Shows BluRay T3 Groups": {
       "sources": [
@@ -1584,7 +1626,10 @@
         "Sylvar",
         "uba",
         "ZR"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 3
     },
     "Anime Shows BluRay T4 Groups": {
       "sources": [
@@ -1674,7 +1719,10 @@
         "Vanilla",
         "Virtuality",
         "VULCAN"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 4
     },
     "Anime Shows BluRay T5 Groups": {
       "sources": [
@@ -1754,7 +1802,10 @@
         "WBDP",
         "WSE",
         "Yuki"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 5
     },
     "Anime Shows BluRay T6 Groups": {
       "sources": [
@@ -1802,7 +1853,10 @@
         "Tsundere",
         "Yoghurt",
         "YURASUKA"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 6
     },
     "Anime Shows BluRay T7 Groups": {
       "sources": [
@@ -1890,7 +1944,10 @@
         "SEV",
         "THORA",
         "Vivid"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 7
     },
     "Anime Shows BluRay T8 Groups": {
       "sources": [
@@ -1928,7 +1985,10 @@
         "Nep[ ._-]Blanc",
         "Prof",
         "Shirσ"
-      ]
+      ],
+      "tier_family": "Anime Shows BluRay",
+      "tier_report_family": "Anime BluRay",
+      "tier": 8
     },
     "Anime Movies WEB T1 Groups": {
       "sources": [
@@ -1982,7 +2042,10 @@
         "Vodes",
         "Z4ST1N",
         "ZeroBuild"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 1
     },
     "Anime Movies WEB T2 Groups": {
       "sources": [
@@ -2038,7 +2101,10 @@
         "Slyfox",
         "SoLCE",
         "tenshi"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 2
     },
     "Anime Movies WEB T3 Groups": {
       "sources": [
@@ -2066,7 +2132,10 @@
         "Kitsune",
         "SubsPlus\\+?",
         "ZR"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 3
     },
     "Anime Movies WEB T4 Groups": {
       "sources": [
@@ -2090,7 +2159,10 @@
         "Erai-raws",
         "ToonsHub",
         "VARYG"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 4
     },
     "Anime Movies WEB T5 Groups": {
       "sources": [
@@ -2140,7 +2212,10 @@
         "URANIME",
         "ZigZab",
         "ZigZag"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 5
     },
     "Anime Movies WEB T6 Groups": {
       "sources": [
@@ -2180,7 +2255,10 @@
         "Kantai",
         "KawaSubs",
         "Tsundere"
-      ]
+      ],
+      "tier_family": "Anime Movies WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 6
     },
     "Anime Shows WEB T1 Groups": {
       "sources": [
@@ -2234,7 +2312,10 @@
         "Vodes",
         "Z4ST1N",
         "ZeroBuild"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 1
     },
     "Anime Shows WEB T2 Groups": {
       "sources": [
@@ -2290,7 +2371,10 @@
         "Slyfox",
         "SoLCE",
         "tenshi"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 2
     },
     "Anime Shows WEB T3 Groups": {
       "sources": [
@@ -2318,7 +2402,10 @@
         "Kitsune",
         "SubsPlus\\+?",
         "ZR"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 3
     },
     "Anime Shows WEB T4 Groups": {
       "sources": [
@@ -2342,7 +2429,10 @@
         "Erai-raws",
         "ToonsHub",
         "VARYG"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 4
     },
     "Anime Shows WEB T5 Groups": {
       "sources": [
@@ -2392,7 +2482,10 @@
         "URANIME",
         "ZigZab",
         "ZigZag"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 5
     },
     "Anime Shows WEB T6 Groups": {
       "sources": [
@@ -2432,7 +2525,10 @@
         "Kantai",
         "KawaSubs",
         "Tsundere"
-      ]
+      ],
+      "tier_family": "Anime Shows WEB",
+      "tier_report_family": "Anime WEB",
+      "tier": 6
     },
     "Anime LQ Groups": {
       "sources": [

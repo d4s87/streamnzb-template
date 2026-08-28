@@ -31,3 +31,6 @@ jobs:
 
       - name: Run Vidhin sync tests
         run: python tests/test_vidhin_sync.py
+
+      - name: Validate Anime tier integrity
+        run: python tests/test_tier_integrity.py

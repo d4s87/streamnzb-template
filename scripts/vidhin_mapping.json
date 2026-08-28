@@ -373,6 +373,15 @@
       "field": "releaseName",
       "anime": true
     },
+    "Anime LQ Groups": {
+      "sources": [
+        "Anime LQ Groups"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "raw_release_name",
+      "anime_lq": true
+    },
     "Movies LQ Groups": {
       "sources": [
         "LQ (Radarr)"

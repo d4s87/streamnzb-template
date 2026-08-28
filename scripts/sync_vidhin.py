@@ -226,6 +226,28 @@ def lq_pattern_terms(pattern):
                 terms.append(term)
     return dedupe_casefold(terms),case_sensitive
 
+def raw_release_name_pattern(pattern):
+    """
+    Preserve a Vidhin regex as a StreamNZB releaseName regex.
+
+    The surrounding JavaScript-style /.../flags delimiters are removed.
+    Case-insensitive upstream regexes are represented with an inline (?i)
+    prefix so StreamNZB receives the same matching semantics.
+    """
+    body, flags = js_regex_parts(pattern)
+
+    unsupported = set(flags) - {"i"}
+    if unsupported:
+        raise ValueError(
+            f"Unsupported raw release-name regex flags "
+            f"{''.join(sorted(unsupported))!r}: {pattern}"
+        )
+
+    if "i" in flags:
+        body = "(?i)" + body
+
+    return body
+
 def target_cfgs(mapping):
     tg=mapping.get("targets")
     if not isinstance(tg,dict): raise KeyError("mapping.targets missing")
@@ -325,8 +347,19 @@ def resolve(mapping,upstream):
                         "source":src,"pattern":pat,"tokens":tt,
                         "case_sensitive":case_sensitive
                     })
+                elif mode=="raw_release_name":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":[],
+                        "raw_release_name_pattern":raw_release_name_pattern(pat),
+                    })
                 else:
-                    recs.append({"source":src,"pattern":pat,"tokens":semantic_tokens(pat)})
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":semantic_tokens(pat)
+                    })
         toks=set()
         for r in recs: toks.update(r["tokens"])
         toks.update(cfg.get("add_tokens",[]))
@@ -470,6 +503,27 @@ def render_lq_condition(entry):
         conditions.append(f'releaseName matches "(?i)(?:^|[-._ ]){esc}$"')
     return " or ".join(conditions)
 
+def render_raw_release_name_condition(entry):
+    conditions=[]
+
+    for rec in entry.get("records",[]):
+        pattern=rec.get("raw_release_name_pattern")
+
+        if not pattern:
+            continue
+
+        escaped=pattern.replace('"','\\"')
+        conditions.append(
+            f'releaseName matches "{escaped}"'
+        )
+
+    if not conditions:
+        raise ValueError(
+            "raw_release_name Define contains no usable regex records"
+        )
+
+    return " or ".join(conditions)
+
 def render(current,mapping):
     current=apply_web_precedence(current,mapping)
     lines=["# Generated from Vidhin05/Releases-Regex.",
@@ -478,6 +532,8 @@ def render(current,mapping):
         e=current[name]
         if e.get("mode")=="lq":
             cond=render_lq_condition(e)
+        elif e.get("mode")=="raw_release_name":
+            cond=render_raw_release_name_condition(e)
         else:
             body="|".join(e["effective_tokens"]).replace('"','\\"')
             field=e["field"]
@@ -485,26 +541,280 @@ def render(current,mapping):
                 cond=f'releaseName matches "(?i)(?:^|[-._ ])(?:{body})$"'
             else:
                 cond=f'group matches "(?i)^({body})$"'
-        lines.append(f'{name} [{e["scope"]}]: define if {cond}')
+        scope=e.get("scope")
+        scope_text=f" [{scope}]" if scope else ""
+        lines.append(
+            f'{name}{scope_text}: define if {cond}'
+        )
     return "\n".join(lines)+"\n"
 
 def report(old,new):
     lines=["# Vidhin sync report",""]; changed=0
+
+    metadata_fields=(
+        "sources",
+        "scope",
+        "field",
+        "mode",
+    )
+
     for name in sorted(set(old)|set(new)):
-        a=toks(old.get(name,{})); b=toks(new.get(name,{}))
-        add=sorted(b-a,key=str.casefold); rem=sorted(a-b,key=str.casefold)
-        oldraw={(r.get("source"),r.get("pattern")) for r in old.get(name,{}).get("records",[])}
-        newraw={(r.get("source"),r.get("pattern")) for r in new.get(name,{}).get("records",[])}
+        old_entry=old.get(name,{})
+        new_entry=new.get(name,{})
+
+        a=toks(old_entry)
+        b=toks(new_entry)
+
+        add=sorted(b-a,key=str.casefold)
+        rem=sorted(a-b,key=str.casefold)
+
+        oldraw={
+            (r.get("source"),r.get("pattern"))
+            for r in old_entry.get("records",[])
+        }
+        newraw={
+            (r.get("source"),r.get("pattern"))
+            for r in new_entry.get("records",[])
+        }
+
         raw=oldraw!=newraw
-        if not add and not rem and not raw: continue
-        changed+=1; lines += [f"## {name}",""]
-        if add: lines += ["**Added release-group tokens**"]+[f"- `+ {x}`" for x in add]+[""]
-        if rem: lines += ["**Removed release-group tokens**"]+[f"- `- {x}`" for x in rem]+[""]
-        if raw and not(add or rem):
-            lines += ["Raw upstream regex changed, but the extracted release-group set did not.",""]
-    if not changed: lines += ["No mapped Vidhin changes detected.",""]
-    lines += ["---",f"Tracked StreamNZB Defines: **{len(new)}**","",
-              "> `profile.txt` is not modified. Generated Defines require review.",""]
+
+        metadata_changes=[]
+
+        if old_entry and new_entry:
+            for field in metadata_fields:
+                old_value=old_entry.get(field)
+                new_value=new_entry.get(field)
+
+                if old_value != new_value:
+                    metadata_changes.append(
+                        (field,old_value,new_value)
+                    )
+
+        if (
+            not add
+            and not rem
+            and not raw
+            and not metadata_changes
+        ):
+            continue
+
+        changed+=1
+        lines += [f"## {name}",""]
+
+        old_mode=old_entry.get("mode")
+        new_mode=new_entry.get("mode")
+
+        is_raw_release_name=(
+            old_mode=="raw_release_name"
+            or new_mode=="raw_release_name"
+        )
+
+        if metadata_changes:
+            lines += [
+                "**Generated metadata changed**",
+            ]
+
+            for field,old_value,new_value in metadata_changes:
+                lines.append(
+                    f"- `{field}`: "
+                    f"`{json.dumps(old_value,ensure_ascii=False)}` "
+                    f"→ "
+                    f"`{json.dumps(new_value,ensure_ascii=False)}`"
+                )
+
+            lines.append("")
+
+        if is_raw_release_name:
+            if not old_entry and new_entry:
+                lines += [
+                    "**Raw release-name regex added**",
+                    "",
+                ]
+            elif old_entry and not new_entry:
+                lines += [
+                    "**Raw release-name regex removed**",
+                    "",
+                ]
+            elif raw:
+                lines += [
+                    "**Raw release-name regex changed**",
+                    "",
+                ]
+
+            sources=sorted({
+                r.get("source")
+                for r in new_entry.get("records",[])
+                if r.get("source")
+            })
+
+            if sources:
+                lines += [
+                    "**Upstream source(s)**",
+                    *[f"- `{source}`" for source in sources],
+                    "",
+                ]
+
+        else:
+            if add:
+                lines += [
+                    "**Added release-group tokens**",
+                    *[f"- `+ {x}`" for x in add],
+                    "",
+                ]
+
+            if rem:
+                lines += [
+                    "**Removed release-group tokens**",
+                    *[f"- `- {x}`" for x in rem],
+                    "",
+                ]
+
+            if raw and not(add or rem):
+                lines += [
+                    "Raw upstream regex changed, but the extracted "
+                    "release-group set did not.",
+                    "",
+                ]
+
+        # A raw-release-name entry whose metadata changed but whose regex did
+        # not still benefits from identifying the tracked upstream source.
+        if (
+            is_raw_release_name
+            and metadata_changes
+            and not raw
+        ):
+            sources=sorted({
+                r.get("source")
+                for r in new_entry.get("records",[])
+                if r.get("source")
+            })
+
+            if sources:
+                lines += [
+                    "**Upstream source(s)**",
+                    *[f"- `{source}`" for source in sources],
+                    "",
+                ]
+
+    if not changed:
+        lines += [
+            "No mapped Vidhin changes detected.",
+            "",
+        ]
+
+    lines += [
+        "---",
+        f"Tracked StreamNZB Defines: **{len(new)}**",
+        "",
+        "> `profile.txt` is not modified. Generated Defines require review.",
+        "",
+    ]
+
+    return "\n".join(lines),changed
+    lines=["# Vidhin sync report",""]; changed=0
+
+    for name in sorted(set(old)|set(new)):
+        old_entry=old.get(name,{})
+        new_entry=new.get(name,{})
+
+        a=toks(old_entry)
+        b=toks(new_entry)
+
+        add=sorted(b-a,key=str.casefold)
+        rem=sorted(a-b,key=str.casefold)
+
+        oldraw={
+            (r.get("source"),r.get("pattern"))
+            for r in old_entry.get("records",[])
+        }
+        newraw={
+            (r.get("source"),r.get("pattern"))
+            for r in new_entry.get("records",[])
+        }
+
+        raw=oldraw!=newraw
+
+        if not add and not rem and not raw:
+            continue
+
+        changed+=1
+        lines += [f"## {name}",""]
+
+        old_mode=old_entry.get("mode")
+        new_mode=new_entry.get("mode")
+
+        is_raw_release_name=(
+            old_mode=="raw_release_name"
+            or new_mode=="raw_release_name"
+        )
+
+        if is_raw_release_name:
+            if not old_entry and new_entry:
+                lines += [
+                    "**Raw release-name regex added**",
+                    "",
+                ]
+            elif old_entry and not new_entry:
+                lines += [
+                    "**Raw release-name regex removed**",
+                    "",
+                ]
+            elif raw:
+                lines += [
+                    "**Raw release-name regex changed**",
+                    "",
+                ]
+
+            sources=sorted({
+                r.get("source")
+                for r in new_entry.get("records",[])
+                if r.get("source")
+            })
+
+            if sources:
+                lines += [
+                    "**Upstream source(s)**",
+                    *[f"- `{source}`" for source in sources],
+                    "",
+                ]
+
+        else:
+            if add:
+                lines += [
+                    "**Added release-group tokens**",
+                    *[f"- `+ {x}`" for x in add],
+                    "",
+                ]
+
+            if rem:
+                lines += [
+                    "**Removed release-group tokens**",
+                    *[f"- `- {x}`" for x in rem],
+                    "",
+                ]
+
+            if raw and not(add or rem):
+                lines += [
+                    "Raw upstream regex changed, but the extracted "
+                    "release-group set did not.",
+                    "",
+                ]
+
+    if not changed:
+        lines += [
+            "No mapped Vidhin changes detected.",
+            "",
+        ]
+
+    lines += [
+        "---",
+        f"Tracked StreamNZB Defines: **{len(new)}**",
+        "",
+        "> `profile.txt` is not modified. Generated Defines require review.",
+        "",
+    ]
+
     return "\n".join(lines),changed
 
 def main():

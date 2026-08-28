@@ -101,6 +101,67 @@ assert 'group == "iVy"' in lib
 assert 'releaseName matches "(?i)(?:^|[-._ ])Feranki1980$"' in lib
 assert len(lq)==2
 
+# Anime LQ must preserve Vidhin's full release-name regex semantics.
+anime_lq_upstream=[
+    {
+        "name":"Anime LQ Groups",
+        "pattern":(
+            r"/\b(Anime[ .-]?(Chap|Land|Time)|"
+            r"(Baked|Dead|Space)Fish|"
+            r"Mini(Freeza|MTBB|sCuba|Theatre))\b|"
+            r"\[224\]|-224\b|"
+            r"\[(Cerberus|Daddy(Subs)?)\]|"
+            r"-(Cerberus|Daddy(Subs)?)\b|"
+            r"^\[Ari\]|-Ari$/i"
+        ),
+        "score":0
+    }
+]
+
+anime_lq_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Anime LQ Groups":{
+            "sources":["Anime LQ Groups"],
+            "scope":None,
+            "field":"releaseName",
+            "mode":"raw_release_name",
+            "anime_lq":True,
+        }
+    }
+}
+
+anime_lq=m.resolve(
+    anime_lq_mapping,
+    anime_lq_upstream,
+)
+
+assert len(anime_lq)==1
+
+anime_lq_entry=anime_lq["Anime LQ Groups"]
+
+assert anime_lq_entry["mode"]=="raw_release_name"
+assert anime_lq_entry["field"]=="releaseName"
+assert anime_lq_entry["tokens"]==[]
+
+anime_lq_library=m.render(
+    anime_lq,
+    anime_lq_mapping,
+)
+
+assert "Anime LQ Groups: define if " in anime_lq_library
+assert "Anime LQ Groups [" not in anime_lq_library
+assert 'releaseName matches "(?i)' in anime_lq_library
+assert r"Anime[ .-]?(Chap|Land|Time)" in anime_lq_library
+assert r"(Baked|Dead|Space)Fish" in anime_lq_library
+assert r"Mini(Freeza|MTBB|sCuba|Theatre)" in anime_lq_library
+assert r"\[224\]" in anime_lq_library
+assert r"-224\b" in anime_lq_library
+assert r"\[(Cerberus|Daddy(Subs)?)\]" in anime_lq_library
+assert r"^\[Ari\]" in anime_lq_library
+assert r"-Ari$" in anime_lq_library
+
 # Anime Vodes regression tests.
 #
 # Vidhin treats Vodes and Not-Vodes as separate release groups:
@@ -222,4 +283,59 @@ else:
     raise AssertionError(
         "Unexpected Anime Web T7 was not detected"
     )
+
+# ---------------------------------------------------------------------------
+# Generated metadata change detection
+#
+# Mapping-only changes must trigger regeneration even when the upstream
+# regex and extracted tokens are unchanged.
+# ---------------------------------------------------------------------------
+
+metadata_old={
+    "Anime LQ Groups":{
+        "sources":["Anime LQ Groups"],
+        "scope":"anime",
+        "field":"releaseName",
+        "mode":"raw_release_name",
+        "records":[{
+            "source":"Anime LQ Groups",
+            "pattern":r"/\bExample\b/i",
+            "tokens":[],
+            "raw_release_name_pattern":r"(?i)\bExample\b",
+        }],
+        "tokens":[],
+    }
+}
+
+metadata_new={
+    "Anime LQ Groups":{
+        "sources":["Anime LQ Groups"],
+        "scope":None,
+        "field":"releaseName",
+        "mode":"raw_release_name",
+        "records":[{
+            "source":"Anime LQ Groups",
+            "pattern":r"/\bExample\b/i",
+            "tokens":[],
+            "raw_release_name_pattern":r"(?i)\bExample\b",
+        }],
+        "tokens":[],
+    }
+}
+
+metadata_report,metadata_changed=m.report(
+    metadata_old,
+    metadata_new,
+)
+
+assert metadata_changed==1, (
+    "Mapping-only metadata change was not detected"
+)
+
+assert "**Generated metadata changed**" in metadata_report
+
+assert "`scope`: `\"anime\"` → `null`" in metadata_report
+
+assert "**Raw release-name regex changed**" not in metadata_report
+
 print("All v2.4 compatibility, LQ and Anime tier tests passed.")

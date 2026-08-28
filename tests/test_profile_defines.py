@@ -89,8 +89,8 @@ def parse_define_library(text: str) -> dict[str, dict]:
     defines = {}
 
     line_re = re.compile(
-        r"^(?P<name>.+?) "
-        r"\[(?P<scope>[^\]]+)\]: "
+        r"^(?P<name>.+?)"
+        r"(?: \[(?P<scope>[^\]]+)\])?: "
         r"define if "
         r"(?P<condition>.+)$"
     )
@@ -246,6 +246,99 @@ def validate_required_anime_structure(defines: dict[str, dict]) -> None:
         )
 
 
+def validate_anime_lq(
+    rules: list[dict],
+    defines: dict[str, dict],
+) -> None:
+    """
+    Validate the Anime LQ Define and profile scoring policy.
+
+    Vidhin's Anime LQ classification is applied to Anime releases with a
+    -10000 penalty, except when the release is a SeaDex Best or SeaDex
+    Alternative recommendation.
+    """
+    define_name = "Anime LQ Groups"
+
+    if define_name not in defines:
+        raise AssertionError(
+            "Required Anime LQ Groups Define is missing"
+        )
+
+    if defines[define_name]["scope"] is not None:
+        raise AssertionError(
+            "Anime LQ Groups Define must use All Content "
+            "(no explicit Define scope)"
+        )
+
+    condition = defines[define_name]["condition"]
+
+    if not condition.startswith('releaseName matches "'):
+        raise AssertionError(
+            "Anime LQ Groups must match against releaseName"
+        )
+
+    anime_lq_rules = [
+        rule
+        for rule in rules
+        if rule.get("name") == "Anime LQ Penalty"
+    ]
+
+    if len(anime_lq_rules) != 1:
+        raise AssertionError(
+            "Expected exactly one Anime LQ Penalty rule, "
+            f"found {len(anime_lq_rules)}"
+        )
+
+    anime_lq = anime_lq_rules[0]
+
+    if anime_lq.get("points") != -10000:
+        raise AssertionError(
+            "Anime LQ Penalty must score -10000"
+        )
+
+    # This is intentionally one Anime-wide rule rather than separate
+    # movie/series rules.
+    if "scope" in anime_lq:
+        raise AssertionError(
+            "Anime LQ Penalty must not use movie/series scope; "
+            "it must rely on isAnime"
+        )
+
+    when = anime_lq.get("when")
+
+    if not isinstance(when, str) or not when.strip():
+        raise AssertionError(
+            "Anime LQ Penalty has no valid when expression"
+        )
+
+    required_conditions = (
+        "isAnime",
+        'matched("Anime LQ Groups")',
+        "seadex.best",
+        "seadex.alternative",
+    )
+
+    for required in required_conditions:
+        if required not in when:
+            raise AssertionError(
+                "Anime LQ Penalty missing required condition: "
+                f"{required}"
+            )
+
+    if "not (seadex.best or seadex.alternative)" not in when:
+        raise AssertionError(
+            "Anime LQ Penalty must exempt both SeaDex Best "
+            "and SeaDex Alternative releases"
+        )
+
+    if "seadex.known" in when:
+        raise AssertionError(
+            "Anime LQ Penalty must not use seadex.known; "
+            "SeaDex title availability is not the same as a "
+            "Best/Alternative recommendation"
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -331,11 +424,29 @@ if not isinstance(profile_name, str) or not profile_name.strip():
         "Decoded StreamNZB profile has no valid name"
     )
 
+# Keep the decoded rules available to all profile-level validations.
+rules = profile.get("rules")
+
+if not isinstance(rules, list):
+    raise AssertionError(
+        'Decoded profile must contain a "rules" array'
+    )
+
+if not rules:
+    raise AssertionError(
+        "Decoded profile contains no rules"
+    )
+
+if len(rules) != 85:
+    raise AssertionError(
+        f"Expected 85 profile rules, found {len(rules)}"
+    )
+
 defines = parse_define_library(defines_text)
 
-if len(defines) != 49:
+if len(defines) != 50:
     raise AssertionError(
-        f"Expected 49 generated Defines, found {len(defines)}"
+        f"Expected 50 generated Defines, found {len(defines)}"
     )
 
 dependencies = extract_matched_dependencies(profile)
@@ -362,11 +473,12 @@ if missing_dependencies:
     )
 
 validate_required_anime_structure(defines)
+validate_anime_lq(rules, defines)
 validate_regressions(defines)
 
 print(
     "Profile/Define validation passed: "
-    f"{len(profile['rules'])} profile rules, "
+    f"{len(rules)} profile rules, "
     f"{len(dependencies)} referenced Defines, "
     f"{len(defines)} available Defines."
 )

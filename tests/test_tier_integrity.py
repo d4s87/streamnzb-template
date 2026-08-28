@@ -86,6 +86,33 @@ for name, cfg in targets.items():
         f"mapping sources {cfg.get('sources')!r}"
     )
 
+ANIME_LQ_TARGET = "Anime LQ Groups"
+
+assert ANIME_LQ_TARGET in targets, (
+    "Required Anime LQ mapping target missing"
+)
+
+anime_lq_cfg = targets[ANIME_LQ_TARGET]
+
+assert anime_lq_cfg.get("sources") == ["Anime LQ Groups"], (
+    "Anime LQ Groups must track Vidhin's Anime LQ Groups source"
+)
+
+assert anime_lq_cfg.get("scope") is None, (
+    "Anime LQ Groups must use All Content (no explicit scope)"
+)
+
+assert anime_lq_cfg.get("field") == "releaseName", (
+    "Anime LQ Groups must match releaseName"
+)
+
+assert anime_lq_cfg.get("mode") == "raw_release_name", (
+    "Anime LQ Groups must preserve the upstream release-name regex"
+)
+
+assert anime_lq_cfg.get("anime_lq") is True, (
+    "Anime LQ Groups must be marked anime_lq=true"
+)
 
 # ---------------------------------------------------------------------------
 # 2. Required Anime hierarchy
@@ -312,6 +339,9 @@ for source in EXPECTED_ANIME_SOURCES:
         f"Expected Anime source missing from committed baseline: {source}"
     )
 
+assert "Anime LQ Groups" in baseline_sources, (
+    "Expected Anime LQ Groups source missing from committed baseline"
+)
 
 # ---------------------------------------------------------------------------
 # 6. Known Anime regressions

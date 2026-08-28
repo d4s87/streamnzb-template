@@ -18,7 +18,60 @@ The profile is designed around:
 - Grouped resolution + quality result limits
 - Hardware-specific HDR and audio preferences
 
+## Quick Start
+
+> [!IMPORTANT]
+> **Import the Define Library before importing the Profile.**
+>
+> The profile references shared `Define` rules with `matched()`. Importing the profile first may result in missing/unresolved Define references.
+
+### 1. Import the Define Library
+
+In StreamNZB, import the following URL as a **linked Define Library**:
+
+https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt
+
+Keep it linked so future library updates can be applied using StreamNZB's **Refresh** action.
+
+### 2. Import the Profile
+
+After the Define Library is installed, import the profile using:
+
+https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt
+
+Import it as a **linked profile** so future updates can also be reviewed and applied with **Refresh**.
+
+### 3. Import the Formatter
+
+Finally, import the formatter using:
+
+https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt
+
+The formatter can also remain linked for future updates.
+
+### 4. Review Hardware-Specific Rules
+
+The default profile is tuned for a **Samsung QN90A without an AVR or soundbar**.
+
+If your display or audio setup differs, review the Dolby Vision, HDR and audio rules/scores after importing.
+
+### 5. Updating
+
+You do **not** need to import new URLs when a new version is released.
+
+For linked resources, use StreamNZB's **Refresh** action to check for updates:
+
+1. Refresh the **Define Library first**.
+2. Review and apply its changes.
+3. Refresh the **Profile**.
+4. Refresh the **Formatter** when it has changed.
+
+The proposed changes can be reviewed before they are applied.
+
 ## Profile
+
+> [!IMPORTANT]
+> The shared Define Library must be imported before this profile. See [Quick Start](#quick-start) for the correct installation order.
 
 The latest V4 StreamNZB share code is always available here:
 
@@ -79,6 +132,8 @@ The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8
 The latest formatter is available here:
 
 **[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**
+
+The formatter is my attempt to reproduce and adapt the look and presentation of **[Tamtaro's SEL Template](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)** formatter for AIOStreams within StreamNZB's formatter capabilities. It is not a direct port and has been adapted to work with StreamNZB's available data and formatting system.
 
 For the recommended linked import, use:
 

@@ -1,5 +1,5 @@
 # 🧛 DraCuLa's StreamNZB Custom Roles & Scoring Template
-DraCuLa's custom filtering, scoring and formatter template for StreamNZB. [StreamNZB](https://github.com/Gaisberg/streamnzb).
+DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
 **Current version: V4**
 

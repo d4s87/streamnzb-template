@@ -234,6 +234,78 @@ def target_cfgs(mapping):
         return {k:{"sources":v,"scope":"unknown","field":"group"} for k,v in tg.items()}
     return tg
 
+def validate_anime_upstream_structure(upstream):
+    """
+    Guard against unexpected structural changes in Vidhin's live Anime tiers.
+
+    Expected upstream hierarchy:
+      - Anime Web T1-T6
+      - Anime BD  T1-T8
+
+    Multiple records with the same source name are allowed because Vidhin
+    may use supplemental regexes for a tier.
+
+    This validates source/tier structure only. Token collision validation is
+    performed after resolve(), using the same semantic parser as generation.
+    """
+    expected = {
+        "Web": {f"Anime Web T{i}" for i in range(1, 7)},
+        "BD": {f"Anime BD T{i}" for i in range(1, 9)},
+    }
+
+    found = {
+        "Web": set(),
+        "BD": set(),
+    }
+
+    anime_source_re = re.compile(
+        r"^Anime (?P<quality>Web|BD) T(?P<tier>\d+)$"
+    )
+
+    for rec in rows(upstream):
+        name = n(rec)
+
+        if not isinstance(name, str):
+            continue
+
+        match = anime_source_re.fullmatch(name)
+
+        if not match:
+            continue
+
+        quality = match.group("quality")
+        found[quality].add(name)
+
+    problems = []
+
+    for quality in ("Web", "BD"):
+        missing = sorted(
+            expected[quality] - found[quality]
+        )
+
+        unexpected = sorted(
+            found[quality] - expected[quality]
+        )
+
+        if missing:
+            problems.append(
+                f"Missing Anime {quality} source(s):\n  - "
+                + "\n  - ".join(missing)
+            )
+
+        if unexpected:
+            problems.append(
+                f"Unexpected Anime {quality} source(s):\n  - "
+                + "\n  - ".join(unexpected)
+            )
+
+    if problems:
+        raise RuntimeError(
+            "Vidhin upstream Anime tier structure changed.\n\n"
+            + "\n\n".join(problems)
+            + "\n\nManual review and mapping update required."
+        )
+    
 def resolve(mapping,upstream):
     by={}
     for rec in rows(upstream):
@@ -268,6 +340,74 @@ def resolve(mapping,upstream):
             out[target]["release_name_fallbacks"]=cfg.get("release_name_fallbacks",[])
     if missing: raise RuntimeError("Mapped upstream rule(s) missing:\n- "+"\n- ".join(missing))
     return out
+
+def validate_anime_tier_collisions(current):
+    """
+    Detect release-group tokens appearing in multiple tiers of the same
+    live Anime quality hierarchy.
+
+    Movie and Show targets intentionally mirror the same upstream sources,
+    so the canonical Anime Movies targets are sufficient for this check.
+
+    WEB <-> BluRay overlap is allowed.
+    """
+    families = (
+        ("WEB", 6),
+        ("BluRay", 8),
+    )
+
+    problems = []
+
+    for quality, max_tier in families:
+        seen = {}
+
+        for tier in range(1, max_tier + 1):
+            target = f"Anime Movies {quality} T{tier} Groups"
+
+            if target not in current:
+                raise RuntimeError(
+                    f"Expected resolved Anime target missing: {target}"
+                )
+
+            tokens = current[target].get("tokens", [])
+
+            if not tokens:
+                raise RuntimeError(
+                    f"Resolved Anime target contains no tokens: {target}"
+                )
+
+            local_seen = set()
+
+            for token in tokens:
+                key = token.casefold()
+
+                if key in local_seen:
+                    raise RuntimeError(
+                        f"Duplicate token {token!r} inside {target}"
+                    )
+
+                local_seen.add(key)
+
+                if key in seen:
+                    previous_tier, previous_token = seen[key]
+
+                    problems.append(
+                        f"{token!r}: "
+                        f"T{previous_tier} ({previous_token!r}) "
+                        f"and T{tier}"
+                    )
+                else:
+                    seen[key] = (tier, token)
+
+        if problems:
+            break
+
+    if problems:
+        raise RuntimeError(
+            f"Vidhin upstream Anime {quality} tier collision detected:\n\n  - "
+            + "\n  - ".join(problems)
+            + "\n\nAutomatic synchronization stopped."
+        )
 
 def read_old(path):
     path=Path(path)
@@ -377,7 +517,10 @@ def main():
     a=ap.parse_args()
     mapping=jload(a.mapping)
     upstream=jload(a.upstream_file) if a.upstream_file else fetch(mapping["upstream_url"])
-    cur=resolve(mapping,upstream); old=read_old(a.baseline)
+    validate_anime_upstream_structure(upstream)
+    cur=resolve(mapping,upstream)
+    validate_anime_tier_collisions(cur)
+    old=read_old(a.baseline)
     text,changed=report(old,cur)
     a.library.parent.mkdir(parents=True,exist_ok=True)
     a.library.write_text(render(cur,mapping),encoding="utf-8")

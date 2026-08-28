@@ -170,4 +170,56 @@ assert "Not-Vodes" not in anime_vodes_library
 assert m.dedupe_casefold({"SiGMA","SIGMA"}) == ["SIGMA"]
 assert m.dedupe_casefold({"sbR","SbR"}) == ["SbR"]
 
+# ---------------------------------------------------------------------------
+# Live Anime upstream structure guard
+# ---------------------------------------------------------------------------
+
+valid_structure = []
+
+for tier in range(1, 7):
+    valid_structure.append({
+        "name": f"Anime Web T{tier}",
+        "pattern": "/(?=(?:.*))(?=(?:Group))/i",
+    })
+
+for tier in range(1, 9):
+    valid_structure.append({
+        "name": f"Anime BD T{tier}",
+        "pattern": "/(?=(?:.*))(?=(?:Group))/i",
+    })
+
+# Expected structure must pass.
+m.validate_anime_upstream_structure(valid_structure)
+
+
+# Missing expected tier must fail.
+missing_tier = [
+    rec for rec in valid_structure
+    if rec["name"] != "Anime Web T6"
+]
+
+try:
+    m.validate_anime_upstream_structure(missing_tier)
+except RuntimeError as exc:
+    assert "Anime Web T6" in str(exc)
+else:
+    raise AssertionError(
+        "Missing Anime Web T6 was not detected"
+    )
+
+
+# Unexpected new tier must fail.
+new_tier = valid_structure + [{
+    "name": "Anime Web T7",
+    "pattern": "/(?=(?:.*))(?=(?:Group))/i",
+}]
+
+try:
+    m.validate_anime_upstream_structure(new_tier)
+except RuntimeError as exc:
+    assert "Anime Web T7" in str(exc)
+else:
+    raise AssertionError(
+        "Unexpected Anime Web T7 was not detected"
+    )
 print("All v2.4 compatibility, LQ and Anime tier tests passed.")

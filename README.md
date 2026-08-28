@@ -1,6 +1,5 @@
-# StreamNZB Template
-
-My custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
+# 🧛 DraCuLa's StreamNZB Custom Roles & Scoring Template
+DraCuLa's custom filtering, scoring and formatter template for StreamNZB. [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
 **Current version: V4**
 
@@ -106,6 +105,12 @@ If you use a different TV, Dolby Vision display, AVR, soundbar or other audio se
 If you imported them by URL, use StreamNZB's **Refresh** action to check for updates. StreamNZB will show the proposed changes before anything is applied; updates are never applied automatically.
 
 GitHub's raw-file CDN may take a few minutes to reflect a newly published update.
+
+## Community
+
+Discussion, setup notes and template updates are available in the [DraCuLa's StreamNZB Template Discord thread](https://discord.com/channels/1470288400157380710/1542856068135125002).
+
+For release-specific changes, always refer to this repository's README and changelog.
 
 ## Credits
 

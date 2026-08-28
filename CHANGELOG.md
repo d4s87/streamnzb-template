@@ -6,6 +6,23 @@
 - **V2** — Major expansion and refinement of the monolithic profile.
 - **V3** — Introduced the shared linked Define Library architecture and Vidhin synchronization.
 - **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
+- **V4.1** — Added Vidhin-backed Anime LQ filtering with SeaDex Best and Alternative exemptions.
+
+## V4.1
+
+### Added
+
+- Added Vidhin-backed **Anime LQ Groups** classification using the upstream release-name regex.
+- Added an **Anime LQ Penalty** of `-10,000` for matching Anime releases.
+- SeaDex **Best** and **Alternative** recommendations are exempt from the Anime LQ penalty.
+- Expanded the shared Define Library from **49 to 50** reusable classifications.
+- Added raw `releaseName` regex support to the Vidhin synchronization generator.
+- Added validation for Anime LQ mapping, matching behavior, and metadata-only synchronization changes.
+
+### Notes
+
+- Anime LQ matching preserves Vidhin's upstream regex semantics rather than converting the expression into release-group tokens.
+- The linked StreamNZB Define Library now contains **50** Define rules.
 
 ## V4
 

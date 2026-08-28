@@ -1,14 +1,15 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V4**
+**Current version: V4.1**
 
-V4 expands the shared Define Library and replaces the previous compressed Anime T1/T2/T3 model with the full Vidhin Anime release-group hierarchy. Movie and Show release-group classification remains separated from profile scoring through StreamNZB's shared Define Libraries, allowing Vidhin-backed definitions to be maintained independently of the profile.
+V4.1 builds on the full Vidhin Anime release-group hierarchy introduced in V4 by adding Vidhin-backed Anime LQ filtering. Matching Anime LQ releases receive a `-10,000` penalty, while SeaDex Best and Alternative recommendations are exempt. Movie and Show release-group classification remains separated from profile scoring through StreamNZB's shared Define Libraries, allowing Vidhin-backed definitions to be maintained independently of the profile.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
 - Movie and Show release-group tiers
 - Full Anime WEB T1–T6 and BluRay T1–T8 release-group tiers
+- Vidhin-backed Anime LQ filtering with SeaDex Best / Alternative exemptions
 - Crunchyroll and HIDIVE detection for Anime WEB releases
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
@@ -73,7 +74,7 @@ The proposed changes can be reviewed before they are applied.
 > [!IMPORTANT]
 > The shared Define Library must be imported before this profile. See [Quick Start](#quick-start) for the correct installation order.
 
-The latest V4 StreamNZB share code is always available here:
+The latest V4.1 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
@@ -83,23 +84,25 @@ For the recommended linked import, use this URL in StreamNZB:
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
-V4 requires the Define Library described below. Import the library before using the profile.
+V4.1 requires the Define Library described below. Import the library before using the profile.
 
 ## Define Library
 
-V4 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
+V4.1 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 49 Define rules covering Movie, Show and Anime release-group classifications, including the LQ classifications used by the profile.
+The library currently provides 50 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications used by the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
 - Anime BluRay: T1–T8
 
 Separate Anime Movie and Anime Show Defines are provided for every tier.
+
+Anime LQ matching uses Vidhin's upstream release-name regex directly rather than converting it into release-group tokens, preserving the upstream matching semantics.
 
 The definitions are synchronized with [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex) through GitHub Actions. Upstream changes are reviewed through a pull request before becoming part of the library.
 
@@ -109,7 +112,7 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 ## Anime Scoring
 
-V4 uses the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
+V4.1 uses the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
 
 WEB release groups are scored as follows:
 - T1: +500
@@ -122,6 +125,8 @@ WEB release groups are scored as follows:
 BluRay release groups use the same T1–T6 scores, with the additional lower tiers:
 - T7: +25
 - T8: +10
+
+Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
 `LazyRemux` and `UltraRemux` require a narrow profile-side exception because StreamNZB may interpret `Remux` in their release-group names as the `remux` trait. They remain classified by the Define Library as their corresponding Anime BluRay tiers.
 

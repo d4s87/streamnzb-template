@@ -43,6 +43,7 @@ Changes in this section are under development and are not part of the latest sta
 - Added raw upstream group-regex synchronization so Bad Dual expressions retain regex-specific semantics instead of being flattened into literal release-group tokens.
 - Added compatibility fixtures for Movie/Show Bad Dual matching, Radarr/Sonarr-specific groups, raw-regex behavior, content scope, negative cases, and Anime Show exclusion.
 - Added Define-Library-aware compatibility testing so `matched()`-based rules can be exercised against the generated shared Defines and exact production rules.
+- Added an explicit StreamNZB profile-schema compatibility guard that pins `streamnzb_profile == 1` and fails when a missing or future schema version requires compatibility review.
 
 ### Changed
 

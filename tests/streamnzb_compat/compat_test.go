@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"slices"
@@ -19,7 +20,10 @@ import (
 	"streamnzb/pkg/search/triage"
 )
 
-const profilePrefix = "SNZBP1:"
+const (
+	profilePrefix         = "SNZBP1:"
+	expectedProfileSchema = 1
+)
 
 type FixtureFile struct {
 	Rules []RuleFixture `json:"rules"`
@@ -50,7 +54,8 @@ type Expectation struct {
 }
 
 type profilePayload struct {
-	Rules []config.RuleConfig `json:"rules"`
+	StreamNZBProfile int                 `json:"streamnzb_profile"`
+	Rules            []config.RuleConfig `json:"rules"`
 }
 
 func loadFixtures(t *testing.T) FixtureFile {
@@ -71,6 +76,19 @@ func loadFixtures(t *testing.T) FixtureFile {
 	}
 
 	return fixtures
+}
+
+func validateProfileSchema(schema int) error {
+	if schema != expectedProfileSchema {
+		return fmt.Errorf(
+			"unsupported StreamNZB profile schema: got %d, expected %d; "+
+				"review share-code compatibility before updating the harness",
+			schema,
+			expectedProfileSchema,
+		)
+	}
+
+	return nil
 }
 
 func loadProductionRules(t *testing.T) []config.RuleConfig {
@@ -107,6 +125,10 @@ func loadProductionRules(t *testing.T) []config.RuleConfig {
 	var profile profilePayload
 	if err := json.Unmarshal(raw, &profile); err != nil {
 		t.Fatalf("decode production profile JSON: %v", err)
+	}
+
+	if err := validateProfileSchema(profile.StreamNZBProfile); err != nil {
+		t.Fatal(err)
 	}
 
 	if len(profile.Rules) == 0 {
@@ -332,6 +354,25 @@ func runCases(
 				)
 			}
 		})
+	}
+}
+
+func TestProfileSchemaCompatibility(t *testing.T) {
+	if err := validateProfileSchema(expectedProfileSchema); err != nil {
+		t.Fatalf(
+			"current profile schema %d was rejected: %v",
+			expectedProfileSchema,
+			err,
+		)
+	}
+
+	for _, schema := range []int{0, 2} {
+		if err := validateProfileSchema(schema); err == nil {
+			t.Fatalf(
+				"schema %d unexpectedly passed compatibility guard",
+				schema,
+			)
+		}
 	}
 }
 

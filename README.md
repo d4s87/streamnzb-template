@@ -215,6 +215,8 @@ The repository includes automated validation for the profile, Define Library, Vi
 
 For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
 
+The harness separately validates StreamNZB's share-code compatibility contract. The `SNZBP1:` prefix identifies the profile share-code container format, while the `streamnzb_profile` marker versions the profile payload semantics. The harness currently requires `streamnzb_profile == 1`; a missing or different schema version fails validation so compatibility can be reviewed before the template accepts it.
+
 New or changed compatibility-sensitive rules can first be developed as fixtures containing representative positive and negative release names. Once a rule is published, the fixture can reference the production rule by name. The harness then decodes `profile.txt`, locates the exact published rule, verifies that its expression and score have not drifted from the tested fixture, and executes the same cases against the production rule.
 
 The harness also loads the generated Define Library when compiling compatibility rules. This allows rules using `matched()` to be tested end-to-end against the same shared Define conditions used by the production profile, including release-group classification, Define scope, profile policy and final score behavior.

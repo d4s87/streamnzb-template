@@ -34,7 +34,15 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added Anime WEB **Streaming Service** detection for Crunchyroll (`CR`), Disney+ (`DSNP`), Netflix (`NF`), Amazon (`AMZN`), VRV, Funimation (`FUNi`), ABEMA, ADN, B-Global, Bilibili, and HIDIVE.
+- Added StreamNZB compatibility fixtures covering positive service markers, boundaries and false positives, Anime scope, BluRay exclusion, and Anime Movie WEB matching.
+- Added production-profile regression coverage for all Streaming Service detection rules.
+
 ### Changed
+
+- Increased the production profile from **91 to 100 rules**.
+- Updated the formatter to use matched Streaming Service rules as a fallback when `.Network` is unavailable, while preserving `.Network` as the preferred source label.
+- Removed the separate Crunchyroll and HIDIVE formatter badges now that those services participate in the unified Network-first source display.
 
 ### Fixed
 

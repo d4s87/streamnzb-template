@@ -2011,6 +2011,706 @@
         }
       ],
       "productionRule": "1080p Remux Preference"
+    },
+    {
+      "name": "CR",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:CR|Crunchyroll)(?:$|[. _\\[\\]-])\"",
+      "points": 6,
+      "cases": [
+        {
+          "name": "CR abbreviation",
+          "release": "Anime.Title.S01E01.1080p.CR.WEB-DL.AAC2.0.H.264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Crunchyroll long",
+          "release": "Anime.Title.S01E01.1080p.Crunchyroll.WEB-DL.AAC2.0.H.264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "CR lowercase",
+          "release": "Anime.Title.S01E01.1080p.cr.WEB-DL.AAC2.0.H.264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "CR bracketed",
+          "release": "Anime.Title.S01E01.1080p.[CR].WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded CR negative",
+          "release": "Anime.Title.S01E01.1080p.MICRO.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.CR.WEB-DL.AAC2.0.H.264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.CR.BluRay.AAC2.0.H.264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.CR.WEB-DL.AAC2.0.H.264-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "CR"
+    },
+    {
+      "name": "DSNP",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:DSNP|Disney[ ._-]?(?:Plus|\\+))(?:$|[. _\\[\\]-])\"",
+      "points": 5,
+      "cases": [
+        {
+          "name": "DSNP abbreviation",
+          "release": "Anime.Title.S01E01.1080p.DSNP.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Disney Plus",
+          "release": "Anime.Title.S01E01.1080p.Disney.Plus.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "DisneyPlus",
+          "release": "Anime.Title.S01E01.1080p.DisneyPlus.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Disney unrelated negative",
+          "release": "Anime.Title.S01E01.1080p.Disney.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.DSNP.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.DSNP.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.DSNP.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "DSNP"
+    },
+    {
+      "name": "NF",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:NF|Netflix)(?:$|[. _\\[\\]-])\"",
+      "points": 4,
+      "cases": [
+        {
+          "name": "NF abbreviation",
+          "release": "Anime.Title.S01E01.1080p.NF.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Netflix long",
+          "release": "Anime.Title.S01E01.1080p.Netflix.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded NF negative",
+          "release": "Anime.Title.S01E01.1080p.INFO.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.NF.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.NF.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.NF.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "NF"
+    },
+    {
+      "name": "AMZN",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:AMZN|Amazon)(?:$|[. _\\[\\]-])\"",
+      "points": 3,
+      "cases": [
+        {
+          "name": "AMZN abbreviation",
+          "release": "Anime.Title.S01E01.1080p.AMZN.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Amazon long",
+          "release": "Anime.Title.S01E01.1080p.Amazon.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded Amazon negative",
+          "release": "Anime.Title.S01E01.1080p.Amazonian.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.AMZN.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.AMZN.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.AMZN.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "AMZN"
+    },
+    {
+      "name": "VRV",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])VRV(?:$|[. _\\[\\]-])\"",
+      "points": 3,
+      "cases": [
+        {
+          "name": "VRV",
+          "release": "Anime.Title.S01E01.1080p.VRV.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded VRV negative",
+          "release": "Anime.Title.S01E01.1080p.XVRVX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.VRV.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.VRV.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.VRV.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "VRV"
+    },
+    {
+      "name": "FUNi",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:FUNi|Funimation)(?:$|[. _\\[\\]-])\"",
+      "points": 2,
+      "cases": [
+        {
+          "name": "FUNi abbreviation",
+          "release": "Anime.Title.S01E01.1080p.FUNi.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Funimation long",
+          "release": "Anime.Title.S01E01.1080p.Funimation.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded FUNi negative",
+          "release": "Anime.Title.S01E01.1080p.FUNimationX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.FUNi.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.FUNi.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.FUNi.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "FUNi"
+    },
+    {
+      "name": "ABEMA",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])ABEMA(?:$|[. _\\[\\]-])\"",
+      "points": 1,
+      "cases": [
+        {
+          "name": "ABEMA",
+          "release": "Anime.Title.S01E01.1080p.ABEMA.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded ABEMA negative",
+          "release": "Anime.Title.S01E01.1080p.XABEMAX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.ABEMA.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.ABEMA.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.ABEMA.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "ABEMA"
+    },
+    {
+      "name": "ADN",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])ADN(?:$|[. _\\[\\]-])\"",
+      "points": 1,
+      "cases": [
+        {
+          "name": "ADN",
+          "release": "Anime.Title.S01E01.1080p.ADN.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded ADN negative",
+          "release": "Anime.Title.S01E01.1080p.BADNEWS.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.ADN.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.ADN.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.ADN.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "ADN"
+    },
+    {
+      "name": "B-Global",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])B[ ._-]?Global(?:$|[. _\\[\\]-])\"",
+      "points": 0,
+      "cases": [
+        {
+          "name": "B-Global hyphen",
+          "release": "Anime.Title.S01E01.1080p.B-Global.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "BGlobal compact",
+          "release": "Anime.Title.S01E01.1080p.BGlobal.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "B Global spaced",
+          "release": "Anime Title S01E01 1080p B Global WEB-DL GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded BGlobal negative",
+          "release": "Anime.Title.S01E01.1080p.XBGlobalX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.B-Global.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.B-Global.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.B-Global.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "B-Global"
+    },
+    {
+      "name": "Bilibili",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])Bilibili(?:$|[. _\\[\\]-])\"",
+      "points": 0,
+      "cases": [
+        {
+          "name": "Bilibili",
+          "release": "Anime.Title.S01E01.1080p.Bilibili.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Bilibili lowercase",
+          "release": "Anime.Title.S01E01.1080p.bilibili.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded Bilibili negative",
+          "release": "Anime.Title.S01E01.1080p.BilibiliX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.Bilibili.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.Bilibili.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.Bilibili.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "Bilibili"
+    },
+    {
+      "name": "HIDIVE",
+      "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])HIDI(?:VE)?(?:$|[. _\\[\\]-])\"",
+      "points": 0,
+      "cases": [
+        {
+          "name": "HIDIVE",
+          "release": "Anime.Title.S01E01.1080p.HIDIVE.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "HIDI",
+          "release": "Anime.Title.S01E01.1080p.HIDI.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "HIDIVE lowercase",
+          "release": "Anime.Title.S01E01.1080p.hidive.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded HIDIVE negative",
+          "release": "Anime.Title.S01E01.1080p.XHIDIVEX.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime negative",
+          "release": "Regular.Show.S01E01.1080p.HIDIVE.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "BluRay negative",
+          "release": "Anime.Title.S01E01.1080p.HIDIVE.BluRay-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie WEB positive",
+          "release": "Anime.Movie.2026.1080p.HIDIVE.WEB-DL-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "HIDIVE"
     }
   ]
 }

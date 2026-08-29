@@ -10,7 +10,7 @@ The profile is designed around:
 - Movie and Show release-group tiers
 - Full Anime WEB T1–T6 and BluRay T1–T8 release-group tiers
 - Vidhin-backed Anime LQ filtering with SeaDex Best / Alternative exemptions
-- Crunchyroll and HIDIVE detection for Anime WEB releases
+- Streaming Service detection for Anime WEB releases, with Network-first formatter fallback
 - Anime 10-bit / Hi10P detection with formatter labeling
 - Anime Uncensored preference with formatter labeling
 - Vidhin-backed Movie and Show Bad Dual release-group penalties
@@ -139,6 +139,10 @@ Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` pen
 Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an additional `Hi10P` release-name fallback for common Anime naming conventions. The rule is informational and scores `0` points, so it does not alter release ranking.
 
 The formatter displays matching releases as `₁₀ʙɪᴛ`.
+
+The profile also detects common **Streaming Services** for Anime WEB releases: Crunchyroll (`CR`), Disney+ (`DSNP`), Netflix (`NF`), Amazon (`AMZN`), VRV, Funimation (`FUNi`), ABEMA, ADN, B-Global, Bilibili, and HIDIVE. These rules are informational and do not change release scores.
+
+The formatter remains **Network-first**: when StreamNZB provides `.Network`, that value is displayed as the source. If `.Network` is absent, the formatter falls back to the matched Streaming Service rule. This provides a source label for Anime WEB releases where the service can be identified from the release name without overriding StreamNZB's parsed Network metadata.
 
 Anime releases explicitly marked as `Uncensored`, `Uncut`, `Unrated`, or with an `AT-X` source variant receive a small `+10` preference. The rule is intentionally Anime-only and acts as a tie-breaking preference rather than replacing the release-group tier hierarchy. Because most Anime BluRay releases are not necessarily labeled as uncensored in their release names, the rule should be interpreted as detecting an explicit uncensored-related marker rather than proving whether every release is censored or uncensored.
 

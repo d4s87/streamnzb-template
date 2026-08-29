@@ -1,0 +1,169 @@
+{
+  "rules": [
+    {
+      "name": "10bit",
+      "when": "isAnime and (parsed.bitDepth == 10 or releaseName matches \"(?i)(?:^|[. _\\[\\]-])Hi10P(?:$|[. _\\[\\]-])\")",
+      "points": 0,
+      "cases": [
+        {
+          "name": "canonical 10bit",
+          "release": "Anime.Title.S01E01.1080p.BluRay.10bit.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "10bit"
+            ],
+            "bitDepth": 10,
+            "match": true
+          }
+        },
+        {
+          "name": "10-bit",
+          "release": "Anime.Title.S01E01.1080p.BluRay.10-bit.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "10.bit",
+          "release": "Anime.Title.S01E01.1080p.BluRay.10.bit.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Hi10P",
+          "release": "Anime.Title.S01E01.1080p.BluRay.Hi10P.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "hi10p lowercase",
+          "release": "Anime.Title.S01E01.1080p.BluRay.hi10p.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "8bit negative",
+          "release": "Anime.Title.S01E01.1080p.BluRay.8bit.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "bitDepth": 8,
+            "match": false
+          }
+        },
+        {
+          "name": "12bit negative",
+          "release": "Anime.Title.S01E01.1080p.BluRay.12bit.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "bitDepth": 12,
+            "match": false
+          }
+        },
+        {
+          "name": "no bit depth negative",
+          "release": "Anime.Title.S01E01.1080p.BluRay.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsExclude": [
+              "10bit"
+            ],
+            "match": false
+          }
+        },
+        {
+          "name": "non anime 10bit negative",
+          "release": "Movie.2026.1080p.BluRay.10bit.FLAC-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "traitsContain": [
+              "10bit"
+            ],
+            "bitDepth": 10,
+            "match": false
+          }
+        },
+        {
+          "name": "Hi10P bracketed",
+          "release": "[GROUP] Anime Title - 01 [1080p][Hi10P][FLAC]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Hi10P underscore",
+          "release": "Anime_Title_S01E01_1080p_Hi10P_FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Hi10P hyphen boundary",
+          "release": "Anime.Title.S01E01.1080p-Hi10P-FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Hi10P prefix false positive",
+          "release": "Anime.Title.S01E01.1080p.NotHi10P.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Hi10P suffix false positive",
+          "release": "Anime.Title.S01E01.1080p.Hi10Plus.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "embedded Hi10P false positive",
+          "release": "Anime.Title.S01E01.1080p.XHi10PY.FLAC-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie 10bit",
+          "release": "Anime.Movie.2026.1080p.BluRay.10bit.FLAC-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "bitDepth": 10,
+            "match": true
+          }
+        }
+      ]
+    }
+  ]
+}

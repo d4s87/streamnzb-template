@@ -1,3 +1,6 @@
 # Python
 __pycache__/
 *.py[cod]
+
+# Temporary StreamNZB compatibility checkout
+.streamnzb-compat/

@@ -26,6 +26,11 @@ jobs:
         with:
           python-version: "3.x"
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.6"
+
       - name: Validate profile and Define library
         run: python tests/test_profile_defines.py
 
@@ -34,3 +39,6 @@ jobs:
 
       - name: Validate Anime tier integrity
         run: python tests/test_tier_integrity.py
+
+      - name: Test against StreamNZB engine
+        run: ./scripts/test_streamnzb_compat.sh

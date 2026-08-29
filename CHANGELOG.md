@@ -33,6 +33,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added availability-aware **Adaptive HD x265** filtering: non-Anime SDR 720p/1080p HEVC releases are rejected only when more than six suitable same-resolution AVC alternatives exist, while 2160p, HDR/Dolby Vision, Anime, Library, HEVC Remux, and AV1 results remain exempt.
 - Added an Anime-only **Uncensored** preference rule with a `+10` score.
 - Added detection for explicit `Uncensored`, `Uncut`, `Unrated`, and `AT-X` release-name markers.
 - Added `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ` formatter labeling for matching Anime releases.

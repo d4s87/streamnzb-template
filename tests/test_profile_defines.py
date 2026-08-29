@@ -427,6 +427,82 @@ def validate_bad_dual(
                 f"{rule.get('when')!r}"
             )
 
+def validate_adaptive_hd_x265(
+    rules: list[dict],
+) -> None:
+    name = "Adaptive HD x265"
+
+    matches = [
+        rule
+        for rule in rules
+        if rule.get("name") == name
+    ]
+
+    if len(matches) != 1:
+        raise AssertionError(
+            f"Expected exactly one {name!r} rule, "
+            f"found {len(matches)}"
+        )
+
+    rule = matches[0]
+
+    if rule.get("action") != "reject":
+        raise AssertionError(
+            f"{name} must use action=reject"
+        )
+
+    if "points" in rule:
+        raise AssertionError(
+            f"{name} Reject rule must not define points"
+        )
+
+    if rule.get("scope"):
+        raise AssertionError(
+            f"{name} must not define an explicit scope"
+        )
+
+    when = rule.get("when")
+
+    if not isinstance(when, str) or not when.strip():
+        raise AssertionError(
+            f"{name} has no valid condition"
+        )
+
+    required_fragments = (
+        'not isAnime',
+        'parsed.codec == "hevc"',
+        'not ("remux" in traits)',
+        'not any(hdr, # == "HDR" or # == "HDR10+" or # == "DV")',
+        'not library',
+        'resolution == "1080p"',
+        'resolution == "720p"',
+        'parsed.codec == "avc"',
+        '"remux" in traits',
+        '"bluray" in traits',
+        '"webdl" in traits',
+    )
+
+    missing = [
+        fragment
+        for fragment in required_fragments
+        if fragment not in when
+    ]
+
+    if missing:
+        raise AssertionError(
+            f"{name} is missing expected policy fragment(s): "
+            + ", ".join(repr(fragment) for fragment in missing)
+        )
+
+    # Both resolution branches must retain the tested > 6
+    # availability threshold.
+    if when.count(") > 6") != 2:
+        raise AssertionError(
+            f"{name} must contain exactly two > 6 "
+            "aggregate thresholds"
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -525,9 +601,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 89:
+if len(rules) != 90:
     raise AssertionError(
-        f"Expected 89 profile rules, found {len(rules)}"
+        f"Expected 90 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -563,6 +639,7 @@ if missing_dependencies:
 validate_required_anime_structure(defines)
 validate_anime_lq(rules, defines)
 validate_bad_dual(rules, defines)
+validate_adaptive_hd_x265(rules)
 validate_regressions(defines)
 
 print(

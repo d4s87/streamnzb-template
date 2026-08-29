@@ -209,6 +209,14 @@ If you imported them by URL, use StreamNZB's **Refresh** action to check for upd
 
 GitHub's raw-file CDN may take a few minutes to reflect a newly published update.
 
+### Adaptive HD x265 filtering
+
+The profile uses an availability-aware **Adaptive HD x265** Reject rule for non-Anime SDR HD releases. Instead of unconditionally penalizing HEVC/x265, a 720p or 1080p HEVC candidate is rejected only when more than six suitable same-resolution AVC alternatives are available.
+
+The rule deliberately keeps HEVC when alternatives are scarce. It also exempts **2160p**, **HDR/HDR10+/Dolby Vision**, **Anime**, **Library results**, and **HEVC Remuxes**. AV1 is unaffected.
+
+For the alternative count, 1080p considers same-resolution AVC Remux, BluRay, and WEB-DL releases; 720p considers same-resolution AVC BluRay and WEB-DL releases. This adapts the usual HD x265 quality preference to streaming, where preserving a usable result is more important than applying an unconditional codec penalty.
+
 ## Validation
 
 The repository includes automated validation for the profile, Define Library, Vidhin synchronization and Anime tier integrity.

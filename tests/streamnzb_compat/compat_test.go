@@ -30,20 +30,29 @@ type FixtureFile struct {
 }
 
 type RuleFixture struct {
-	Name           string        `json:"name"`
-	ProductionRule string        `json:"productionRule,omitempty"`
-	Scope          string        `json:"scope,omitempty"`
-	When           string        `json:"when"`
-	Points         int           `json:"points"`
-	Cases          []CaseFixture `json:"cases"`
+	Name           string                 `json:"name"`
+	ProductionRule string                 `json:"productionRule,omitempty"`
+	Scope          string                 `json:"scope,omitempty"`
+	When           string                 `json:"when"`
+	Action         string                 `json:"action,omitempty"`
+	Points         int                    `json:"points"`
+	Cases          []CaseFixture          `json:"cases"`
+	AggregateCases []AggregateCaseFixture `json:"aggregateCases,omitempty"`
+}
+
+type AggregateCaseFixture struct {
+	Name       string        `json:"name"`
+	Candidates []CaseFixture `json:"candidates"`
 }
 
 type CaseFixture struct {
-	Name     string      `json:"name"`
-	Release  string      `json:"release"`
-	Kind     string      `json:"kind"`
-	Anime    bool        `json:"anime"`
-	Expected Expectation `json:"expected"`
+	Name             string      `json:"name"`
+	Release          string      `json:"release"`
+	Kind             string      `json:"kind"`
+	Anime            bool        `json:"anime"`
+	Library          bool        `json:"library,omitempty"`
+	IndexerDataKnown bool        `json:"indexerDataKnown,omitempty"`
+	Expected         Expectation `json:"expected"`
 }
 
 type Expectation struct {
@@ -51,6 +60,7 @@ type Expectation struct {
 	TraitsExclude []string `json:"traitsExclude,omitempty"`
 	BitDepth      *int     `json:"bitDepth,omitempty"`
 	Match         bool     `json:"match"`
+	Rejected      bool     `json:"rejected,omitempty"`
 }
 
 type profilePayload struct {
@@ -251,7 +261,8 @@ func loadDefineLibrary(t *testing.T) []config.RuleConfig {
 func buildEnv(c CaseFixture) rules.Env {
 	cand := triage.Candidate{
 		Release: &release.Release{
-			Title: c.Release,
+			Title:     c.Release,
+			IsLibrary: c.Library,
 		},
 	}
 
@@ -259,8 +270,9 @@ func buildEnv(c CaseFixture) rules.Env {
 		cand,
 		jhin.Parse(c.Release),
 		rules.Context{
-			Kind:    c.Kind,
-			IsAnime: c.Anime,
+			Kind:             c.Kind,
+			IsAnime:          c.Anime,
+			IndexerDataKnown: c.IndexerDataKnown,
 		},
 	)
 }
@@ -357,6 +369,123 @@ func runCases(
 	}
 }
 
+func ruleRejected(out rules.Outcome, name string) bool {
+	for _, rejection := range out.Rejections {
+		if strings.Contains(rejection, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func runAggregateCases(
+	t *testing.T,
+	rf RuleFixture,
+	cfg config.RuleConfig,
+	library ...config.RuleConfig,
+) {
+	t.Helper()
+
+	if len(rf.AggregateCases) == 0 {
+		return
+	}
+
+	set, err := rules.Compile(
+		[]config.RuleConfig{cfg},
+		library...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"StreamNZB rejected aggregate rule %q:\ncondition: %s\nerror: %v",
+			cfg.Name,
+			cfg.When,
+			err,
+		)
+	}
+
+	for _, ac := range rf.AggregateCases {
+		ac := ac
+
+		t.Run(ac.Name, func(t *testing.T) {
+			if len(ac.Candidates) == 0 {
+				t.Fatal("aggregate fixture contains no candidates")
+			}
+
+			envs := make([]rules.Env, len(ac.Candidates))
+
+			for i, cf := range ac.Candidates {
+				envs[i] = buildEnv(cf)
+			}
+
+			state := set.ComputeAggregates(envs)
+			if state == nil {
+				t.Fatal("ComputeAggregates returned nil state")
+			}
+
+			for i, cf := range ac.Candidates {
+				state.Inject(&envs[i])
+
+				out := set.Evaluate(envs[i], cf.Kind)
+
+				var got bool
+				var want bool
+				var outcome string
+
+				if cfg.EffectiveAction() == config.RuleActionReject {
+					got = ruleRejected(out, cfg.Name)
+					want = cf.Expected.Rejected
+					outcome = "rejected"
+				} else {
+					got = ruleMatched(out, cfg.Name)
+					want = cf.Expected.Match
+					outcome = "matched"
+				}
+
+				if got != want {
+					_, reports := set.ReportAggregates(envs)
+
+					t.Errorf(
+						"aggregate rule %s = %v, want %v\n"+
+							"case: %s\n"+
+							"release: %s\n"+
+							"kind: %s\n"+
+							"anime: %v\n"+
+							"library: %v\n"+
+							"condition: %s\n"+
+							"resolution: %s\n"+
+							"codec: %s\n"+
+							"hdr: %v\n"+
+							"traits: %v\n"+
+							"points: %d\n"+
+							"matched rules: %+v\n"+
+							"rejections: %+v\n"+
+							"skipped: %+v\n"+
+							"aggregate reports: %+v",
+						outcome,
+						got,
+						want,
+						ac.Name,
+						cf.Release,
+						cf.Kind,
+						cf.Anime,
+						envs[i].Library,
+						cfg.When,
+						envs[i].Resolution,
+						envs[i].Parsed.Codec,
+						envs[i].HDR,
+						envs[i].Traits,
+						out.Points,
+						out.Matched,
+						out.Rejections,
+						out.Skipped,
+						reports,
+					)
+				}
+			}
+		})
+	}
+}
+
 func TestProfileSchemaCompatibility(t *testing.T) {
 	if err := validateProfileSchema(expectedProfileSchema); err != nil {
 		t.Fatalf(
@@ -391,11 +520,19 @@ func TestCompatibilityFixtures(t *testing.T) {
 				Name:   rf.Name,
 				Scope:  rf.Scope,
 				When:   rf.When,
+				Action: rf.Action,
 				Points: rf.Points,
 			}
 
 			t.Run("fixture", func(t *testing.T) {
 				runCases(
+					t,
+					rf,
+					fixtureRule,
+					defineLibrary...,
+				)
+
+				runAggregateCases(
 					t,
 					rf,
 					fixtureRule,
@@ -444,6 +581,13 @@ func TestCompatibilityFixtures(t *testing.T) {
 
 			t.Run("production", func(t *testing.T) {
 				runCases(
+					t,
+					rf,
+					productionRule,
+					defineLibrary...,
+				)
+
+				runAggregateCases(
 					t,
 					rf,
 					productionRule,

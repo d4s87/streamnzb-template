@@ -12,6 +12,7 @@ The profile is designed around:
 - Vidhin-backed Anime LQ filtering with SeaDex Best / Alternative exemptions
 - Crunchyroll and HIDIVE detection for Anime WEB releases
 - Anime 10-bit / Hi10P detection with formatter labeling
+- Anime Uncensored preference with formatter labeling
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
@@ -132,6 +133,10 @@ Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` pen
 Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an additional `Hi10P` release-name fallback for common Anime naming conventions. The rule is informational and scores `0` points, so it does not alter release ranking.
 
 The formatter displays matching releases as `₁₀ʙɪᴛ`.
+
+Anime releases explicitly marked as `Uncensored`, `Uncut`, `Unrated`, or with an `AT-X` source variant receive a small `+10` preference. The rule is intentionally Anime-only and acts as a tie-breaking preference rather than replacing the release-group tier hierarchy. Because most Anime BluRay releases are not necessarily labeled as uncensored in their release names, the rule should be interpreted as detecting an explicit uncensored-related marker rather than proving whether every release is censored or uncensored.
+
+The formatter normalizes matching releases to `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ`.
 
 `LazyRemux` and `UltraRemux` require a narrow profile-side exception because StreamNZB may interpret `Remux` in their release-group names as the `remux` trait. They remain classified by the Define Library as their corresponding Anime BluRay tiers.
 

@@ -165,6 +165,230 @@
           }
         }
       ]
+    },
+    {
+      "name": "Uncensored",
+      "when": "isAnime and releaseName matches \"(?i)\\\\b(?:Uncut|Unrated|Uncensored|AT[-_. ]?X)\\\\b\"",
+      "points": 10,
+      "cases": [
+        {
+          "name": "uncensored",
+          "release": "Anime.Show.S01E01.Uncensored.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uncensored uppercase",
+          "release": "Anime.Show.S01E01.UNCENSORED.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uncut",
+          "release": "Anime.Show.S01E01.Uncut.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "unrated",
+          "release": "Anime.Show.S01E01.Unrated.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "AT-X hyphen",
+          "release": "Anime.Show.S01E01.AT-X.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "AT-X dot",
+          "release": "Anime.Show.S01E01.AT.X.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "AT-X underscore",
+          "release": "Anime.Show.S01E01.AT_X.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "AT-X space",
+          "release": "Anime Show S01E01 AT X 1080p WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uncensored bracketed",
+          "release": "Anime.Show.S01E01.[Uncensored].1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uncut bracketed",
+          "release": "Anime.Show.S01E01.[Uncut].1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "unrated bracketed",
+          "release": "Anime.Show.S01E01.[Unrated].1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "AT-X bracketed",
+          "release": "Anime.Show.S01E01.[AT-X].1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "plain anime negative",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "censored negative",
+          "release": "Anime.Show.S01E01.Censored.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "cut negative",
+          "release": "Anime.Show.S01E01.Cut.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "rated negative",
+          "release": "Anime.Show.S01E01.Rated.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "ATXtra false positive",
+          "release": "Anime.Show.S01E01.ATXtra.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "XAT false positive",
+          "release": "Anime.Show.S01E01.XAT.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "uncensored group false positive",
+          "release": "Anime.Show.S01E01.UncensoredGroup.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "not uncensored false positive",
+          "release": "Anime.Show.S01E01.NotUncensored.1080p.WEB-DL",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime uncensored",
+          "release": "Regular.Show.S01E01.Uncensored.1080p.WEB-DL",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime AT-X",
+          "release": "Regular.Show.S01E01.AT-X.1080p.WEB-DL",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime unrated movie",
+          "release": "Movie.Name.2026.Unrated.1080p.BluRay",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie uncensored",
+          "release": "Anime.Movie.2026.Uncensored.1080p.BluRay",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ],
+      "productionRule": "Uncensored"
     }
   ]
 }

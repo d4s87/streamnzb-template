@@ -466,6 +466,22 @@
       "mode": "raw_release_name",
       "anime_lq": true
     },
+    "Movies Bad Dual Groups": {
+      "sources": [
+        "Radarr Bad Dual Groups"
+      ],
+      "scope": "movie",
+      "field": "group",
+      "mode": "raw_regex"
+    },
+    "Shows Bad Dual Groups": {
+      "sources": [
+        "Sonarr Bad Dual Groups"
+      ],
+      "scope": "series",
+      "field": "group",
+      "mode": "raw_regex"
+    },
     "Movies LQ Groups": {
       "sources": [
         "LQ (Radarr)"

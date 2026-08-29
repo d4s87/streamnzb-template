@@ -437,16 +437,16 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 87:
+if len(rules) != 89:
     raise AssertionError(
-        f"Expected 87 profile rules, found {len(rules)}"
+        f"Expected 89 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
 
-if len(defines) != 50:
+if len(defines) != 52:
     raise AssertionError(
-        f"Expected 50 generated Defines, found {len(defines)}"
+        f"Expected 52 generated Defines, found {len(defines)}"
     )
 
 dependencies = extract_matched_dependencies(profile)

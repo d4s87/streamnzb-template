@@ -389,6 +389,157 @@
         }
       ],
       "productionRule": "Uncensored"
+    },
+    {
+      "name": "Movie Bad Dual Penalty",
+      "when": "matched(\"Movies Bad Dual Groups\")",
+      "points": -10000,
+      "cases": [
+        {
+          "name": "movie Bad Dual group",
+          "release": "Example.Movie.2026.1080p.BluRay-BAT",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Radarr-only MGE",
+          "release": "Example.Movie.2026.1080p.BluRay-MGE",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Radarr-only ONLYMOViE",
+          "release": "Example.Movie.2026.1080p.BluRay-ONLYMOViE",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie alfaHD wildcard family",
+          "release": "Example.Movie.2026.1080p.BluRay-alfaHD123",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Sonarr-only BiOMA negative",
+          "release": "Example.Movie.2026.1080p.BluRay-BiOMA",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie normal group negative",
+          "release": "Example.Movie.2026.1080p.BluRay-FraMeSToR",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "series group must not trigger movie rule",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-BAT",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ],
+      "productionRule": "Movie Bad Dual Penalty"
+    },
+    {
+      "name": "Show Bad Dual Penalty",
+      "when": "not isAnime and matched(\"Shows Bad Dual Groups\")",
+      "points": -10000,
+      "cases": [
+        {
+          "name": "show Bad Dual group",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-BAT",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show Sonarr-only BiOMA",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-BiOMA",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show alfaHD wildcard family",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-alfaHD123",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show Radarr-only MGE negative",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-MGE",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "show normal group negative",
+          "release": "Example.Show.S01E01.1080p.WEB-DL-NTb",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Anime show BAT excluded",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL-BAT",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Anime show BiOMA excluded",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL-BiOMA",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie must not trigger show rule",
+          "release": "Example.Movie.2026.1080p.BluRay-BAT",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ],
+      "productionRule": "Show Bad Dual Penalty"
     }
   ]
 }

@@ -226,9 +226,9 @@ def lq_pattern_terms(pattern):
                 terms.append(term)
     return dedupe_casefold(terms),case_sensitive
 
-def raw_release_name_pattern(pattern):
+def raw_regex_pattern(pattern):
     """
-    Preserve a Vidhin regex as a StreamNZB releaseName regex.
+    Preserve a Vidhin regex for direct use by StreamNZB.
 
     The surrounding JavaScript-style /.../flags delimiters are removed.
     Case-insensitive upstream regexes are represented with an inline (?i)
@@ -239,7 +239,7 @@ def raw_release_name_pattern(pattern):
     unsupported = set(flags) - {"i"}
     if unsupported:
         raise ValueError(
-            f"Unsupported raw release-name regex flags "
+            f"Unsupported raw regex flags "
             f"{''.join(sorted(unsupported))!r}: {pattern}"
         )
 
@@ -247,6 +247,11 @@ def raw_release_name_pattern(pattern):
         body = "(?i)" + body
 
     return body
+
+
+def raw_release_name_pattern(pattern):
+    """Backward-compatible wrapper for existing Anime LQ generation."""
+    return raw_regex_pattern(pattern)
 
 def target_cfgs(mapping):
     tg=mapping.get("targets")
@@ -353,6 +358,13 @@ def resolve(mapping,upstream):
                         "pattern":pat,
                         "tokens":[],
                         "raw_release_name_pattern":raw_release_name_pattern(pat),
+                    })
+                elif mode=="raw_regex":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":[],
+                        "raw_regex_pattern":raw_regex_pattern(pat),
                     })
                 else:
                     recs.append({
@@ -528,6 +540,35 @@ def render_raw_release_name_condition(entry):
 
     return " or ".join(conditions)
 
+def render_raw_regex_condition(entry):
+    conditions=[]
+
+    field=entry.get("field")
+
+    if field not in {"group","releaseName"}:
+        raise ValueError(
+            f"raw_regex Define uses unsupported field: {field!r}"
+        )
+
+    for rec in entry.get("records",[]):
+        pattern=rec.get("raw_regex_pattern")
+
+        if not pattern:
+            continue
+
+        escaped=pattern.replace('"','\\\"')
+        conditions.append(
+            f'{field} matches "{escaped}"'
+        )
+
+    if not conditions:
+        raise ValueError(
+            "raw_regex Define contains no usable regex records"
+        )
+
+    return " or ".join(conditions)
+
+
 def render(current,mapping):
     current=apply_web_precedence(current,mapping)
     lines=["# Generated from Vidhin05/Releases-Regex.",
@@ -538,6 +579,8 @@ def render(current,mapping):
             cond=render_lq_condition(e)
         elif e.get("mode")=="raw_release_name":
             cond=render_raw_release_name_condition(e)
+        elif e.get("mode")=="raw_regex":
+            cond=render_raw_regex_condition(e)
         else:
             body="|".join(e["effective_tokens"]).replace('"','\\"')
             field=e["field"]
@@ -724,6 +767,11 @@ def report(old,new,mapping):
             or new_mode=="raw_release_name"
         )
 
+        is_raw_regex=(
+            old_mode=="raw_regex"
+            or new_mode=="raw_regex"
+        )
+
         if metadata_changes:
             lines += [
                 "**Generated metadata changed**",
@@ -738,6 +786,42 @@ def report(old,new,mapping):
                 )
 
             lines.append("")
+
+        if is_raw_regex:
+            if not old_entry and new_entry:
+                lines += [
+                    "**Raw regex added**",
+                    "",
+                ]
+            elif old_entry and not new_entry:
+                lines += [
+                    "**Raw regex removed**",
+                    "",
+                ]
+            elif raw:
+                lines += [
+                    "**Raw regex changed**",
+                    "",
+                ]
+
+            sources=sorted({
+                r.get("source")
+                for r in new_entry.get("records",[])
+                if r.get("source")
+            } | {
+                r.get("source")
+                for r in old_entry.get("records",[])
+                if r.get("source")
+            })
+
+            if sources:
+                lines.append(
+                    "- Source: "
+                    + ", ".join(f"`{source}`" for source in sources)
+                )
+                lines.append("")
+
+            continue
 
         if is_raw_release_name:
             if not old_entry and new_entry:

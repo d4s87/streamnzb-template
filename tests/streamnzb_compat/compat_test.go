@@ -141,6 +141,90 @@ func findProductionRule(
 	return found[0]
 }
 
+func loadDefineLibrary(t *testing.T) []config.RuleConfig {
+	t.Helper()
+
+	data, err := os.ReadFile("../../generated/streamnzb-defines.txt")
+	if err != nil {
+		t.Fatalf("read generated Define Library: %v", err)
+	}
+
+	var library []config.RuleConfig
+
+	for lineNumber, rawLine := range strings.Split(string(data), "\n") {
+		line := strings.TrimSpace(rawLine)
+
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		const separator = ": define if "
+		idx := strings.Index(line, separator)
+
+		if idx < 1 {
+			t.Fatalf(
+				"invalid generated Define syntax on line %d: %q",
+				lineNumber+1,
+				rawLine,
+			)
+		}
+
+		label := strings.TrimSpace(line[:idx])
+		when := strings.TrimSpace(line[idx+len(separator):])
+
+		if when == "" {
+			t.Fatalf(
+				"generated Define has empty condition on line %d: %q",
+				lineNumber+1,
+				rawLine,
+			)
+		}
+
+		name := label
+		scope := ""
+
+		if strings.HasSuffix(label, "]") {
+			open := strings.LastIndex(label, " [")
+
+			if open < 1 {
+				t.Fatalf(
+					"invalid generated Define scope on line %d: %q",
+					lineNumber+1,
+					rawLine,
+				)
+			}
+
+			name = strings.TrimSpace(label[:open])
+			scope = strings.TrimSpace(
+				label[open+2 : len(label)-1],
+			)
+		}
+
+		if name == "" {
+			t.Fatalf(
+				"generated Define has empty name on line %d",
+				lineNumber+1,
+			)
+		}
+
+		library = append(
+			library,
+			config.RuleConfig{
+				Name:   name,
+				Scope:  scope,
+				When:   when,
+				Action: config.RuleActionDefine,
+			},
+		)
+	}
+
+	if len(library) == 0 {
+		t.Fatal("generated Define Library contains no definitions")
+	}
+
+	return library
+}
+
 func buildEnv(c CaseFixture) rules.Env {
 	cand := triage.Candidate{
 		Release: &release.Release{
@@ -172,10 +256,14 @@ func runCases(
 	t *testing.T,
 	rf RuleFixture,
 	cfg config.RuleConfig,
+	library ...config.RuleConfig,
 ) {
 	t.Helper()
 
-	set, err := rules.Compile([]config.RuleConfig{cfg})
+	set, err := rules.Compile(
+		[]config.RuleConfig{cfg},
+		library...,
+	)
 	if err != nil {
 		t.Fatalf(
 			"StreamNZB rejected rule %q:\ncondition: %s\nerror: %v",
@@ -249,6 +337,7 @@ func runCases(
 func TestCompatibilityFixtures(t *testing.T) {
 	fixtures := loadFixtures(t)
 	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
 
 	for _, rf := range fixtures.Rules {
 		rf := rf
@@ -263,7 +352,12 @@ func TestCompatibilityFixtures(t *testing.T) {
 			}
 
 			t.Run("fixture", func(t *testing.T) {
-				runCases(t, rf, fixtureRule)
+				runCases(
+					t,
+					rf,
+					fixtureRule,
+					defineLibrary...,
+				)
 			})
 
 			if rf.ProductionRule == "" {
@@ -297,7 +391,12 @@ func TestCompatibilityFixtures(t *testing.T) {
 			}
 
 			t.Run("production", func(t *testing.T) {
-				runCases(t, rf, productionRule)
+				runCases(
+					t,
+					rf,
+					productionRule,
+					defineLibrary...,
+				)
 			})
 		})
 	}

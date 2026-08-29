@@ -38,10 +38,17 @@ Changes in this section are under development and are not part of the latest sta
 - Added `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ` formatter labeling for matching Anime releases.
 - Added StreamNZB compatibility fixtures covering Uncensored marker variants, boundaries, false positives, Anime scope, and Anime Movies.
 - Added production-profile regression coverage for the published Uncensored rule.
+- Added separate Vidhin-backed **Movie Bad Dual Groups** and **Show Bad Dual Groups** classifications.
+- Added **Movie Bad Dual Penalty** and **Show Bad Dual Penalty** rules with a `-10,000` score.
+- Added raw upstream group-regex synchronization so Bad Dual expressions retain regex-specific semantics instead of being flattened into literal release-group tokens.
+- Added compatibility fixtures for Movie/Show Bad Dual matching, Radarr/Sonarr-specific groups, raw-regex behavior, content scope, negative cases, and Anime Show exclusion.
+- Added Define-Library-aware compatibility testing so `matched()`-based rules can be exercised against the generated shared Defines and exact production rules.
 
 ### Changed
 
-- Increased the production profile from **86 to 87 rules**.
+- Increased the production profile from **86 to 89 rules** across the current Unreleased changes.
+- Expanded the generated Define Library from **50 to 52** reusable classifications.
+- Extended the StreamNZB compatibility harness to load the generated Define Library when compiling rules that use `matched()`.
 
 ### Fixed
 

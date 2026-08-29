@@ -13,6 +13,7 @@ The profile is designed around:
 - Crunchyroll and HIDIVE detection for Anime WEB releases
 - Anime 10-bit / Hi10P detection with formatter labeling
 - Anime Uncensored preference with formatter labeling
+- Vidhin-backed Movie and Show Bad Dual release-group penalties
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
@@ -96,7 +97,7 @@ Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 50 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications used by the profile.
+The library currently provides 52 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications and separate Movie/Show Bad Dual classifications used by the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -105,6 +106,10 @@ Anime classifications follow the full Vidhin hierarchy:
 Separate Anime Movie and Anime Show Defines are provided for every tier.
 
 Anime LQ matching uses Vidhin's upstream release-name regex directly rather than converting it into release-group tokens, preserving the upstream matching semantics.
+
+Bad Dual classifications are synchronized separately from Vidhin's Radarr and Sonarr Bad Dual group definitions. Their upstream group regexes are preserved directly rather than flattened into literal release-group tokens, including regex-specific matching semantics.
+
+The Define Library performs classification only. Matching non-Anime Movie and Show releases receive a `-10,000` profile penalty. Anime Shows are deliberately excluded from the Show Bad Dual penalty; Anime Movies are outside the Movie-scoped Bad Dual classification.
 
 The definitions are synchronized with [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex) through GitHub Actions. Upstream changes are reviewed through a pull request before becoming part of the library.
 
@@ -211,6 +216,8 @@ The repository includes automated validation for the profile, Define Library, Vi
 For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
 
 New or changed compatibility-sensitive rules can first be developed as fixtures containing representative positive and negative release names. Once a rule is published, the fixture can reference the production rule by name. The harness then decodes `profile.txt`, locates the exact published rule, verifies that its expression and score have not drifted from the tested fixture, and executes the same cases against the production rule.
+
+The harness also loads the generated Define Library when compiling compatibility rules. This allows rules using `matched()` to be tested end-to-end against the same shared Define conditions used by the production profile, including release-group classification, Define scope, profile policy and final score behavior.
 
 This approach provides two layers of behavioral validation:
 

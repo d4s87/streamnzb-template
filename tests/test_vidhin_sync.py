@@ -101,6 +101,227 @@ assert 'group == "iVy"' in lib
 assert 'releaseName matches "(?i)(?:^|[-._ ])Feranki1980$"' in lib
 assert len(lq)==2
 
+# Bad Dual Groups must preserve Vidhin's raw group-regex semantics.
+#
+# Unlike the tier regexes, these upstream patterns are simple group regexes
+# rather than lookahead classifiers. They must therefore remain raw regexes
+# instead of being flattened through semantic_tokens().
+bad_dual_upstream=[
+    {
+        "name":"Radarr Bad Dual Groups",
+        "pattern":(
+            r"/\b(alfaHD.*|BAT|C\.A\.A|MGE|ONLYMOViE|TM|TvR|ZNM)\b/i"
+        ),
+        "score":0
+    },
+    {
+        "name":"Sonarr Bad Dual Groups",
+        "pattern":(
+            r"/\b(alfaHD.*|BAT|BiOMA|C\.A\.A|ZNM)\b/i"
+        ),
+        "score":0
+    }
+]
+
+bad_dual_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Movies Bad Dual Groups":{
+            "sources":["Radarr Bad Dual Groups"],
+            "scope":"movie",
+            "field":"group",
+            "mode":"raw_regex",
+        },
+        "Shows Bad Dual Groups":{
+            "sources":["Sonarr Bad Dual Groups"],
+            "scope":"series",
+            "field":"group",
+            "mode":"raw_regex",
+        },
+    }
+}
+
+bad_dual=m.resolve(
+    bad_dual_mapping,
+    bad_dual_upstream,
+)
+
+assert len(bad_dual)==2
+
+movie_bad_dual=bad_dual["Movies Bad Dual Groups"]
+show_bad_dual=bad_dual["Shows Bad Dual Groups"]
+
+assert movie_bad_dual["scope"]=="movie"
+assert movie_bad_dual["field"]=="group"
+assert movie_bad_dual["mode"]=="raw_regex"
+assert movie_bad_dual["tokens"]==[]
+
+assert show_bad_dual["scope"]=="series"
+assert show_bad_dual["field"]=="group"
+assert show_bad_dual["mode"]=="raw_regex"
+assert show_bad_dual["tokens"]==[]
+
+movie_pattern=movie_bad_dual["records"][0]["raw_regex_pattern"]
+show_pattern=show_bad_dual["records"][0]["raw_regex_pattern"]
+
+assert movie_pattern.startswith(r"(?i)\b(")
+assert show_pattern.startswith(r"(?i)\b(")
+
+# Preserve regex semantics rather than flattening group names.
+assert "alfaHD.*" in movie_pattern
+assert r"C\.A\.A" in movie_pattern
+assert "alfaHD.*" in show_pattern
+assert r"C\.A\.A" in show_pattern
+
+# Radarr/Sonarr differences must remain intact.
+assert "MGE" in movie_pattern
+assert "ONLYMOViE" in movie_pattern
+assert "TM" in movie_pattern
+assert "TvR" in movie_pattern
+assert "BiOMA" not in movie_pattern
+
+assert "BiOMA" in show_pattern
+assert "MGE" not in show_pattern
+assert "ONLYMOViE" not in show_pattern
+assert "TM" not in show_pattern
+assert "TvR" not in show_pattern
+
+bad_dual_library=m.render(
+    bad_dual,
+    bad_dual_mapping,
+)
+
+assert (
+    'Movies Bad Dual Groups [movie]: define if group matches '
+    in bad_dual_library
+)
+assert (
+    'Shows Bad Dual Groups [series]: define if group matches '
+    in bad_dual_library
+)
+
+assert r"(?i)\b(alfaHD.*|BAT" in bad_dual_library
+assert r"C\.A\.A" in bad_dual_library
+
+# Missing upstream sources must fail closed.
+missing_bad_dual_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Missing Bad Dual Groups":{
+            "sources":["Missing Bad Dual Source"],
+            "scope":"movie",
+            "field":"group",
+            "mode":"raw_regex",
+        }
+    }
+}
+
+try:
+    m.resolve(
+        missing_bad_dual_mapping,
+        bad_dual_upstream,
+    )
+except RuntimeError as exc:
+    assert "Missing Bad Dual Source" in str(exc)
+else:
+    raise AssertionError(
+        "Missing Bad Dual upstream source was not rejected"
+    )
+
+# Unsupported JavaScript regex flags must fail closed.
+try:
+    m.raw_regex_pattern(r"/\bBAT\b/g")
+except ValueError as exc:
+    assert "Unsupported raw regex flags" in str(exc)
+else:
+    raise AssertionError(
+        "Unsupported raw-regex flag was not rejected"
+    )
+
+# Existing raw_release_name behavior remains backward-compatible.
+assert (
+    m.raw_release_name_pattern(r"/\bExample\b/i")
+    ==
+    m.raw_regex_pattern(r"/\bExample\b/i")
+)
+
+
+# raw_regex reporting must distinguish additions, changes and removals.
+raw_regex_report_mapping={
+    "targets":{
+        "Bad Dual":{
+            "sources":["Radarr Bad Dual Groups"],
+            "scope":"movie",
+            "field":"group",
+            "mode":"raw_regex",
+        }
+    }
+}
+
+raw_regex_v1={
+    "Bad Dual":{
+        "sources":["Radarr Bad Dual Groups"],
+        "scope":"movie",
+        "field":"group",
+        "mode":"raw_regex",
+        "records":[{
+            "source":"Radarr Bad Dual Groups",
+            "pattern":r"/\b(BAT|ZNM)\b/i",
+            "tokens":[],
+            "raw_regex_pattern":r"(?i)\b(BAT|ZNM)\b",
+        }],
+        "tokens":[],
+    }
+}
+
+raw_regex_v2={
+    "Bad Dual":{
+        "sources":["Radarr Bad Dual Groups"],
+        "scope":"movie",
+        "field":"group",
+        "mode":"raw_regex",
+        "records":[{
+            "source":"Radarr Bad Dual Groups",
+            "pattern":r"/\b(BAT|ZNM|MGE)\b/i",
+            "tokens":[],
+            "raw_regex_pattern":r"(?i)\b(BAT|ZNM|MGE)\b",
+        }],
+        "tokens":[],
+    }
+}
+
+added_report,added_changed=m.report(
+    {},
+    raw_regex_v1,
+    raw_regex_report_mapping,
+)
+
+assert added_changed==1
+assert "**Raw regex added**" in added_report
+assert "Raw upstream regex changed, but the extracted release-group set did not." not in added_report
+
+changed_report,changed_changed=m.report(
+    raw_regex_v1,
+    raw_regex_v2,
+    raw_regex_report_mapping,
+)
+
+assert changed_changed==1
+assert "**Raw regex changed**" in changed_report
+assert "Raw upstream regex changed, but the extracted release-group set did not." not in changed_report
+
+removed_report,removed_changed=m.report(
+    raw_regex_v1,
+    {},
+    raw_regex_report_mapping,
+)
+
+assert removed_changed==1
+assert "**Raw regex removed**" in removed_report
+
+
 # Anime LQ must preserve Vidhin's full release-name regex semantics.
 anime_lq_upstream=[
     {

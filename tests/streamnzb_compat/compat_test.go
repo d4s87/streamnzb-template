@@ -28,6 +28,7 @@ type FixtureFile struct {
 type RuleFixture struct {
 	Name           string        `json:"name"`
 	ProductionRule string        `json:"productionRule,omitempty"`
+	Scope          string        `json:"scope,omitempty"`
 	When           string        `json:"when"`
 	Points         int           `json:"points"`
 	Cases          []CaseFixture `json:"cases"`
@@ -347,6 +348,7 @@ func TestCompatibilityFixtures(t *testing.T) {
 			// with the fixture.
 			fixtureRule := config.RuleConfig{
 				Name:   rf.Name,
+				Scope:  rf.Scope,
 				When:   rf.When,
 				Points: rf.Points,
 			}
@@ -387,6 +389,15 @@ func TestCompatibilityFixtures(t *testing.T) {
 					rf.ProductionRule,
 					productionRule.Points,
 					rf.Points,
+				)
+			}
+
+			if productionRule.Scope != rf.Scope {
+				t.Fatalf(
+					"production rule %q scope = %q, fixture expects %q",
+					rf.ProductionRule,
+					productionRule.Scope,
+					rf.Scope,
 				)
 			}
 

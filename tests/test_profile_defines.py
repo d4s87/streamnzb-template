@@ -339,6 +339,94 @@ def validate_anime_lq(
         )
 
 
+def validate_bad_dual(
+    rules: list[dict],
+    defines: dict[str, dict],
+) -> None:
+    """
+    Validate Bad Dual classification and production scoring scopes.
+
+    The generated Vidhin classifications and the profile scoring rules
+    must both remain explicitly content-scoped. A missing profile scope
+    appears as "All Content" in StreamNZB and is a regression.
+    """
+    expected = {
+        "Movie Bad Dual Penalty": {
+            "scope": "movie",
+            "define": "Movies Bad Dual Groups",
+            "define_scope": "movie",
+            "when": 'matched("Movies Bad Dual Groups")',
+        },
+        "Show Bad Dual Penalty": {
+            "scope": "series",
+            "define": "Shows Bad Dual Groups",
+            "define_scope": "series",
+            "when": (
+                'not isAnime and '
+                'matched("Shows Bad Dual Groups")'
+            ),
+        },
+    }
+
+    for rule_name, spec in expected.items():
+        define_name = spec["define"]
+
+        if define_name not in defines:
+            raise AssertionError(
+                f"Required {define_name} Define is missing"
+            )
+
+        actual_define_scope = defines[define_name]["scope"]
+
+        if actual_define_scope != spec["define_scope"]:
+            raise AssertionError(
+                f"{define_name} must use "
+                f"[{spec['define_scope']}] scope; "
+                f"found [{actual_define_scope}]"
+            )
+
+        condition = defines[define_name]["condition"]
+
+        if not condition.startswith('group matches "'):
+            raise AssertionError(
+                f"{define_name} must match against parsed group"
+            )
+
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == rule_name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {rule_name} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+
+        actual_scope = rule.get("scope")
+
+        if actual_scope != spec["scope"]:
+            raise AssertionError(
+                f"{rule_name} must use scope "
+                f"{spec['scope']!r}; found "
+                f"{actual_scope!r}. Missing scope would "
+                "appear as All Content in StreamNZB."
+            )
+
+        if rule.get("points") != -10000:
+            raise AssertionError(
+                f"{rule_name} must score -10000"
+            )
+
+        if rule.get("when") != spec["when"]:
+            raise AssertionError(
+                f"{rule_name} condition drifted: "
+                f"{rule.get('when')!r}"
+            )
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -474,6 +562,7 @@ if missing_dependencies:
 
 validate_required_anime_structure(defines)
 validate_anime_lq(rules, defines)
+validate_bad_dual(rules, defines)
 validate_regressions(defines)
 
 print(

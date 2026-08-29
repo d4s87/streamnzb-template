@@ -52,6 +52,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Fixed
 
+- Fixed the Movie and Show Bad Dual penalty rules to use explicit `movie` and `series` scopes instead of appearing as **All Content** in StreamNZB.
+
 ## V4.1
 
 ### Added

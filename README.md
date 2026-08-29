@@ -11,6 +11,7 @@ The profile is designed around:
 - Full Anime WEB T1–T6 and BluRay T1–T8 release-group tiers
 - Vidhin-backed Anime LQ filtering with SeaDex Best / Alternative exemptions
 - Crunchyroll and HIDIVE detection for Anime WEB releases
+- Anime 10-bit / Hi10P detection with formatter labeling
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
@@ -128,6 +129,10 @@ BluRay release groups use the same T1–T6 scores, with the additional lower tie
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
+Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an additional `Hi10P` release-name fallback for common Anime naming conventions. The rule is informational and scores `0` points, so it does not alter release ranking.
+
+The formatter displays matching releases as `₁₀ʙɪᴛ`.
+
 `LazyRemux` and `UltraRemux` require a narrow profile-side exception because StreamNZB may interpret `Remux` in their release-group names as the `remux` trait. They remain classified by the Define Library as their corresponding Anime BluRay tiers.
 
 The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8 hierarchy. Known Anime release groups can therefore pass the 4K release-group trust check regardless of tier, while unknown 4K Anime groups remain filtered.
@@ -193,6 +198,23 @@ The general rule is:
 If you imported them by URL, use StreamNZB's **Refresh** action to check for updates. StreamNZB will show the proposed changes before anything is applied; updates are never applied automatically.
 
 GitHub's raw-file CDN may take a few minutes to reflect a newly published update.
+
+## Validation
+
+The repository includes automated validation for the profile, Define Library, Vidhin synchronization and Anime tier integrity.
+
+For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
+
+New or changed compatibility-sensitive rules can first be developed as fixtures containing representative positive and negative release names. Once a rule is published, the fixture can reference the production rule by name. The harness then decodes `profile.txt`, locates the exact published rule, verifies that its expression and score have not drifted from the tested fixture, and executes the same cases against the production rule.
+
+This approach provides two layers of behavioral validation:
+
+1. **Fixture validation** — verifies the intended rule against StreamNZB's real parser and rule engine.
+2. **Production regression validation** — verifies the exact rule shipped in `profile.txt` against the same cases.
+
+The compatibility harness is intentionally used selectively for rules where parsing, traits, regular expressions or other StreamNZB engine behavior can materially affect matching. It is not intended to duplicate every profile rule into a second configuration file.
+
+Validation runs automatically through GitHub Actions.
 
 ## Community
 

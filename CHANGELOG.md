@@ -6,7 +6,26 @@
 - **V2** — Major expansion and refinement of the monolithic profile.
 - **V3** — Introduced the shared linked Define Library architecture and Vidhin synchronization.
 - **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
-- **V4.1** — Added Vidhin-backed Anime LQ filtering with SeaDex Best and Alternative exemptions.
+- **V4.1** — Added Vidhin-backed Anime LQ filtering and subsequent Anime detection, formatter and compatibility-testing improvements.
+
+### Subsequent Improvements
+
+- Added Anime **10-bit** detection using StreamNZB's parsed bit depth.
+- Added a `Hi10P` fallback for Anime release names not identified as 10-bit by the parser.
+- Added `₁₀ʙɪᴛ` formatter labeling for detected Anime 10-bit releases.
+- Added `DUAL` formatter labeling for the existing Dual Audio scoring rule.
+- Expanded formatter tier labels to expose Anime WEB T4–T6 and BluRay T4–T8 while preserving the existing non-Anime T1–T3 display behavior.
+- Added Vidhin tier-movement reporting to identify release groups moving between upstream tiers.
+- Added a StreamNZB compatibility test harness using a pinned real StreamNZB engine.
+- Added production-profile regression testing so compatibility fixtures can be validated against the exact rule published in `profile.txt`.
+
+### Testing Approach
+
+Compatibility fixtures are intended for rules where StreamNZB parser or rule-engine behavior requires explicit behavioral validation. Fixtures contain representative positive and negative release names and are evaluated using the real StreamNZB engine.
+
+Published rules can be linked to their fixture through a production-rule reference. CI then verifies that the tested expression and score match the rule embedded in `profile.txt` and executes the same fixture cases against the production rule.
+
+This testing layer complements the existing profile, Define Library, Vidhin synchronization and Anime tier-integrity validation rather than duplicating every profile rule into fixtures.
 
 ## V4.1
 

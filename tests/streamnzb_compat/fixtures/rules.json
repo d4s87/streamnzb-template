@@ -2,6 +2,7 @@
   "rules": [
     {
       "name": "10bit",
+      "productionRule": "10bit",
       "when": "isAnime and (parsed.bitDepth == 10 or releaseName matches \"(?i)(?:^|[. _\\[\\]-])Hi10P(?:$|[. _\\[\\]-])\")",
       "points": 0,
       "cases": [

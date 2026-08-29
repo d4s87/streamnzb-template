@@ -30,6 +30,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25.6"
+          cache-dependency-path: tests/streamnzb_compat/go.sum
 
       - name: Validate profile and Define library
         run: python tests/test_profile_defines.py

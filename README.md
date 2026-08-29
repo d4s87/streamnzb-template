@@ -154,6 +154,34 @@ The Samsung QN90A does not support Dolby Vision, so the profile contains custom 
 
 If you use a different TV, Dolby Vision display, AVR, soundbar or other audio setup, review these rules and scores before importing the profile.
 
+## Personalizing the Profile Without Losing Updates
+
+The linked profile can be customized for your own hardware and preferences without maintaining a separate copy of DraCuLa's profile.
+
+The recommended approach is to **add your own scoring rules with unique names** instead of editing existing DraCuLa rules.
+
+For example, if your setup supports Dolby Vision or you want to prioritize high-quality audio, you can add personal rules such as:
+
+- `My DV Bonus`
+- `My HQ Audio Bonus`
+
+These local-only rules are preserved when the linked DraCuLa profile is refreshed, allowing your personal scoring preferences to remain layered on top of the upstream profile.
+
+> [!IMPORTANT]
+> Avoid modifying an existing DraCuLa rule if you want the change to survive future updates.
+>
+> StreamNZB merges linked-profile updates by rule name. If a rule has the same name as an upstream DraCuLa rule, the upstream version owns that rule and a future **Refresh** may replace your local edits.
+>
+> Rules you create yourself with **unique names** remain local and are preserved across profile refreshes.
+
+This makes it possible to keep using the canonical DraCuLa profile while adapting scoring to different TVs, AVRs, soundbars or personal preferences.
+
+For example, a Dolby Vision display can add a local positive DV scoring rule rather than changing DraCuLa's existing Samsung-specific DV handling. Likewise, users who prefer lossless or higher-quality audio can add their own audio bonus rule without maintaining a separate version of the complete profile.
+
+The general rule is:
+
+**Keep DraCuLa rules upstream-managed; add your preferences as uniquely named local rules.**
+
 ## Updating
 
 `profile.txt`, `formatter.txt` and `generated/streamnzb-defines.txt` on the `main` branch are the canonical versions.

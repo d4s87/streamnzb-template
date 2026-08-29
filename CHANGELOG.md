@@ -7,6 +7,7 @@
 - **V3** — Introduced the shared linked Define Library architecture and Vidhin synchronization.
 - **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
 - **V4.1** — Added Vidhin-backed Anime LQ filtering and subsequent Anime detection, formatter and compatibility-testing improvements.
+- **V4.2** — Added availability-aware HD x265 filtering, adaptive 1080p Remux preference, Anime Uncensored preference, Vidhin-backed Bad Dual penalties, and expanded compatibility validation.
 
 ### Subsequent Improvements
 
@@ -30,6 +31,14 @@ This testing layer complements the existing profile, Define Library, Vidhin sync
 ## Unreleased
 
 Changes in this section are under development and are not part of the latest stable release.
+
+### Added
+
+### Changed
+
+### Fixed
+
+## V4.2
 
 ### Added
 

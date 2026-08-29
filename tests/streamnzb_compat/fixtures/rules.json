@@ -1642,6 +1642,375 @@
       ],
       "action": "reject",
       "productionRule": "Adaptive HD x265"
+    },
+    {
+      "name": "1080p Remux Preference",
+      "when": "(kind == \"movie\" or kind == \"series\")\nand not isAnime\nand resolution == \"1080p\"\nand \"remux\" in traits\nand not library\nand count(\n  resolution == \"2160p\"\n  and \"webdl\" in traits\n  and not any(hdr, # == \"HDR\" or # == \"HDR10+\")\n) > 0\nand count(\n  resolution == \"2160p\"\n  and \"webdl\" in traits\n  and any(hdr, # == \"HDR\" or # == \"HDR10+\")\n) == 0",
+      "points": 50,
+      "aggregateCases": [
+        {
+          "name": "1080p Remux preferred over SDR 2160p WEB-DL",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "SDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "No preference without 2160p WEB-DL",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "1080p WEB-DL",
+              "release": "Movie.2026.1080p.WEB-DL.AVC.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "HDR 2160p WEB-DL suppresses preference",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "HDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.HDR.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "HDR10Plus 2160p WEB-DL suppresses preference",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "HDR10Plus 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.HDR10Plus.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dolby Vision only 2160p WEB-DL keeps Remux preference",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "DV 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.DV.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "HDR option suppresses preference even with SDR option",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "SDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "HDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.HDR.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "2160p Remux does not trigger preference",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "2160p Remux",
+              "release": "Movie.2026.2160p.BluRay.REMUX.HEVC.HDR.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anime excluded",
+          "candidates": [
+            {
+              "name": "Anime 1080p Remux",
+              "release": "Anime.Movie.2026.1080p.BluRay.REMUX.AVC.FLAC-GROUP",
+              "kind": "movie",
+              "anime": true,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "Anime SDR 2160p WEB-DL",
+              "release": "Anime.Movie.2026.2160p.WEB-DL.HEVC.AAC-GROUP",
+              "kind": "movie",
+              "anime": true,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Library Remux excluded",
+          "candidates": [
+            {
+              "name": "Library 1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              },
+              "library": true
+            },
+            {
+              "name": "SDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dolby Vision with HDR fallback suppresses preference",
+          "candidates": [
+            {
+              "name": "1080p Remux",
+              "release": "Movie.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "DV HDR 2160p WEB-DL",
+              "release": "Movie.2026.2160p.WEB-DL.HEVC.DV.HDR.DDP5.1-GROUP",
+              "kind": "movie",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show 1080p Remux preferred over SDR 2160p WEB-DL",
+          "candidates": [
+            {
+              "name": "Show 1080p Remux",
+              "release": "Show.S01E01.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "series",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "Show SDR 2160p WEB-DL",
+              "release": "Show.S01E01.2160p.WEB-DL.HEVC.DDP5.1-GROUP",
+              "kind": "series",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Show HDR 2160p WEB-DL suppresses preference",
+          "candidates": [
+            {
+              "name": "Show 1080p Remux",
+              "release": "Show.S01E01.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "series",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "Show HDR 2160p WEB-DL",
+              "release": "Show.S01E01.2160p.WEB-DL.HEVC.HDR.DDP5.1-GROUP",
+              "kind": "series",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anime Show excluded",
+          "candidates": [
+            {
+              "name": "Anime Show 1080p Remux",
+              "release": "Anime.Show.S01E01.1080p.BluRay.REMUX.AVC.FLAC-GROUP",
+              "kind": "series",
+              "anime": true,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "Anime Show SDR 2160p WEB-DL",
+              "release": "Anime.Show.S01E01.2160p.WEB-DL.HEVC.AAC-GROUP",
+              "kind": "series",
+              "anime": true,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Other content kind excluded",
+          "candidates": [
+            {
+              "name": "Other 1080p Remux",
+              "release": "Other.2026.1080p.BluRay.REMUX.AVC.DTS-HD.MA.5.1-GROUP",
+              "kind": "other",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "Other SDR 2160p WEB-DL",
+              "release": "Other.2026.2160p.WEB-DL.HEVC.DDP5.1-GROUP",
+              "kind": "other",
+              "anime": false,
+              "indexerDataKnown": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        }
+      ],
+      "productionRule": "1080p Remux Preference"
     }
   ]
 }

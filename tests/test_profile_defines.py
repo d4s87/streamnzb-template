@@ -503,6 +503,105 @@ def validate_adaptive_hd_x265(
         )
 
 
+def validate_1080p_remux_preference(rules):
+    matches = [
+        rule
+        for rule in rules
+        if rule.get("name") == "1080p Remux Preference"
+    ]
+
+    if len(matches) != 1:
+        raise AssertionError(
+            "Expected exactly one '1080p Remux Preference' rule, "
+            f"found {len(matches)}"
+        )
+
+    rule = matches[0]
+
+    if rule.get("points") != 50:
+        raise AssertionError(
+            "'1080p Remux Preference' must score exactly +50"
+        )
+
+    if "action" in rule:
+        raise AssertionError(
+            "'1080p Remux Preference' must remain a score rule "
+            "without an explicit action"
+        )
+
+    if "scope" in rule:
+        raise AssertionError(
+            "'1080p Remux Preference' must not have an explicit scope"
+        )
+
+    when = rule.get("when")
+
+    if not isinstance(when, str) or not when.strip():
+        raise AssertionError(
+            "'1080p Remux Preference' must have a non-empty condition"
+        )
+
+    required = [
+        '(kind == "movie" or kind == "series")',
+        "not isAnime",
+        'resolution == "1080p"',
+        '"remux" in traits',
+        "not library",
+        'resolution == "2160p"',
+        '"webdl" in traits',
+        '# == "HDR"',
+        '# == "HDR10+"',
+    ]
+
+    missing = [
+        fragment
+        for fragment in required
+        if fragment not in when
+    ]
+
+    if missing:
+        raise AssertionError(
+            "'1080p Remux Preference' condition is missing: "
+            + ", ".join(repr(item) for item in missing)
+        )
+
+    if when.count("count(") != 2:
+        raise AssertionError(
+            "'1080p Remux Preference' must contain exactly "
+            "two aggregate count() predicates"
+        )
+
+    if ") > 0" not in when:
+        raise AssertionError(
+            "'1080p Remux Preference' must require at least "
+            "one eligible 2160p WEB-DL"
+        )
+
+    if ") == 0" not in when:
+        raise AssertionError(
+            "'1080p Remux Preference' must suppress the bonus "
+            "when HDR/HDR10+ 2160p WEB-DL is available"
+        )
+
+    forbidden = [
+        "seadex.best",
+        "seadex.alternative",
+        '# == "DV"',
+    ]
+
+    present = [
+        fragment
+        for fragment in forbidden
+        if fragment in when
+    ]
+
+    if present:
+        raise AssertionError(
+            "'1080p Remux Preference' unexpectedly contains: "
+            + ", ".join(repr(item) for item in present)
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -601,9 +700,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 90:
+if len(rules) != 91:
     raise AssertionError(
-        f"Expected 90 profile rules, found {len(rules)}"
+        f"Expected 91 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -640,6 +739,7 @@ validate_required_anime_structure(defines)
 validate_anime_lq(rules, defines)
 validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
+validate_1080p_remux_preference(rules)
 validate_regressions(defines)
 
 print(

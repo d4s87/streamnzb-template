@@ -33,6 +33,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added an availability-aware **1080p Remux Preference** rule: non-Anime, non-Library 1080p Remuxes receive a `+50` bonus when SDR 2160p WEB-DL alternatives exist but no HDR/HDR10+ 2160p WEB-DL is available.
+- Added aggregate compatibility coverage for the 1080p Remux preference across Movies and Shows, including SDR 4K WEB-DL, HDR, HDR10+, Dolby Vision-only, Dolby Vision with HDR fallback, Anime, Library, 2160p Remux, and unsupported content-kind cases.
+- Added production-profile regression and structural validation for the published **1080p Remux Preference** rule.
 - Added availability-aware **Adaptive HD x265** filtering: non-Anime SDR 720p/1080p HEVC releases are rejected only when more than six suitable same-resolution AVC alternatives exist, while 2160p, HDR/Dolby Vision, Anime, Library, HEVC Remux, and AV1 results remain exempt.
 - Added an Anime-only **Uncensored** preference rule with a `+10` score.
 - Added detection for explicit `Uncensored`, `Uncut`, `Unrated`, and `AT-X` release-name markers.
@@ -48,7 +51,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changed
 
-- Increased the production profile from **86 to 89 rules** across the current Unreleased changes.
+- Increased the production profile from **86 to 91 rules** across the current Unreleased changes.
 - Expanded the generated Define Library from **50 to 52** reusable classifications.
 - Extended the StreamNZB compatibility harness to load the generated Define Library when compiling rules that use `matched()`.
 

@@ -17,6 +17,7 @@ The profile is designed around:
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
+- Adaptive 1080p Remux preference over SDR 4K WEB-DL
 - NZB availability and library scoring
 - Same-release failover
 - Grouped resolution + quality result limits
@@ -216,6 +217,16 @@ The profile uses an availability-aware **Adaptive HD x265** Reject rule for non-
 The rule deliberately keeps HEVC when alternatives are scarce. It also exempts **2160p**, **HDR/HDR10+/Dolby Vision**, **Anime**, **Library results**, and **HEVC Remuxes**. AV1 is unaffected.
 
 For the alternative count, 1080p considers same-resolution AVC Remux, BluRay, and WEB-DL releases; 720p considers same-resolution AVC BluRay and WEB-DL releases. This adapts the usual HD x265 quality preference to streaming, where preserving a usable result is more important than applying an unconditional codec penalty.
+
+### Adaptive 1080p Remux preference
+
+The profile includes an availability-aware **1080p Remux Preference** rule for non-Anime Movies and Shows. A non-Library 1080p Remux receives a small `+50` preference when the available 4K alternatives are limited to SDR 2160p WEB-DLs.
+
+The bonus is deliberately conditional rather than making 1080p Remux universally outrank 4K. If any 2160p WEB-DL with **HDR or HDR10+** is available, the preference is suppressed so the higher-resolution HDR option can retain its normal ranking advantage.
+
+A Dolby Vision-only 2160p WEB-DL does not suppress the bonus because the default profile is tuned for a Samsung QN90A, which does not support Dolby Vision. A Dolby Vision release that also exposes an HDR fallback does suppress it.
+
+The rule does not apply to Anime, Library results, 2160p Remuxes, or other content kinds. At `+50`, it acts as a targeted cross-resolution tie-breaker rather than overriding the profile's release-group, SeaDex, availability, or other major quality scoring.
 
 ## Validation
 

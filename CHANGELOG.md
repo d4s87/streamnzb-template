@@ -27,6 +27,16 @@ Published rules can be linked to their fixture through a production-rule referen
 
 This testing layer complements the existing profile, Define Library, Vidhin synchronization and Anime tier-integrity validation rather than duplicating every profile rule into fixtures.
 
+## Unreleased
+
+Changes in this section are under development and are not part of the latest stable release.
+
+### Added
+
+### Changed
+
+### Fixed
+
 ## V4.1
 
 ### Added

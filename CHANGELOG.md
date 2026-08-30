@@ -50,6 +50,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changed
 
+- Replaced the unconditional Unknown Resolution rejection with adaptive **Intelligent Unknown Resolution** handling. Weak unknown-resolution results are pruned only when more than six alternatives have both known resolution and known quality; scarce fallbacks remain available.
+
 - Moved the `💚 ɴᴢʙ` availability indicator from the result name to the description score line, keeping the compact result name focused on resolution, quality, and relative ranking.
 - Updated the pinned StreamNZB compatibility revision to `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to validate the `.TopScore` and `stars` formatter API against the real engine.
 - Increased the production profile from **101 to 110 rules** across the current Unreleased scoring additions: three global corrected-release preference rules, five Anime revision preference rules, and one global Retag soft-penalty rule. The generated Define Library remains at **53** rules because these features use native StreamNZB parser traits and/or direct release-name matching rather than new Vidhin-backed classifications.
@@ -62,6 +64,7 @@ Changes in this section are under development and are not part of the latest sta
 - Reduced the current production profile from **109 to 103 rules** after removing the redundant Library rule and five freshness/popularity scoring rules. The generated Define Library remains at **53** rules.
 
 ### Fixed
+- Protected useful incomplete-metadata results from adaptive Unknown Resolution pruning when they have recognized quality, match a trusted Movie/Show/Anime release-group tier, are Library results, or are SeaDex Best/Alternative recommendations. Missing SeaDex lookup data fails open, and known-resolution Unknown Quality results remain unaffected. Pinned real-engine regression coverage verifies the complete production policy.
 - Rescaled Anime BluRay release-group tiers to +500/+430/+360/+290/+220/+150/+80/+10 (T1–T8), creating uniform 70-point gaps so the known +31 cumulative positive minor-metadata stack cannot overtake the next-higher clean tier; Anime WEB tier scores remain unchanged.
 
 - Fixed a reachable Anime scoring inversion where StreamNZB's `dubbed` parser trait caused Dual/Multi Audio Anime releases to inherit the generic `+500` Dubbed bonus in addition to the legacy `+200` Dual/Multi score. Anime Dual/Multi Audio now receives one `+10` same-tier preference instead of an effective `+700` bonus.

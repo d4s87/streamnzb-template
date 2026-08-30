@@ -1283,6 +1283,136 @@ def validate_availability_scoring_policy(
         )
 
 
+def validate_unknown_resolution_policy(
+    rules: list[dict],
+    defines: dict[str, dict],
+) -> None:
+    """
+    Unknown resolution is not inherently bad.
+
+    Weak results are rejected only when more than six
+    well-identified alternatives exist. Library, SeaDex,
+    known-quality and recognized release-group results
+    remain protected. Unknown Quality by itself is not
+    rejected.
+    """
+
+    name = "Unknown resolution"
+
+    matches = [
+        rule
+        for rule in rules
+        if rule.get("name") == name
+    ]
+
+    if len(matches) != 1:
+        raise AssertionError(
+            f"Expected exactly one {name!r} rule, "
+            f"found {len(matches)}"
+        )
+
+    rule = matches[0]
+
+    if rule.get("action") != "reject":
+        raise AssertionError(
+            f"{name} must use action=reject"
+        )
+
+    if "points" in rule:
+        raise AssertionError(
+            f"{name} Reject rule must not define points"
+        )
+
+    if rule.get("scope"):
+        raise AssertionError(
+            f"{name} must remain All Content"
+        )
+
+    when = rule.get("when")
+
+    if not isinstance(when, str) or not when.strip():
+        raise AssertionError(
+            f"{name} has no valid condition"
+        )
+
+    required_fragments = (
+        'resolution == ""',
+        "not library",
+        "not seadex.best",
+        "not seadex.alternative",
+        'quality == ""',
+        "count(",
+        'resolution != ""',
+        'quality != ""',
+        ") > 6",
+    )
+
+    missing = [
+        fragment
+        for fragment in required_fragments
+        if fragment not in when
+    ]
+
+    if missing:
+        raise AssertionError(
+            f"{name} is missing policy fragment(s): "
+            + ", ".join(repr(x) for x in missing)
+        )
+
+    if when.count("count(") != 1:
+        raise AssertionError(
+            f"{name} must contain exactly one "
+            "aggregate count()"
+        )
+
+    if when.count(") > 6") != 1:
+        raise AssertionError(
+            f"{name} must use exactly one > 6 threshold"
+        )
+
+    tier_pattern = re.compile(
+        r"^(?:"
+        r"Movies|Shows|Anime Movies|Anime Shows"
+        r") "
+        r"(?:UHD BluRay|HD BluRay|BluRay|WEB|Remux) "
+        r"T\d+ Groups$"
+    )
+
+    tier_defines = sorted(
+        define_name
+        for define_name in defines
+        if tier_pattern.fullmatch(define_name)
+    )
+
+    if not tier_defines:
+        raise AssertionError(
+            "No release-group tier Defines found "
+            "for Unknown resolution protection"
+        )
+
+    missing_tiers = [
+        define_name
+        for define_name in tier_defines
+        if f'matched("{define_name}")' not in when
+    ]
+
+    if missing_tiers:
+        raise AssertionError(
+            f"{name} no longer protects tier Define(s): "
+            + ", ".join(missing_tiers)
+        )
+
+    # Known Resolution + Unknown Quality must never fall
+    # into this rule. The resolution predicate is the
+    # outer gate; quality alone is not grounds to reject.
+    if not when.lstrip().startswith(
+        'resolution == ""'
+    ):
+        raise AssertionError(
+            f"{name} must gate on Unknown Resolution first"
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -1428,6 +1558,7 @@ validate_audio_preferences(rules)
 validate_availability_scoring_policy(rules)
 validate_anime_version_preferences(rules)
 validate_movie_edition_preferences(rules)
+validate_unknown_resolution_policy(rules, defines)
 validate_regressions(defines)
 
 

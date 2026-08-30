@@ -323,6 +323,14 @@ If you imported them by URL, use StreamNZB's **Refresh** action to check for upd
 
 GitHub's raw-file CDN may take a few minutes to reflect a newly published update.
 
+### Intelligent Unknown Resolution fallback
+
+The profile uses an adaptive **Intelligent Unknown Resolution** rule instead of unconditionally rejecting every result whose resolution could not be parsed. Unknown-resolution results remain available when the result set is scarce, and weak unknowns are rejected only when more than six alternatives have both a known resolution and known quality.
+
+The rule deliberately protects useful incomplete results. An unknown-resolution result is retained when it still has a recognized quality, matches a trusted Movie, Show, or Anime release-group tier, is a **Library** result, or is a **SeaDex Best / Alternative** recommendation. If SeaDex lookup data is unavailable for the request, the rule fails open rather than rejecting the result.
+
+This policy applies only to **Unknown Resolution**. A result with a known resolution but Unknown Quality is not rejected by this rule. StreamNZB already places Unknown Resolution at the bottom of its native resolution ranking, so the profile does not add a separate score penalty; it only prunes weak unknowns when the result set has enough well-identified alternatives.
+
 ### Adaptive HD x265 filtering
 
 The profile uses an availability-aware **Adaptive HD x265** Reject rule for non-Anime SDR HD releases. Instead of unconditionally penalizing HEVC/x265, a 720p or 1080p HEVC candidate is rejected only when more than six suitable same-resolution AVC alternatives are available.

@@ -1601,3 +1601,441 @@ func TestProductionRankingPreservesSameReleaseVariants(t *testing.T) {
 		)
 	}
 }
+
+// TestIntelligentUnknownResolutionProductionPolicy protects the adaptive
+// fallback policy for releases whose resolution could not be parsed.
+//
+// Unknown metadata is not itself evidence that a Usenet result is bad.
+// Production may reject a weak unknown-resolution/unknown-quality release only
+// when the result set contains more than six well-identified alternatives.
+// Library, SeaDex, known-quality and recognized release-group results remain
+// protected, and a missing SeaDex lookup fails open.
+func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Intelligent unknown-resolution regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile production profile: %v",
+			err,
+		)
+	}
+
+	unknownRule := findProductionRule(
+		t,
+		productionRules,
+		"Unknown resolution",
+	)
+
+	if unknownRule.EffectiveAction() != config.RuleActionReject {
+		t.Fatalf(
+			"Unknown resolution action=%q, want reject",
+			unknownRule.EffectiveAction(),
+		)
+	}
+
+	data, err := os.ReadFile(
+		"../../generated/vidhin-defines.json",
+	)
+	if err != nil {
+		t.Fatalf(
+			"read generated Vidhin data: %v",
+			err,
+		)
+	}
+
+	var generated struct {
+		Defines map[string]struct {
+			Tokens []string `json:"tokens"`
+		} `json:"defines"`
+	}
+
+	if err := json.Unmarshal(data, &generated); err != nil {
+		t.Fatalf(
+			"decode generated Vidhin data: %v",
+			err,
+		)
+	}
+
+	defineToken := func(name string) string {
+		t.Helper()
+
+		entry, ok := generated.Defines[name]
+		if !ok {
+			t.Fatalf(
+				"missing generated Define %q",
+				name,
+			)
+		}
+
+		if len(entry.Tokens) == 0 {
+			t.Fatalf(
+				"generated Define %q has no tokens",
+				name,
+			)
+		}
+
+		tokens := append(
+			[]string(nil),
+			entry.Tokens...,
+		)
+
+		slices.Sort(tokens)
+
+		return tokens[0]
+	}
+
+	movieTierGroup := defineToken(
+		"Movies WEB T1 Groups",
+	)
+
+	showTierGroup := defineToken(
+		"Shows WEB T1 Groups",
+	)
+
+	animeTierGroup := defineToken(
+		"Anime Shows WEB T1 Groups",
+	)
+
+	knownAlternatives := func(
+		kind string,
+		count int,
+	) []string {
+		t.Helper()
+
+		titles := make(
+			[]string,
+			0,
+			count,
+		)
+
+		for i := 0; i < count; i++ {
+			switch kind {
+			case ranking.KindMovie:
+				titles = append(
+					titles,
+					fmt.Sprintf(
+						"Example.Movie.%02d.2026.1080p.WEB-DL.x264-GRP",
+						i+1,
+					),
+				)
+
+			case ranking.KindSeries:
+				titles = append(
+					titles,
+					fmt.Sprintf(
+						"Example.Show.S01E%02d.1080p.WEB-DL.x264-GRP",
+						i+1,
+					),
+				)
+
+			case ranking.KindAnimeShow:
+				titles = append(
+					titles,
+					fmt.Sprintf(
+						"Example.Anime.S01E%02d.1080p.WEB-DL.x264-GRP",
+						i+1,
+					),
+				)
+
+			default:
+				t.Fatalf(
+					"unsupported regression kind %q",
+					kind,
+				)
+			}
+		}
+
+		return titles
+	}
+
+	type policyCase struct {
+		name               string
+		target             string
+		kind               string
+		anime              bool
+		alternatives       int
+		library            bool
+		seadex             *rules.SeadexContext
+		wantRejected       bool
+		wantSeaDexFailOpen bool
+	}
+
+	seadexCheckedNoMatch := func() *rules.SeadexContext {
+		return &rules.SeadexContext{
+			Known: false,
+		}
+	}
+
+	cases := []policyCase{
+		{
+			name:         "dense weak Movie unknown is rejected",
+			target:       "Example.Movie.2026-GRP",
+			kind:         ranking.KindMovie,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+			wantRejected: true,
+		},
+		{
+			name:         "six alternatives preserve scarce fallback",
+			target:       "Example.Movie.2026-GRP",
+			kind:         ranking.KindMovie,
+			alternatives: 6,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name:         "known quality protects unknown resolution",
+			target:       "Example.Movie.2026.WEB-DL.x264-GRP",
+			kind:         ranking.KindMovie,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name: "Movie tier group protects weak metadata",
+			target: fmt.Sprintf(
+				"Example.Movie.2026-%s",
+				movieTierGroup,
+			),
+			kind:         ranking.KindMovie,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name: "Show tier group protects weak metadata",
+			target: fmt.Sprintf(
+				"Example.Show.S01E01-%s",
+				showTierGroup,
+			),
+			kind:         ranking.KindSeries,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name: "Anime tier group protects weak metadata",
+			target: fmt.Sprintf(
+				"Example.Anime.S01E01-%s",
+				animeTierGroup,
+			),
+			kind:         ranking.KindAnimeShow,
+			anime:        true,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name:         "Library protects weak unknown",
+			target:       "Example.Movie.2026-GRP",
+			kind:         ranking.KindMovie,
+			alternatives: 7,
+			library:      true,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name:         "SeaDex Best protects weak unknown",
+			target:       "Example.Anime.S01E01-BESTGRP",
+			kind:         ranking.KindAnimeShow,
+			anime:        true,
+			alternatives: 7,
+			seadex: &rules.SeadexContext{
+				Known: true,
+				Best: map[string]bool{
+					"bestgrp": true,
+				},
+			},
+		},
+		{
+			name:         "SeaDex Alternative protects weak unknown",
+			target:       "Example.Anime.S01E01-ALTGRP",
+			kind:         ranking.KindAnimeShow,
+			anime:        true,
+			alternatives: 7,
+			seadex: &rules.SeadexContext{
+				Known: true,
+				Alt: map[string]bool{
+					"altgrp": true,
+				},
+			},
+		},
+		{
+			name:               "missing SeaDex lookup fails open",
+			target:             "Example.Movie.2026-GRP",
+			kind:               ranking.KindMovie,
+			alternatives:       7,
+			seadex:             nil,
+			wantSeaDexFailOpen: true,
+		},
+		{
+			name:         "known resolution unknown quality is untouched",
+			target:       "Example.Movie.2026.1080p.x264-GRP",
+			kind:         ranking.KindMovie,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			titles := []string{
+				tc.target,
+			}
+
+			titles = append(
+				titles,
+				knownAlternatives(
+					tc.kind,
+					tc.alternatives,
+				)...,
+			)
+
+			req := ranking.Request{
+				Kind:    tc.kind,
+				IsAnime: tc.anime,
+				Season:  1,
+				Episode: 1,
+				Title:   "Example",
+				Seadex:  tc.seadex,
+				Sample: &ranking.Sample{
+					IndexerData: true,
+					Library:     tc.library,
+				},
+			}
+
+			explanations, aggregates := profile.Explain(
+				titles,
+				req,
+				jhinrank.RankOptions{},
+			)
+
+			var target *ranking.Explanation
+
+			for _, explanation := range explanations {
+				if explanation.Title == tc.target {
+					target = explanation
+					break
+				}
+			}
+
+			if target == nil {
+				t.Fatalf(
+					"target release missing from explanations: %q",
+					tc.target,
+				)
+			}
+
+			hasUnknownRejection := false
+
+			for _, rejection := range target.Rejections {
+				if strings.Contains(
+					rejection,
+					"Unknown resolution",
+				) {
+					hasUnknownRejection = true
+					break
+				}
+			}
+
+			if hasUnknownRejection != tc.wantRejected {
+				t.Fatalf(
+					"Unknown resolution rejection=%v, want=%v\n"+
+						"target=%q\n"+
+						"fetch=%v\n"+
+						"rejections=%v\n"+
+						"skipped=%v",
+					hasUnknownRejection,
+					tc.wantRejected,
+					tc.target,
+					target.Fetch,
+					target.Rejections,
+					target.SkippedRules,
+				)
+			}
+
+			if tc.wantRejected && target.Fetch {
+				t.Fatalf(
+					"target remained fetchable despite Unknown resolution rejection",
+				)
+			}
+
+			if !tc.wantRejected && !target.Fetch {
+				t.Fatalf(
+					"protected target was rejected\n"+
+						"target=%q\n"+
+						"rejections=%v\n"+
+						"skipped=%v",
+					tc.target,
+					target.Rejections,
+					target.SkippedRules,
+				)
+			}
+
+			hasSeaDexSkip := false
+
+			for _, skipped := range target.SkippedRules {
+				if strings.Contains(
+					skipped,
+					"Unknown resolution",
+				) &&
+					strings.Contains(
+						skipped,
+						"no SeaDex lookup",
+					) {
+					hasSeaDexSkip = true
+					break
+				}
+			}
+
+			if tc.wantSeaDexFailOpen {
+				if !hasSeaDexSkip {
+					t.Fatalf(
+						"missing SeaDex lookup did not expose expected fail-open skip\n"+
+							"skipped=%v",
+						target.SkippedRules,
+					)
+				}
+			} else if hasSeaDexSkip {
+				t.Fatalf(
+					"SeaDex-aware case unexpectedly skipped Unknown resolution rule\n"+
+						"skipped=%v",
+					target.SkippedRules,
+				)
+			}
+
+			var (
+				foundAggregate bool
+				aggregateCount int
+			)
+
+			for _, report := range aggregates {
+				if report.Source ==
+					`resolution != "" and quality != ""` {
+					foundAggregate = true
+					aggregateCount = report.Count
+					break
+				}
+			}
+
+			if !foundAggregate {
+				t.Fatal(
+					"production aggregate report for well-identified alternatives is missing",
+				)
+			}
+
+			if aggregateCount != tc.alternatives {
+				t.Fatalf(
+					"well-identified aggregate count=%d, want=%d",
+					aggregateCount,
+					tc.alternatives,
+				)
+			}
+		})
+	}
+}

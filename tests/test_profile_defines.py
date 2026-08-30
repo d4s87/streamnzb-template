@@ -602,6 +602,103 @@ def validate_1080p_remux_preference(rules):
         )
 
 
+def validate_repack_proper_preferences(rules):
+    """Validate the corrected-release tie-breaker policy."""
+
+    expected = {
+        "Repack/Proper Preference": {
+            "points": 5,
+            "when": (
+                '(proper or repack) and not '
+                '(releaseName matches '
+                '"(?i)(?:^|[. _\\\\[\\\\]-])REPACK'
+                '[. _-]?(?:2|3)(?:$|[. _\\\\[\\\\]-])")'
+            ),
+        },
+        "Repack2 Preference": {
+            "points": 6,
+            "when": (
+                'repack and releaseName matches '
+                '"(?i)(?:^|[. _\\\\[\\\\]-])REPACK'
+                '[. _-]?2(?:$|[. _\\\\[\\\\]-])"'
+            ),
+        },
+        "Repack3 Preference": {
+            "points": 7,
+            "when": (
+                'repack and releaseName matches '
+                '"(?i)(?:^|[. _\\\\[\\\\]-])REPACK'
+                '[. _-]?3(?:$|[. _\\\\[\\\\]-])"'
+            ),
+        },
+    }
+
+    for name, spec in expected.items():
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+
+        if rule.get("points") != spec["points"]:
+            raise AssertionError(
+                f"{name} must score exactly +{spec['points']}"
+            )
+
+        if rule.get("when") != spec["when"]:
+            raise AssertionError(
+                f"{name} condition drifted: "
+                f"{rule.get('when')!r}"
+            )
+
+        if "action" in rule:
+            raise AssertionError(
+                f"{name} must remain a score rule "
+                "without an explicit action"
+            )
+
+        if "scope" in rule:
+            raise AssertionError(
+                f"{name} must remain global "
+                "without an explicit profile scope"
+            )
+
+        when = rule["when"]
+
+        if 'matched("' in when or "matched('" in when:
+            raise AssertionError(
+                f"{name} must use native StreamNZB parser traits "
+                "and releaseName matching, not Define dependencies"
+            )
+
+        if "seadex" in when.lower():
+            raise AssertionError(
+                f"{name} must remain a global tie-breaker "
+                "without SeaDex-specific predicates"
+            )
+
+    base_when = expected["Repack/Proper Preference"]["when"]
+
+    if "not (releaseName matches" not in base_when:
+        raise AssertionError(
+            "Base REPACK/PROPER rule must negate the numbered "
+            "REPACK matcher as a parenthesized expression"
+        )
+
+    if "(?:2|3)" not in base_when:
+        raise AssertionError(
+            "Base REPACK/PROPER rule must exclude REPACK2/REPACK3"
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -700,9 +797,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 101:
+if len(rules) != 104:
     raise AssertionError(
-        f"Expected 101 profile rules, found {len(rules)}"
+        f"Expected 104 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -740,6 +837,7 @@ validate_anime_lq(rules, defines)
 validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
+validate_repack_proper_preferences(rules)
 validate_regressions(defines)
 
 

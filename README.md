@@ -19,6 +19,7 @@ The profile is designed around:
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
 - Adaptive 1080p Remux preference over SDR 4K WEB-DL
+- Corrected-release REPACK / PROPER tie-breaking preference
 - NZB availability and library scoring
 - Same-release failover
 - Grouped resolution + quality result limits
@@ -157,6 +158,22 @@ The formatter normalizes matching releases to `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ`.
 `LazyRemux` and `UltraRemux` require a narrow profile-side exception because StreamNZB may interpret `Remux` in their release-group names as the `remux` trait. They remain classified by the Define Library as their corresponding Anime BluRay tiers.
 
 The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8 hierarchy. Known Anime release groups can therefore pass the 4K release-group trust check regardless of tier, while unknown 4K Anime groups remain filtered.
+
+## Corrected Release Preference
+
+The profile gives legitimate corrected releases a small global scoring preference:
+
+- PROPER / REPACK: `+5`
+- REPACK2: `+6`
+- REPACK3: `+7`
+
+These bonuses are deliberately small tie-breakers. They do not replace the profile's source, quality, release-group, SeaDex, or availability priorities.
+
+The rules are non-stacking: REPACK2 and REPACK3 receive only their numbered score rather than also receiving the base PROPER / REPACK bonus.
+
+Base PROPER and REPACK detection uses StreamNZB's native `proper` and `repack` parser traits. Narrow release-name matching distinguishes REPACK2 and REPACK3 because the native `repack` trait intentionally classifies those numbered forms as repacks as well. `REAL.PROPER` and `REAL.REPACK` remain base corrected releases, while `REAL.REPACK2` and `REAL.REPACK3` retain their numbered preference.
+
+The preference applies globally, including Anime, and does not require additional Vidhin-backed Define rules.
 
 ## Formatter
 

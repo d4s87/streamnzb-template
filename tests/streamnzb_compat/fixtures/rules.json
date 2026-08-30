@@ -2926,6 +2926,246 @@
         }
       ],
       "productionRule": "Anime Dubs Only Penalty"
+    },
+    {
+      "name": "Repack/Proper Preference",
+      "productionRule": "Repack/Proper Preference",
+      "when": "(proper or repack) and not (releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?(?:2|3)(?:$|[. _\\\\[\\\\]-])\")",
+      "points": 5,
+      "cases": [
+        {
+          "name": "plain PROPER",
+          "release": "Example.Movie.2026.1080p.WEB-DL.PROPER-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "plain REPACK",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REAL PROPER",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REAL.PROPER-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REAL REPACK",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REAL.REPACK-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REPACK2 excluded from base",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "REPACK3 excluded from base",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK3-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "REPACK separated 2 excluded from base",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK.2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "PROPER2 unsupported",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.PROPER2-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "ordinary release negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "word collision negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.Properly-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repack2 Preference",
+      "productionRule": "Repack2 Preference",
+      "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?2(?:$|[. _\\\\[\\\\]-])\"",
+      "points": 6,
+      "cases": [
+        {
+          "name": "REPACK2",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REAL REPACK2",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REAL.REPACK2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REPACK separated 2",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK.2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "lowercase repack2",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.repack2-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "plain REPACK negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "REPACK3 negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK3-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "embedded collision negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.XREPACK2Y-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Repack3 Preference",
+      "productionRule": "Repack3 Preference",
+      "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?3(?:$|[. _\\\\[\\\\]-])\"",
+      "points": 7,
+      "cases": [
+        {
+          "name": "REPACK3",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK3-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REAL REPACK3",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REAL.REPACK3-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REPACK separated 3",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK.3-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "lowercase repack3",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.repack3-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "REPACK2 negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK2-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "plain REPACK negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.REPACK-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "embedded collision negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.XREPACK3Y-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
     }
   ]
 }

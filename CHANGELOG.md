@@ -37,11 +37,14 @@ Changes in this section are under development and are not part of the latest sta
 
 - Added relative five-star result ranking using StreamNZB's `.TopScore` and `stars` formatter helper. The highest-scoring result renders as `★★★★★`, while lower-scoring results are scaled against the current result-set winner.
 - Added real-engine formatter regression coverage for full, partial, negative, and zero-TopScore star rendering.
+- Added global corrected-release preference rules: PROPER / REPACK `+5`, REPACK2 `+6`, and REPACK3 `+7`, with mutually exclusive scoring so numbered repacks do not also receive the base bonus.
+- Added pinned real-engine compatibility coverage for base, numbered, separated, lowercase, `REAL.*`, unsupported, and false-positive REPACK / PROPER forms, plus structural validation of the published scoring policy.
 
 ### Changed
 
 - Moved the `💚 ɴᴢʙ` availability indicator from the result name to the description score line, keeping the compact result name focused on resolution, quality, and relative ranking.
 - Updated the pinned StreamNZB compatibility revision to `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to validate the `.TopScore` and `stars` formatter API against the real engine.
+- Increased the production profile from **101 to 104 rules** with the three corrected-release preference rules; the generated Define Library remains at **53** rules because the feature uses native StreamNZB parser traits and narrow release-name matching rather than new Vidhin-backed classifications.
 
 ### Fixed
 

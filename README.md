@@ -1,9 +1,9 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V4.3**
+**Current version: V4.4**
 
-V4.3 builds on V4.2 with Anime WEB Streaming Service classification and Network-first formatter fallback, a human-readable formatter development source with real-engine regression coverage, and availability-aware Anime Dubs Only handling. Dub-only Anime receives only a small `-10` tie-breaker when a non-dub Anime alternative exists; scarce dub-only results remain untouched, and explicit Dual/Multi Audio releases are protected.
+V4.4 builds on V4.3 with a broad ranking and scoring hardening pass: relative result-score stars, corrected-release and Anime revision preferences, Retag tie-breaking, tier-safe Anime and non-Anime audio scoring, corrected Movie edition preferences, normalized availability and Library interactions, explicit same-release failover regression protection, and Intelligent Unknown Resolution fallback.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -82,7 +82,7 @@ The proposed changes can be reviewed before they are applied.
 > [!IMPORTANT]
 > The shared Define Library must be imported before this profile. See [Quick Start](#quick-start) for the correct installation order.
 
-The latest V4.3 StreamNZB share code is always available here:
+The latest V4.4 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
@@ -92,11 +92,11 @@ For the recommended linked import, use this URL in StreamNZB:
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
-V4.3 requires the Define Library described below. Import the library before using the profile.
+V4.4 requires the Define Library described below. Import the library before using the profile.
 
 ## Define Library
 
-V4.3 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
+V4.4 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
@@ -124,7 +124,7 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 ## Anime Scoring
 
-V4.3 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
+V4.4 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
 
 WEB release groups are scored as follows:
 - T1: +500

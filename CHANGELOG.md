@@ -9,6 +9,7 @@
 - **V4.1** — Added Vidhin-backed Anime LQ filtering and subsequent Anime detection, formatter and compatibility-testing improvements.
 - **V4.2** — Added availability-aware HD x265 filtering, adaptive 1080p Remux preference, Anime Uncensored preference, Vidhin-backed Bad Dual penalties, and expanded compatibility validation.
 - **V4.3** — Added Anime Streaming Service classification and Network-first formatter fallback, real-engine formatter regression infrastructure, and availability-aware Anime Dubs Only handling.
+- **V4.4** — Added ranking and scoring hardening with relative result-score stars, corrected-release and Anime revision preferences, tier-safe audio and availability scoring, Movie edition corrections, same-release failover regression protection, and Intelligent Unknown Resolution fallback.
 
 ### Subsequent Improvements
 
@@ -32,6 +33,10 @@ This testing layer complements the existing profile, Define Library, Vidhin sync
 ## Unreleased
 
 Changes in this section are under development and are not part of the latest stable release.
+
+No unreleased changes yet.
+
+## V4.4
 
 ### Added
 

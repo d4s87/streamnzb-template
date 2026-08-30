@@ -11,11 +11,14 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	jhin "github.com/dreulavelle/jhin/parser"
+	jhinrank "github.com/dreulavelle/jhin/rank"
 
 	"streamnzb/pkg/core/config"
 	"streamnzb/pkg/release"
+	"streamnzb/pkg/search/ranking"
 	"streamnzb/pkg/search/rules"
 	"streamnzb/pkg/search/triage"
 )
@@ -808,7 +811,7 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 
 		higherClean := scores[higherName]
 		lowerClean := scores[lowerCleanName]
-		lowerStack := scores[lowerStackName]
+		lowerStackRaw := scores[lowerStackName]
 
 		if higherClean-lowerClean != 70 {
 			t.Fatalf(
@@ -819,30 +822,60 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 			)
 		}
 
-		if lowerStack-lowerClean != 31 {
+		// This test intentionally evaluates only the profile-rule
+		// layer. The shared Anime Dual/Multi rule is +1010 because
+		// it compensates for StreamNZB/jhin's native -1000 dubbed
+		// audio score, leaving an effective +10 preference in the
+		// complete ranking pipeline.
+		//
+		// The raw rules-layer metadata stack is therefore:
+		//
+		//   Dual/Multi +1010
+		//   Uncensored   +10
+		//   Anime v4      +4
+		//   REPACK3       +7
+		//                -----
+		//                +1031
+		//
+		// Normalize the +1000 compensation before checking the
+		// effective tier ceiling.
+		const audioNativeCompensation = 1000
+
+		if lowerStackRaw-lowerClean != 1031 {
 			t.Fatalf(
-				"T%d positive minor stack adds %d points; want 31",
+				"T%d raw positive minor stack adds %d points; want 1031",
 				lowerTier,
-				lowerStack-lowerClean,
+				lowerStackRaw-lowerClean,
 			)
 		}
 
-		if lowerStack >= higherClean {
+		lowerStackEffective :=
+			lowerStackRaw - audioNativeCompensation
+
+		if lowerStackEffective-lowerClean != 31 {
 			t.Fatalf(
-				"Anime BluRay tier ceiling inversion: %s=%d >= %s=%d",
+				"T%d effective positive minor stack adds %d points; want 31",
+				lowerTier,
+				lowerStackEffective-lowerClean,
+			)
+		}
+
+		if lowerStackEffective >= higherClean {
+			t.Fatalf(
+				"Anime BluRay tier ceiling inversion: effective %s=%d >= %s=%d",
 				lowerStackName,
-				lowerStack,
+				lowerStackEffective,
 				higherName,
 				higherClean,
 			)
 		}
 
-		if higherClean-lowerStack != 39 {
+		if higherClean-lowerStackEffective != 39 {
 			t.Fatalf(
-				"T%d -> T%d ceiling headroom=%d want=39",
+				"T%d -> T%d effective ceiling headroom=%d want=39",
 				higherTier,
 				lowerTier,
-				higherClean-lowerStack,
+				higherClean-lowerStackEffective,
 			)
 		}
 	}
@@ -1198,6 +1231,257 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		results["Movie T3 IMAX"] != 25 {
 		t.Fatal(
 			"Open Matte contribution beside IMAX must remain +25",
+		)
+	}
+}
+
+func TestEffectiveAvailabilityLibraryAndAudioPolicy(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	forbidden := map[string]bool{
+		"Library hit":        true,
+		"Very fresh NZB":     true,
+		"Recent NZB":         true,
+		"Popular NZB":        true,
+		"Very popular NZB":   true,
+		"Highly popular NZB": true,
+	}
+
+	for _, rule := range productionRules {
+		if forbidden[rule.Name] {
+			t.Fatalf(
+				"removed score rule returned: %s",
+				rule.Name,
+			)
+		}
+	}
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Effective scoring regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile production profile: %v",
+			err,
+		)
+	}
+
+	if profile.LibraryScoreBonus != 500 {
+		t.Fatalf(
+			"native library bonus = %+d, want +500",
+			profile.LibraryScoreBonus,
+		)
+	}
+
+	score := func(
+		name string,
+		title string,
+		kind string,
+		anime bool,
+		library bool,
+		avail triage.AvailState,
+	) int {
+		t.Helper()
+
+		candidate := triage.Candidate{
+			Release: &release.Release{
+				Title:     title,
+				IsLibrary: library,
+			},
+		}
+
+		candidate.Verdict.Avail = avail
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{
+				Kind:    kind,
+				IsAnime: anime,
+				Season:  1,
+				Episode: 1,
+				Title:   "Example",
+			},
+			[]triage.Candidate{candidate},
+			jhinrank.RankOptions{},
+		)
+
+		if len(rejected) != 0 {
+			t.Fatalf(
+				"%s unexpectedly rejected: %+v",
+				name,
+				rejected,
+			)
+		}
+
+		if len(kept) != 1 {
+			t.Fatalf(
+				"%s kept %d candidates, want 1",
+				name,
+				len(kept),
+			)
+		}
+
+		return kept[0].Torrent.Rank
+	}
+
+	movieCleanName :=
+		"Example.Movie.2025.1080p.WEB-DL.H264-GRP"
+
+	movieDubbedName :=
+		"Example.Movie.2025.1080p.WEB-DL.H264.DUBBED-GRP"
+
+	base := score(
+		"Movie clean",
+		movieCleanName,
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	library := score(
+		"Movie library",
+		movieCleanName,
+		ranking.KindMovie,
+		false,
+		true,
+		triage.AvailState{},
+	)
+
+	if got := library - base; got != 500 {
+		t.Fatalf(
+			"effective Library delta = %+d, want +500",
+			got,
+		)
+	}
+
+	backbone := score(
+		"Movie backbone",
+		movieCleanName,
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{
+			Status:       triage.AvailAvailable,
+			OnMyBackbone: true,
+			CheckedAt:    time.Now().Add(-90 * 24 * time.Hour),
+		},
+	)
+
+	if got := backbone - base; got != 20 {
+		t.Fatalf(
+			"effective backbone delta = %+d, want +20",
+			got,
+		)
+	}
+
+	recent := score(
+		"Movie recently confirmed",
+		movieCleanName,
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{
+			Status:    triage.AvailAvailable,
+			CheckedAt: time.Now().Add(-3 * 24 * time.Hour),
+		},
+	)
+
+	if got := recent - base; got != 10 {
+		t.Fatalf(
+			"effective recent-confirmation delta = %+d, want +10",
+			got,
+		)
+	}
+
+	both := score(
+		"Movie backbone plus recent",
+		movieCleanName,
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{
+			Status:       triage.AvailAvailable,
+			OnMyBackbone: true,
+			CheckedAt:    time.Now().Add(-3 * 24 * time.Hour),
+		},
+	)
+
+	if got := both - base; got != 30 {
+		t.Fatalf(
+			"effective positive availability ceiling = %+d, want +30",
+			got,
+		)
+	}
+
+	dubbed := score(
+		"Movie DUBBED",
+		movieDubbedName,
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := dubbed - base; got != 10 {
+		t.Fatalf(
+			"effective non-Anime DUBBED delta = %+d, want +10",
+			got,
+		)
+	}
+
+	animeCleanName :=
+		"Example.Anime.S01E01.1080p.WEB-DL.H264-GRP"
+
+	animeDualName :=
+		"Example.Anime.S01E01.1080p.WEB-DL.H264.Dual.Audio-GRP"
+
+	animeMultiName :=
+		"Example.Anime.S01E01.1080p.WEB-DL.H264.Multi.Audio-GRP"
+
+	animeBase := score(
+		"Anime clean",
+		animeCleanName,
+		ranking.KindAnimeShow,
+		true,
+		false,
+		triage.AvailState{},
+	)
+
+	animeDual := score(
+		"Anime Dual Audio",
+		animeDualName,
+		ranking.KindAnimeShow,
+		true,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := animeDual - animeBase; got != 10 {
+		t.Fatalf(
+			"effective Anime Dual Audio delta = %+d, want +10",
+			got,
+		)
+	}
+
+	animeMulti := score(
+		"Anime Multi Audio",
+		animeMultiName,
+		ranking.KindAnimeShow,
+		true,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := animeMulti - animeBase; got != 10 {
+		t.Fatalf(
+			"effective Anime Multi Audio delta = %+d, want +10",
+			got,
 		)
 	}
 }

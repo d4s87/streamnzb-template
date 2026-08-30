@@ -3984,7 +3984,7 @@
       "name": "Non-Anime Dubbed/Dual/Multi Audio Preference",
       "productionRule": "Non-Anime Dubbed/Dual/Multi Audio Preference",
       "when": "not isAnime and \"dubbed\" in traits",
-      "points": 10,
+      "points": 1010,
       "cases": [
         {
           "name": "movie clean",
@@ -4121,7 +4121,7 @@
       "name": "Anime Dual/Multi Audio Preference",
       "productionRule": "Anime Dual/Multi Audio Preference",
       "when": "isAnime and releaseName matches \"(?i)\\\\b(?:Dual|Multi)[. _-]?Audio\\\\b\"",
-      "points": 10,
+      "points": 1010,
       "cases": [
         {
           "name": "anime dual",

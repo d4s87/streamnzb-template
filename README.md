@@ -22,7 +22,7 @@ The profile is designed around:
 - Corrected-release REPACK / PROPER tie-breaking preference
 - Retag soft penalty for recognized redistribution markers
 - Anime revision preference for explicit `v0`–`v4` release markers
-- NZB availability and library scoring
+- Tier-safe NZB availability tie-breaking and native StreamNZB library prioritization
 - Same-release failover
 - Grouped resolution + quality result limits
 - Hardware-specific HDR and audio preferences
@@ -167,9 +167,9 @@ Anime revision scoring is independent of the global REPACK / PROPER preference. 
 
 Anime releases classified by the Vidhin-backed **Anime Dubs Only** Define receive a small `-10` preference penalty only when another Anime result exists that is not classified as dub-only. This makes the rule a ranking tie-breaker rather than a filter: when all available releases are dub-only, no penalty is applied. Explicit Dual/Multi Audio forms are excluded from the classification, including protected known dub groups.
 
-Explicit Anime **Dual Audio** and **Multi Audio** releases receive one shared, non-stacking `+10` preference. This follows the same-tier preference model used by the TRaSH Anime guidance: Dual/Multi Audio can break a tie within a release-group tier but does not override the tier hierarchy. A release containing both `Dual Audio` and `Multi Audio` still receives only `+10`.
+Explicit Anime **Dual Audio** and **Multi Audio** releases receive one shared, non-stacking **effective `+10` preference**. StreamNZB's 4K preset applies a native `-1000` dubbed/audio rank to these releases, so the published profile rule uses a raw `+1010` compensation. After the complete ranking pipeline, the net preference is exactly `+10`. This keeps Dual/Multi Audio as a same-tier tie-breaker rather than allowing it to replace the release-group hierarchy. A release containing both `Dual Audio` and `Multi Audio` still receives only one effective `+10`.
 
-Audio-language preferences are deliberately small, shared, and non-stacking. Non-Anime Movies and Shows receive one shared `+10` **Dubbed/Dual/Multi Audio** preference through StreamNZB's parsed `dubbed` trait, which covers DUBBED, Dual Audio, and Multi Audio releases. A release containing both Dual Audio and Multi Audio still receives only `+10`. This replaces the historical `Dubbed bonus` (`+500`) plus independent Dual/Multi (`+200`) rules, which produced reachable `+700` and `+900` stacks capable of overriding Movie/Show release-group tiers. Anime remains isolated on its dedicated shared `+10` Dual/Multi Audio preference.
+Audio-language preferences are deliberately small, shared, and non-stacking. Non-Anime Movies and Shows use the same compensation model through StreamNZB's parsed `dubbed` trait, which covers DUBBED, Dual Audio, and Multi Audio releases: the profile's raw `+1010` rule offsets StreamNZB's native `-1000` rank and leaves an effective `+10`. This replaces the historical `Dubbed bonus` (`+500`) plus independent Dual/Multi (`+200`) rules, which produced reachable `+700` and `+900` stacks capable of overriding Movie/Show release-group tiers. Anime remains isolated on its dedicated shared effective `+10` Dual/Multi Audio preference.
 
 Users who prefer dubbed Anime should leave the upstream DraCuLa rule untouched and add a uniquely named local positive scoring rule instead, so their preference survives linked-profile refreshes.
 
@@ -228,7 +228,7 @@ rejected by this rule.
 
 The penalty is deliberately much smaller than the profile's major
 quality signals, including SeaDex prioritization, release-group tiers,
-availability, source and quality scoring. Its purpose is only to prefer
+source and quality scoring. Its purpose is only to prefer
 an otherwise equivalent original release over a recognized redistributed
 copy.
 
@@ -238,6 +238,28 @@ retag. This protects legitimate Anime release-group forms such as
 
 The rule uses direct release-name matching and does not add a new
 Vidhin-backed Define or formatter badge.
+
+
+## Availability and Library Scoring
+
+Positive NZB availability metadata is intentionally a **small tie-breaker** rather than a second release-quality hierarchy.
+
+The profile now scores only two positive availability signals:
+
+- **Alive on our backbone:** `+20`
+- **Recently confirmed:** `+10`
+
+When both apply, the maximum positive availability contribution is therefore `+30`. This remains below the `70`-point minimum gap between adjacent Anime BluRay release-group tiers, so availability alone cannot promote a lower Anime BluRay tier above the next-higher clean tier.
+
+Indexer freshness and grab-count metadata remain visible through the formatter but no longer receive separate profile scoring bonuses. The former `Very fresh NZB`, `Recent NZB`, `Popular NZB`, `Very popular NZB`, and `Highly popular NZB` score rules were removed so informational metadata does not compete with release-group quality.
+
+Known-unavailable handling remains a usability decision rather than a preference: releases known to be unavailable continue to be rejected.
+
+Library results use StreamNZB's native **`+500` library bonus** from the `4k` preset. The former profile-level `Library hit +500` rule was removed because it stacked with that native bonus and produced an unintended effective `+1000`.
+
+The formatter remains independent from this score normalization. Availability, age, grabs, and related NZB metadata can still be displayed even when they do not contribute ranking points.
+
+Pinned full-ranking-pipeline regression coverage verifies the effective `+500` Library bonus, `+20` backbone preference, `+10` recent-confirmation preference, combined `+30` availability ceiling, and effective `+10` Anime/non-Anime audio preferences.
 
 ## Formatter
 

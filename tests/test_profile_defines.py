@@ -266,7 +266,7 @@ def validate_anime_bluray_tier_scores(
 
     The known maximum positive minor Anime metadata stack is +31:
 
-        Dual/Multi Audio +10
+        Dual/Multi Audio +10 effective
         Uncensored       +10
         Anime v4          +4
         REPACK3           +7
@@ -874,22 +874,23 @@ def validate_audio_preferences(
     """
     Validate the non-stacking audio preference policy.
 
-    Non-Anime Movies and Shows use one shared +10 preference based on
-    StreamNZB's parsed ``dubbed`` trait. The parser exposes DUBBED,
-    Dual Audio, and Multi Audio through that trait, so independent
-    legacy rules must not exist.
+    StreamNZB's 4k preset applies a native -1000 score to the
+    dubbed / Dual-Multi Audio trait. Each shared +1010 profile rule
+    compensates for that native baseline and leaves the intended
+    effective +10 preference after the complete ranking pipeline.
 
-    Anime remains isolated on its dedicated shared +10 Dual/Multi
-    release-name preference.
+    Non-Anime Movies and Shows share the parsed ``dubbed`` rule;
+    Anime remains isolated on its dedicated Dual/Multi release-name
+    rule. Independent legacy audio rules must not exist.
     """
 
     expected = {
         "Non-Anime Dubbed/Dual/Multi Audio Preference": {
-            "points": 10,
+            "points": 1010,
             "when": 'not isAnime and "dubbed" in traits',
         },
         "Anime Dual/Multi Audio Preference": {
-            "points": 10,
+            "points": 1010,
             "when": (
                 'isAnime and releaseName matches '
                 '"(?i)\\\\b(?:Dual|Multi)[. _-]?Audio\\\\b"'
@@ -1200,6 +1201,88 @@ def validate_movie_edition_preferences(
             "preference rather than a minor tie-breaker"
         )
 
+
+def validate_availability_scoring_policy(
+    rules: list[dict],
+) -> None:
+    """
+    Availability is a small tie-breaker, not a replacement for
+    release-group quality.
+
+    The formatter still exposes freshness, popularity, backbone and
+    confirmation metadata, but positive ranking points are limited to:
+
+        Alive on our backbone +20
+        Recently confirmed   +10
+
+    The maximum positive availability stack is therefore +30, safely
+    below the 70-point Anime BluRay tier gap.
+
+    The 4k preset already provides the intended native +500 Library
+    bonus, so a separate Library hit score rule must not exist.
+    """
+
+    forbidden_names = {
+        "Library hit",
+        "Very fresh NZB",
+        "Recent NZB",
+        "Popular NZB",
+        "Very popular NZB",
+        "Highly popular NZB",
+    }
+
+    found_forbidden = sorted(
+        rule.get("name")
+        for rule in rules
+        if rule.get("name") in forbidden_names
+    )
+
+    if found_forbidden:
+        raise AssertionError(
+            "Removed availability/library score rules "
+            "must not return: "
+            + ", ".join(found_forbidden)
+        )
+
+    expected = {
+        "Alive on our backbone": 20,
+        "Recently confirmed": 10,
+    }
+
+    for name, expected_points in expected.items():
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r}; "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+
+        if rule.get("points") != expected_points:
+            raise AssertionError(
+                f"{name} must score exactly "
+                f"{expected_points:+d}; found "
+                f"{rule.get('points')!r}"
+            )
+
+        if "action" in rule:
+            raise AssertionError(
+                f"{name} must remain a score rule"
+            )
+
+    if sum(expected.values()) >= 70:
+        raise AssertionError(
+            "Positive availability ceiling must remain "
+            "below the 70-point Anime BluRay tier gap"
+        )
+
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -1298,9 +1381,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 109:
+if len(rules) != 103:
     raise AssertionError(
-        f"Expected 109 profile rules, found {len(rules)}"
+        f"Expected 103 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -1342,6 +1425,7 @@ validate_1080p_remux_preference(rules)
 validate_repack_proper_preferences(rules)
 validate_retag_soft_penalty(rules)
 validate_audio_preferences(rules)
+validate_availability_scoring_policy(rules)
 validate_anime_version_preferences(rules)
 validate_movie_edition_preferences(rules)
 validate_regressions(defines)

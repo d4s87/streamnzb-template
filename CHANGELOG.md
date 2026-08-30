@@ -57,6 +57,10 @@ Changes in this section are under development and are not part of the latest sta
 - Replaced the legacy non-Anime `Dubbed bonus` (`+500`), `Dual audio` (`+200`), and `Multi audio` (`+200`) rules with one shared, non-stacking `+10` `Non-Anime Dubbed/Dual/Multi Audio Preference`. Real-engine validation confirmed that DUBBED, Dual Audio, Multi Audio, and combined Dual+Multi releases now receive exactly one `+10` preference instead of reachable `+700`/`+900` stacks.
 - Corrected the Anime Streaming Service documentation to reflect the intentional TRaSH-recommended preference scale (`CR +6`, `DSNP +5`, `NF +4`, `AMZN/VRV +3`, `FUNi +2`, `ABEMA/ADN +1`, B-Global/Bilibili/HIDIVE `0`) rather than describing those rules as score-neutral.
 
+- Normalized positive availability scoring so it acts only as a tie-breaker: `Alive on our backbone` is now `+20` and `Recently confirmed` is `+10`, for a maximum combined positive availability contribution of `+30`.
+- Removed the `Very fresh NZB`, `Recent NZB`, `Popular NZB`, `Very popular NZB`, and `Highly popular NZB` score rules. Freshness and grab-count metadata remain formatter-visible but no longer affect ranking directly.
+- Reduced the current production profile from **109 to 103 rules** after removing the redundant Library rule and five freshness/popularity scoring rules. The generated Define Library remains at **53** rules.
+
 ### Fixed
 - Rescaled Anime BluRay release-group tiers to +500/+430/+360/+290/+220/+150/+80/+10 (T1–T8), creating uniform 70-point gaps so the known +31 cumulative positive minor-metadata stack cannot overtake the next-higher clean tier; Anime WEB tier scores remain unchanged.
 
@@ -64,6 +68,10 @@ Changes in this section are under development and are not part of the latest sta
 
 - Fixed **Movie-version preference scoring** so `IMAX` and `Open matte` are explicitly Movie-only instead of global rules that could override Show and Anime release-group hierarchies.
 - Corrected the Movie edition preference scale from `IMAX +1000` / `Open Matte +500` to `IMAX +800` / `Open Matte +25`. IMAX remains an intentional strong Movie preference, while Open Matte now remains below the 200-point Movie release-group tier gap. Real-engine regression coverage verifies Movie-only scope, matching boundaries, `+825` combined stacking, and representative tier interactions.
+- Fixed Library scoring double-counting by removing the profile-level `Library hit +500` rule. StreamNZB's `4k` preset already supplies the intended native `+500` Library bonus; the previous combination produced an effective `+1000` preference.
+- Fixed Anime and non-Anime Dubbed/Dual/Multi Audio scoring against StreamNZB's native `-1000` dubbed/audio rank. The published rules now use raw `+1010` compensation so the complete ranking pipeline produces the intended effective `+10` non-stacking preference.
+- Added full-pipeline regression coverage for native Library scoring, the `+30` positive availability ceiling, and effective Anime/non-Anime audio scoring, and updated the Anime BluRay ceiling regression to distinguish raw audio compensation from its effective `+10` preference.
+
 
 ## V4.3
 

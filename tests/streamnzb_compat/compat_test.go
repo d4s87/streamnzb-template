@@ -597,3 +597,253 @@ func TestCompatibilityFixtures(t *testing.T) {
 		})
 	}
 }
+
+func TestAnimeBluRayTierCeilings(t *testing.T) {
+	data, err := os.ReadFile(
+		"../../generated/vidhin-defines.json",
+	)
+	if err != nil {
+		t.Fatalf(
+			"read generated Define baseline: %v",
+			err,
+		)
+	}
+
+	var baseline struct {
+		Defines map[string]struct {
+			Tokens []string `json:"tokens"`
+		} `json:"defines"`
+	}
+
+	if err := json.Unmarshal(data, &baseline); err != nil {
+		t.Fatalf(
+			"decode generated Define baseline: %v",
+			err,
+		)
+	}
+
+	tokenForTier := func(tier int) string {
+		t.Helper()
+
+		name := fmt.Sprintf(
+			"Anime Shows BluRay T%d Groups",
+			tier,
+		)
+
+		entry, ok := baseline.Defines[name]
+		if !ok {
+			t.Fatalf(
+				"missing Define baseline entry %q",
+				name,
+			)
+		}
+
+		if len(entry.Tokens) == 0 {
+			t.Fatalf(
+				"%s contains no release-group tokens",
+				name,
+			)
+		}
+
+		tokens := append(
+			[]string(nil),
+			entry.Tokens...,
+		)
+
+		slices.Sort(tokens)
+
+		return tokens[0]
+	}
+
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	set, err := rules.Compile(
+		productionRules,
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile complete production profile: %v",
+			err,
+		)
+	}
+
+	type auditCase struct {
+		name     string
+		tier     int
+		metadata string
+	}
+
+	var cases []auditCase
+
+	for tier := 1; tier <= 8; tier++ {
+		cases = append(
+			cases,
+			auditCase{
+				name: fmt.Sprintf(
+					"T%d clean",
+					tier,
+				),
+				tier: tier,
+			},
+		)
+
+		if tier >= 2 {
+			cases = append(
+				cases,
+				auditCase{
+					name: fmt.Sprintf(
+						"T%d full positive minor stack",
+						tier,
+					),
+					tier:     tier,
+					metadata: "Dual.Audio.Uncensored.v4.REPACK3",
+				},
+			)
+		}
+	}
+
+	buildRelease := func(
+		group string,
+		metadata string,
+	) string {
+		parts := []string{
+			"Example.Anime",
+			"S01E01",
+			"1080p",
+			"BluRay",
+			"x264",
+		}
+
+		if metadata != "" {
+			parts = append(
+				parts,
+				strings.Split(metadata, ".")...,
+			)
+		}
+
+		return strings.Join(parts, ".") + "-" + group
+	}
+
+	envs := make([]rules.Env, len(cases))
+
+	for i, c := range cases {
+		envs[i] = buildEnv(
+			CaseFixture{
+				Release: buildRelease(
+					tokenForTier(c.tier),
+					c.metadata,
+				),
+				Kind:  "anime_show",
+				Anime: true,
+			},
+		)
+	}
+
+	state := set.ComputeAggregates(envs)
+	if state == nil {
+		t.Fatal(
+			"ComputeAggregates returned nil state",
+		)
+	}
+
+	scores := make(map[string]int)
+
+	for i, c := range cases {
+		state.Inject(&envs[i])
+
+		out := set.Evaluate(
+			envs[i],
+			"anime_show",
+		)
+
+		scores[c.name] = out.Points
+	}
+
+	expectedClean := map[int]int{
+		1: 500,
+		2: 430,
+		3: 360,
+		4: 290,
+		5: 220,
+		6: 150,
+		7: 80,
+		8: 10,
+	}
+
+	for tier, expected := range expectedClean {
+		name := fmt.Sprintf(
+			"T%d clean",
+			tier,
+		)
+
+		if scores[name] != expected {
+			t.Fatalf(
+				"%s score=%d want=%d",
+				name,
+				scores[name],
+				expected,
+			)
+		}
+	}
+
+	for lowerTier := 2; lowerTier <= 8; lowerTier++ {
+		higherTier := lowerTier - 1
+
+		higherName := fmt.Sprintf(
+			"T%d clean",
+			higherTier,
+		)
+
+		lowerCleanName := fmt.Sprintf(
+			"T%d clean",
+			lowerTier,
+		)
+
+		lowerStackName := fmt.Sprintf(
+			"T%d full positive minor stack",
+			lowerTier,
+		)
+
+		higherClean := scores[higherName]
+		lowerClean := scores[lowerCleanName]
+		lowerStack := scores[lowerStackName]
+
+		if higherClean-lowerClean != 70 {
+			t.Fatalf(
+				"T%d -> T%d clean gap=%d want=70",
+				higherTier,
+				lowerTier,
+				higherClean-lowerClean,
+			)
+		}
+
+		if lowerStack-lowerClean != 31 {
+			t.Fatalf(
+				"T%d positive minor stack adds %d points; want 31",
+				lowerTier,
+				lowerStack-lowerClean,
+			)
+		}
+
+		if lowerStack >= higherClean {
+			t.Fatalf(
+				"Anime BluRay tier ceiling inversion: %s=%d >= %s=%d",
+				lowerStackName,
+				lowerStack,
+				higherName,
+				higherClean,
+			)
+		}
+
+		if higherClean-lowerStack != 39 {
+			t.Fatalf(
+				"T%d -> T%d ceiling headroom=%d want=39",
+				higherTier,
+				lowerTier,
+				higherClean-lowerStack,
+			)
+		}
+	}
+}

@@ -134,9 +134,17 @@ WEB release groups are scored as follows:
 - T5: +100
 - T6: +50
 
-BluRay release groups use the same T1–T6 scores, with the additional lower tiers:
-- T7: +25
+BluRay release groups use a wider 70-point tier ladder:
+- T1: +500
+- T2: +430
+- T3: +360
+- T4: +290
+- T5: +220
+- T6: +150
+- T7: +80
 - T8: +10
+
+The wider BluRay gaps protect the release-group hierarchy from cumulative minor metadata preferences. The current maximum known positive Anime metadata stack is `+31` (`Dual/Multi Audio +10`, `Uncensored +10`, `v4 +4`, and `REPACK3 +7`), leaving `39` points of headroom below every next-higher clean BluRay tier. Anime WEB scores are intentionally unchanged.
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 

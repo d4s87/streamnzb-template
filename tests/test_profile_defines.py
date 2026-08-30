@@ -246,6 +246,115 @@ def validate_required_anime_structure(defines: dict[str, dict]) -> None:
         )
 
 
+def validate_anime_bluray_tier_scores(
+    rules: list[dict],
+) -> None:
+    """
+    Protect the Anime BluRay release-group hierarchy from cumulative
+    minor metadata preferences.
+
+    BluRay uses a uniform 70-point tier gap:
+
+        T1 500
+        T2 430
+        T3 360
+        T4 290
+        T5 220
+        T6 150
+        T7  80
+        T8  10
+
+    The known maximum positive minor Anime metadata stack is +31:
+
+        Dual/Multi Audio +10
+        Uncensored       +10
+        Anime v4          +4
+        REPACK3           +7
+
+    This leaves 39 points of headroom between adjacent BluRay tiers.
+
+    Tier conditions may contain intentional classification logic such
+    as the LazyRemux / UltraRemux exception, so this validation does
+    not simplify or replace their expressions.
+    """
+
+    expected = {
+        1: 500,
+        2: 430,
+        3: 360,
+        4: 290,
+        5: 220,
+        6: 150,
+        7: 80,
+        8: 10,
+    }
+
+    for media in (
+        "Anime Movies",
+        "Anime Shows",
+    ):
+        for tier, expected_points in expected.items():
+            name = f"{media} BluRay T{tier}"
+
+            matches = [
+                rule
+                for rule in rules
+                if rule.get("name") == name
+            ]
+
+            if len(matches) != 1:
+                raise AssertionError(
+                    f"Expected exactly one {name!r} rule, "
+                    f"found {len(matches)}"
+                )
+
+            rule = matches[0]
+
+            if rule.get("points") != expected_points:
+                raise AssertionError(
+                    f"{name} must score "
+                    f"{expected_points:+d}; found "
+                    f"{rule.get('points')!r}"
+                )
+
+            when = rule.get("when")
+
+            if not isinstance(when, str) or not when.strip():
+                raise AssertionError(
+                    f"{name} must have a valid condition"
+                )
+
+            required_match = (
+                f'matched("{media} BluRay T{tier} Groups")'
+            )
+
+            if required_match not in when:
+                raise AssertionError(
+                    f"{name} must reference "
+                    f"{required_match!r}"
+                )
+
+    gaps = [
+        expected[tier] - expected[tier + 1]
+        for tier in range(1, 8)
+    ]
+
+    if gaps != [70] * 7:
+        raise AssertionError(
+            "Anime BluRay tier ladder must retain uniform "
+            f"70-point gaps; found {gaps}"
+        )
+
+    max_positive_minor_stack = 10 + 10 + 4 + 7
+
+    for gap in gaps:
+        if gap <= max_positive_minor_stack:
+            raise AssertionError(
+                "Anime BluRay tier gap is not safely above "
+                f"the +{max_positive_minor_stack} positive "
+                "minor-metadata ceiling"
+            )
+
 def validate_anime_lq(
     rules: list[dict],
     defines: dict[str, dict],
@@ -1136,6 +1245,7 @@ if missing_dependencies:
     )
 
 validate_required_anime_structure(defines)
+validate_anime_bluray_tier_scores(rules)
 validate_anime_lq(rules, defines)
 validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)

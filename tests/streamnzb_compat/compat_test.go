@@ -1485,3 +1485,119 @@ func TestEffectiveAvailabilityLibraryAndAudioPolicy(t *testing.T) {
 		)
 	}
 }
+
+// TestProductionRankingPreservesSameReleaseVariants protects the template side
+// of StreamNZB same-release failover. StreamNZB performs copy merging and
+// primary/fallback selection before profile ranking; once a merged release
+// reaches the profile, ranking must preserve its attached playback variants.
+//
+// MergeSameReleaseVariants and DropCopies are runtime-owned behavior covered by
+// the pinned StreamNZB test suite. This regression deliberately avoids
+// reimplementing those runtime tests or widening this harness's dependency
+// graph merely to import the search package.
+func TestProductionRankingPreservesSameReleaseVariants(t *testing.T) {
+	const (
+		primaryURL  = "https://drunkenslug.example/details/456"
+		fallbackURL = "https://nzbgeek.example/details/123"
+	)
+
+	merged := &release.Release{
+		Title:      "Example.Movie.2025.1080p.WEB-DL.DDP5.1.H.264-GRP",
+		DetailsURL: primaryURL,
+		Link:       "https://drunkenslug.example/get/456",
+		GUID:       "slug-456",
+		Indexer:    "DrunkenSlug",
+		Grabs:      50,
+		Variants: []*release.Release{
+			{
+				Title:      "Example.Movie.2025.1080p.WEB-DL.DDP5.1.H.264-GRP",
+				DetailsURL: fallbackURL,
+				Link:       "https://nzbgeek.example/get/123",
+				GUID:       "geek-123",
+				Indexer:    "NZBGeek",
+				Grabs:      100,
+			},
+		},
+	}
+
+	if got := merged.CopyCount(); got != 2 {
+		t.Fatalf("test setup has %d copies; want 2", got)
+	}
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Same-release failover regression",
+			Preset: "4k",
+			Rules:  loadProductionRules(t),
+		},
+		loadDefineLibrary(t)...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	kept, rejected := profile.ApplyWithRejected(
+		ranking.Request{
+			Kind:  ranking.KindMovie,
+			Title: "Example Movie",
+		},
+		[]triage.Candidate{
+			{Release: merged},
+		},
+		jhinrank.RankOptions{},
+	)
+
+	if len(rejected) != 0 {
+		t.Fatalf(
+			"production profile unexpectedly rejected merged release: %#v",
+			rejected,
+		)
+	}
+
+	if len(kept) != 1 {
+		t.Fatalf(
+			"production profile kept %d releases; want 1",
+			len(kept),
+		)
+	}
+
+	rel := kept[0].Candidate.Release
+	if rel == nil {
+		t.Fatal("production profile returned nil release")
+	}
+
+	if rel.DetailsURL != primaryURL {
+		t.Fatalf(
+			"production ranking changed primary copy to %q; want %q",
+			rel.DetailsURL,
+			primaryURL,
+		)
+	}
+
+	if got := rel.CopyCount(); got != 2 {
+		t.Fatalf(
+			"production ranking reduced same-release copies to %d; want 2",
+			got,
+		)
+	}
+
+	fallback := rel.CopyAt(1)
+	if fallback == nil {
+		t.Fatal("production ranking removed fallback copy")
+	}
+
+	if fallback.DetailsURL != fallbackURL {
+		t.Fatalf(
+			"fallback details URL = %q; want %q",
+			fallback.DetailsURL,
+			fallbackURL,
+		)
+	}
+
+	if fallback.Indexer != "NZBGeek" {
+		t.Fatalf(
+			"fallback indexer = %q; want NZBGeek",
+			fallback.Indexer,
+		)
+	}
+}

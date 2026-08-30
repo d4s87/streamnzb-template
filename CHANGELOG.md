@@ -44,14 +44,22 @@ Changes in this section are under development and are not part of the latest sta
 - Added pinned real-engine compatibility coverage for Anime Shows and Movies, episode-suffix forms such as `01v2`, case variants, REPACK interaction, unsupported `v5+`, false positives, and multi-version non-stacking behavior.
 - Added a global **Retag Soft Penalty** of `-1` for recognized redistribution markers including `.heb`, EZTV variants, RARBG, RARTV, and TGx. The rule is intentionally a metadata tie-breaker and never rejects a result.
 - Added pinned real-engine compatibility coverage for Retag matching, including spaced and unspaced forms, EZTV variants, case handling, Anime redistribution, clean releases, legitimate Anime bracket groups, and false-positive boundaries.
+- Added a dedicated Anime **Dual/Multi Audio Preference** of `+10`, shared between Dual Audio and Multi Audio so the preference remains non-stacking and subordinate to Anime release-group tiers.
+- Added pinned real-engine compatibility coverage for Anime/non-Anime Dubbed, Dual Audio and Multi Audio behavior, including Anime Movies and combined Dual+Multi release names.
+- Added structural validation for the split Anime/non-Anime audio policy so Anime cannot silently inherit the legacy high-value audio bonuses again.
 
 ### Changed
 
 - Moved the `💚 ɴᴢʙ` availability indicator from the result name to the description score line, keeping the compact result name focused on resolution, quality, and relative ranking.
 - Updated the pinned StreamNZB compatibility revision to `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to validate the `.TopScore` and `stars` formatter API against the real engine.
 - Increased the production profile from **101 to 110 rules** across the current Unreleased scoring additions: three global corrected-release preference rules, five Anime revision preference rules, and one global Retag soft-penalty rule. The generated Define Library remains at **53** rules because these features use native StreamNZB parser traits and/or direct release-name matching rather than new Vidhin-backed classifications.
+- Increased the production profile from **110 to 111 rules** with the dedicated Anime Dual/Multi Audio preference. The generated Define Library remains at **53** rules.
+- Scoped the legacy `Dubbed bonus` (`+500`), `Dual audio` (`+200`), and `Multi audio` (`+200`) rules to non-Anime content. Their existing Movie and Show behavior is unchanged.
+- Corrected the Anime Streaming Service documentation to reflect the intentional TRaSH-recommended preference scale (`CR +6`, `DSNP +5`, `NF +4`, `AMZN/VRV +3`, `FUNi +2`, `ABEMA/ADN +1`, B-Global/Bilibili/HIDIVE `0`) rather than describing those rules as score-neutral.
 
 ### Fixed
+
+- Fixed a reachable Anime scoring inversion where StreamNZB's `dubbed` parser trait caused Dual/Multi Audio Anime releases to inherit the generic `+500` Dubbed bonus in addition to the legacy `+200` Dual/Multi score. Anime Dual/Multi Audio now receives one `+10` same-tier preference instead of an effective `+700` bonus.
 
 
 ## V4.3

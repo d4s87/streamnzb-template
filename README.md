@@ -10,11 +10,11 @@ The profile is designed around:
 - Movie and Show release-group tiers
 - Full Anime WEB T1–T6 and BluRay T1–T8 release-group tiers
 - Vidhin-backed Anime LQ filtering with SeaDex Best / Alternative exemptions
-- Streaming Service detection for Anime WEB releases, with Network-first formatter fallback
+- Anime WEB Streaming Service preference scoring using the TRaSH-recommended source hierarchy, with Network-first formatter fallback
 - Anime 10-bit / Hi10P detection with formatter labeling
 - Anime Uncensored preference with formatter labeling
 - Vidhin-backed Movie and Show Bad Dual release-group penalties
-- Availability-aware Vidhin-backed Anime Dubs Only preference with Dual/Multi Audio protection
+- Availability-aware Vidhin-backed Anime Dubs Only preference with a non-stacking `+10` Anime Dual/Multi Audio preference
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
@@ -144,7 +144,7 @@ Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an a
 
 The formatter displays matching releases as `₁₀ʙɪᴛ`.
 
-The profile also detects common **Streaming Services** for Anime WEB releases: Crunchyroll (`CR`), Disney+ (`DSNP`), Netflix (`NF`), Amazon (`AMZN`), VRV, Funimation (`FUNi`), ABEMA, ADN, B-Global, Bilibili, and HIDIVE. These rules are informational and do not change release scores.
+The profile also detects common **Streaming Services** for Anime WEB releases and applies the small source-preference scale recommended by TRaSH for Anime: Crunchyroll (`CR`) `+6`, Disney+ (`DSNP`) `+5`, Netflix (`NF`) `+4`, Amazon (`AMZN`) `+3`, VRV `+3`, Funimation (`FUNi`) `+2`, ABEMA `+1`, ADN `+1`, while B-Global, Bilibili, and HIDIVE score `0`. These are deliberately small source preferences and remain subordinate to the Anime release-group tier hierarchy.
 
 The formatter remains **Network-first**: when StreamNZB provides `.Network`, that value is displayed as the source. If `.Network` is absent, the formatter falls back to the matched Streaming Service rule. This provides a source label for Anime WEB releases where the service can be identified from the release name without overriding StreamNZB's parsed Network metadata.
 
@@ -158,6 +158,10 @@ Anime revision scoring is independent of the global REPACK / PROPER preference. 
 
 
 Anime releases classified by the Vidhin-backed **Anime Dubs Only** Define receive a small `-10` preference penalty only when another Anime result exists that is not classified as dub-only. This makes the rule a ranking tie-breaker rather than a filter: when all available releases are dub-only, no penalty is applied. Explicit Dual/Multi Audio forms are excluded from the classification, including protected known dub groups.
+
+Explicit Anime **Dual Audio** and **Multi Audio** releases receive one shared, non-stacking `+10` preference. This follows the same-tier preference model used by the TRaSH Anime guidance: Dual/Multi Audio can break a tie within a release-group tier but does not override the tier hierarchy. A release containing both `Dual Audio` and `Multi Audio` still receives only `+10`.
+
+The legacy `Dubbed bonus` (`+500`), `Dual audio` (`+200`), and `Multi audio` (`+200`) rules now apply only to non-Anime Movies and Shows. StreamNZB's parser exposes Dual/Multi Audio Anime as `dubbed`, so allowing Anime to inherit those generic rules produced effective `+700` audio bonuses that could overwhelm the full Anime release-group ladder. Anime uses the dedicated `+10` rule instead.
 
 Users who prefer dubbed Anime should leave the upstream DraCuLa rule untouched and add a uniquely named local positive scoring rule instead, so their preference survives linked-profile refreshes.
 

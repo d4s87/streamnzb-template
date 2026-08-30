@@ -759,6 +759,155 @@ def validate_retag_soft_penalty(
         )
 
 
+def validate_audio_preferences(
+    rules: list[dict],
+) -> None:
+    """
+    Validate the split Anime/non-Anime audio preference policy.
+
+    Non-Anime content retains the legacy Dubbed/Dual/Multi scoring.
+    Anime releases must not inherit the generic Dubbed +500 bonus or
+    the legacy Dual/Multi +200 rules. Anime Dual/Multi Audio instead
+    receives one shared +10 same-tier preference.
+    """
+
+    expected = {
+        "Dubbed bonus": {
+            "points": 500,
+            "when": 'not isAnime and "dubbed" in traits',
+        },
+        "Dual audio": {
+            "points": 200,
+            "when": (
+                'not isAnime and releaseName matches '
+                '"(?i)\\\\bDual[. _-]?Audio\\\\b"'
+            ),
+        },
+        "Multi audio": {
+            "points": 200,
+            "when": (
+                'not isAnime and releaseName matches '
+                '"(?i)\\\\bMulti[. _-]?Audio\\\\b"'
+            ),
+        },
+        "Anime Dual/Multi Audio Preference": {
+            "points": 10,
+            "when": (
+                'isAnime and releaseName matches '
+                '"(?i)\\\\b(?:Dual|Multi)[. _-]?Audio\\\\b"'
+            ),
+        },
+    }
+
+    resolved = {}
+
+    for name, spec in expected.items():
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+        resolved[name] = rule
+
+        if rule.get("points") != spec["points"]:
+            raise AssertionError(
+                f"{name} must score exactly "
+                f"{spec['points']:+d}; "
+                f"found {rule.get('points')!r}"
+            )
+
+        if rule.get("when") != spec["when"]:
+            raise AssertionError(
+                f"{name} condition drifted: "
+                f"{rule.get('when')!r}"
+            )
+
+        if "action" in rule:
+            raise AssertionError(
+                f"{name} must remain a score rule "
+                "without an explicit action"
+            )
+
+        if "scope" in rule:
+            raise AssertionError(
+                f"{name} must use isAnime/not isAnime "
+                "rather than an explicit profile scope"
+            )
+
+        when = rule["when"]
+
+        if 'matched("' in when or "matched('" in when:
+            raise AssertionError(
+                f"{name} must not depend on a Define rule"
+            )
+
+        if "seadex" in when.lower():
+            raise AssertionError(
+                f"{name} must not contain "
+                "SeaDex-specific predicates"
+            )
+
+    dubbed = resolved["Dubbed bonus"]["when"]
+    dual = resolved["Dual audio"]["when"]
+    multi = resolved["Multi audio"]["when"]
+    anime = resolved[
+        "Anime Dual/Multi Audio Preference"
+    ]["when"]
+
+    # The three legacy rules must explicitly exclude Anime.
+    for name, when in (
+        ("Dubbed bonus", dubbed),
+        ("Dual audio", dual),
+        ("Multi audio", multi),
+    ):
+        if not when.startswith("not isAnime and "):
+            raise AssertionError(
+                f"{name} must explicitly exclude Anime"
+            )
+
+    # Anime must have exactly one combined Dual/Multi score rule.
+    if not anime.startswith("isAnime and "):
+        raise AssertionError(
+            "Anime Dual/Multi Audio Preference "
+            "must remain Anime-only"
+        )
+
+    if "(?:Dual|Multi)" not in anime:
+        raise AssertionError(
+            "Anime Dual/Multi Audio Preference must "
+            "combine Dual and Multi matching in one rule"
+        )
+
+    # Guard against reintroducing independent Anime Dual and Multi
+    # rules, which would allow Dual+Multi releases to stack twice.
+    forbidden_names = {
+        "Anime Dual Audio Preference",
+        "Anime Multi Audio Preference",
+    }
+
+    found_forbidden = sorted(
+        rule.get("name")
+        for rule in rules
+        if rule.get("name") in forbidden_names
+    )
+
+    if found_forbidden:
+        raise AssertionError(
+            "Anime Dual/Multi preference must remain "
+            "non-stacking; found separate rule(s): "
+            + ", ".join(found_forbidden)
+        )
+
+
+
 def validate_anime_version_preferences(
     rules: list[dict],
 ) -> None:
@@ -961,9 +1110,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 110:
+if len(rules) != 111:
     raise AssertionError(
-        f"Expected 110 profile rules, found {len(rules)}"
+        f"Expected 111 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -1003,6 +1152,7 @@ validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
 validate_repack_proper_preferences(rules)
 validate_retag_soft_penalty(rules)
+validate_audio_preferences(rules)
 validate_anime_version_preferences(rules)
 validate_regressions(defines)
 

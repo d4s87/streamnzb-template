@@ -3979,6 +3979,203 @@
           }
         }
       ]
+    },
+    {
+      "name": "Dubbed bonus",
+      "productionRule": "Dubbed bonus",
+      "when": "not isAnime and \"dubbed\" in traits",
+      "points": 500,
+      "cases": [
+        {
+          "name": "movie dubbed remains preferred",
+          "release": "Example.Movie.2026.DUBBED.1080p.WEB-DL.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": true
+          }
+        },
+        {
+          "name": "series dubbed remains preferred",
+          "release": "Example.Show.S01E01.DUBBED.1080p.WEB-DL.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": true
+          }
+        },
+        {
+          "name": "anime dubbed excluded",
+          "release": "Anime.Show.S01E01.DUBBED.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": false
+          }
+        },
+        {
+          "name": "anime dual excluded from generic dubbed bonus",
+          "release": "Anime.Show.S01E01.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dual audio",
+      "productionRule": "Dual audio",
+      "when": "not isAnime and releaseName matches \"(?i)\\\\bDual[. _-]?Audio\\\\b\"",
+      "points": 200,
+      "cases": [
+        {
+          "name": "movie dual remains preferred",
+          "release": "Example.Movie.2026.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "series dual remains preferred",
+          "release": "Example.Show.S01E01.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime dual excluded from legacy rule",
+          "release": "Anime.Show.S01E01.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Multi audio",
+      "productionRule": "Multi audio",
+      "when": "not isAnime and releaseName matches \"(?i)\\\\bMulti[. _-]?Audio\\\\b\"",
+      "points": 200,
+      "cases": [
+        {
+          "name": "movie multi remains preferred",
+          "release": "Example.Movie.2026.Multi.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "series multi remains preferred",
+          "release": "Example.Show.S01E01.Multi.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime multi excluded from legacy rule",
+          "release": "Anime.Show.S01E01.Multi.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anime Dual/Multi Audio Preference",
+      "productionRule": "Anime Dual/Multi Audio Preference",
+      "when": "isAnime and releaseName matches \"(?i)\\\\b(?:Dual|Multi)[. _-]?Audio\\\\b\"",
+      "points": 10,
+      "cases": [
+        {
+          "name": "anime dual",
+          "release": "Anime.Show.S01E01.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": true
+          }
+        },
+        {
+          "name": "anime multi",
+          "release": "Anime.Show.S01E01.Multi.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": true
+          }
+        },
+        {
+          "name": "anime dual plus multi shared rule",
+          "release": "Anime.Show.S01E01.Dual.Audio.Multi.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "traitsContain": [
+              "dubbed"
+            ],
+            "match": true
+          }
+        },
+        {
+          "name": "plain anime negative",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non anime dual negative",
+          "release": "Example.Show.S01E01.Dual.Audio.1080p.WEB-DL.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie dual",
+          "release": "Anime.Movie.2026.Dual.Audio.1080p.BluRay.x264-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        }
+      ]
     }
   ]
 }

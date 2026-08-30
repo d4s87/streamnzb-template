@@ -161,7 +161,7 @@ Anime releases classified by the Vidhin-backed **Anime Dubs Only** Define receiv
 
 Explicit Anime **Dual Audio** and **Multi Audio** releases receive one shared, non-stacking `+10` preference. This follows the same-tier preference model used by the TRaSH Anime guidance: Dual/Multi Audio can break a tie within a release-group tier but does not override the tier hierarchy. A release containing both `Dual Audio` and `Multi Audio` still receives only `+10`.
 
-The legacy `Dubbed bonus` (`+500`), `Dual audio` (`+200`), and `Multi audio` (`+200`) rules now apply only to non-Anime Movies and Shows. StreamNZB's parser exposes Dual/Multi Audio Anime as `dubbed`, so allowing Anime to inherit those generic rules produced effective `+700` audio bonuses that could overwhelm the full Anime release-group ladder. Anime uses the dedicated `+10` rule instead.
+Audio-language preferences are deliberately small, shared, and non-stacking. Non-Anime Movies and Shows receive one shared `+10` **Dubbed/Dual/Multi Audio** preference through StreamNZB's parsed `dubbed` trait, which covers DUBBED, Dual Audio, and Multi Audio releases. A release containing both Dual Audio and Multi Audio still receives only `+10`. This replaces the historical `Dubbed bonus` (`+500`) plus independent Dual/Multi (`+200`) rules, which produced reachable `+700` and `+900` stacks capable of overriding Movie/Show release-group tiers. Anime remains isolated on its dedicated shared `+10` Dual/Multi Audio preference.
 
 Users who prefer dubbed Anime should leave the upstream DraCuLa rule untouched and add a uniquely named local positive scoring rule instead, so their preference survives linked-profile refreshes.
 

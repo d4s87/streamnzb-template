@@ -763,32 +763,21 @@ def validate_audio_preferences(
     rules: list[dict],
 ) -> None:
     """
-    Validate the split Anime/non-Anime audio preference policy.
+    Validate the non-stacking audio preference policy.
 
-    Non-Anime content retains the legacy Dubbed/Dual/Multi scoring.
-    Anime releases must not inherit the generic Dubbed +500 bonus or
-    the legacy Dual/Multi +200 rules. Anime Dual/Multi Audio instead
-    receives one shared +10 same-tier preference.
+    Non-Anime Movies and Shows use one shared +10 preference based on
+    StreamNZB's parsed ``dubbed`` trait. The parser exposes DUBBED,
+    Dual Audio, and Multi Audio through that trait, so independent
+    legacy rules must not exist.
+
+    Anime remains isolated on its dedicated shared +10 Dual/Multi
+    release-name preference.
     """
 
     expected = {
-        "Dubbed bonus": {
-            "points": 500,
+        "Non-Anime Dubbed/Dual/Multi Audio Preference": {
+            "points": 10,
             "when": 'not isAnime and "dubbed" in traits',
-        },
-        "Dual audio": {
-            "points": 200,
-            "when": (
-                'not isAnime and releaseName matches '
-                '"(?i)\\\\bDual[. _-]?Audio\\\\b"'
-            ),
-        },
-        "Multi audio": {
-            "points": 200,
-            "when": (
-                'not isAnime and releaseName matches '
-                '"(?i)\\\\bMulti[. _-]?Audio\\\\b"'
-            ),
         },
         "Anime Dual/Multi Audio Preference": {
             "points": 10,
@@ -855,25 +844,20 @@ def validate_audio_preferences(
                 "SeaDex-specific predicates"
             )
 
-    dubbed = resolved["Dubbed bonus"]["when"]
-    dual = resolved["Dual audio"]["when"]
-    multi = resolved["Multi audio"]["when"]
+    non_anime = resolved[
+        "Non-Anime Dubbed/Dual/Multi Audio Preference"
+    ]["when"]
+
     anime = resolved[
         "Anime Dual/Multi Audio Preference"
     ]["when"]
 
-    # The three legacy rules must explicitly exclude Anime.
-    for name, when in (
-        ("Dubbed bonus", dubbed),
-        ("Dual audio", dual),
-        ("Multi audio", multi),
-    ):
-        if not when.startswith("not isAnime and "):
-            raise AssertionError(
-                f"{name} must explicitly exclude Anime"
-            )
+    if non_anime != 'not isAnime and "dubbed" in traits':
+        raise AssertionError(
+            "Non-Anime audio preference must use StreamNZB's "
+            "parsed dubbed trait"
+        )
 
-    # Anime must have exactly one combined Dual/Multi score rule.
     if not anime.startswith("isAnime and "):
         raise AssertionError(
             "Anime Dual/Multi Audio Preference "
@@ -886,9 +870,16 @@ def validate_audio_preferences(
             "combine Dual and Multi matching in one rule"
         )
 
-    # Guard against reintroducing independent Anime Dual and Multi
-    # rules, which would allow Dual+Multi releases to stack twice.
+    # These historical independent rules produced reachable +700
+    # and +900 stacks because StreamNZB also marks Dual/Multi
+    # releases with the dubbed trait.
     forbidden_names = {
+        "Dubbed bonus",
+        "Dual audio",
+        "Multi audio",
+        "Non-Anime Dubbed bonus",
+        "Non-Anime Dual audio",
+        "Non-Anime Multi audio",
         "Anime Dual Audio Preference",
         "Anime Multi Audio Preference",
     }
@@ -901,11 +892,10 @@ def validate_audio_preferences(
 
     if found_forbidden:
         raise AssertionError(
-            "Anime Dual/Multi preference must remain "
-            "non-stacking; found separate rule(s): "
+            "Audio preferences must remain shared and "
+            "non-stacking; found forbidden rule(s): "
             + ", ".join(found_forbidden)
         )
-
 
 
 def validate_anime_version_preferences(
@@ -1110,9 +1100,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 111:
+if len(rules) != 109:
     raise AssertionError(
-        f"Expected 111 profile rules, found {len(rules)}"
+        f"Expected 109 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

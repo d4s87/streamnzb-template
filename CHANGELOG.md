@@ -8,6 +8,7 @@
 - **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
 - **V4.1** — Added Vidhin-backed Anime LQ filtering and subsequent Anime detection, formatter and compatibility-testing improvements.
 - **V4.2** — Added availability-aware HD x265 filtering, adaptive 1080p Remux preference, Anime Uncensored preference, Vidhin-backed Bad Dual penalties, and expanded compatibility validation.
+- **V4.3** — Added Anime Streaming Service classification and Network-first formatter fallback, real-engine formatter regression infrastructure, and availability-aware Anime Dubs Only handling.
 
 ### Subsequent Improvements
 
@@ -34,6 +35,19 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## V4.3
+
+### Added
+
+- Added Vidhin-backed **Anime Dubs Only** classification with a StreamNZB-safe translation of the upstream release-name expression.
+- Added an availability-aware **Anime Dubs Only Penalty** of `-10`: dub-only Anime is demoted only when a non-dub Anime alternative exists, so scarce dub-only results remain available.
+- Added explicit Dual/Multi Audio protection so legitimate Dual Audio releases are not classified as dub-only, including known dub groups.
+- Added aggregate fixture and production-profile regression coverage for dub-only Anime Shows and Movies, Dual Audio protection, non-Anime exclusion, and scarce-result preservation.
+
 - Added Anime WEB **Streaming Service** detection for Crunchyroll (`CR`), Disney+ (`DSNP`), Netflix (`NF`), Amazon (`AMZN`), VRV, Funimation (`FUNi`), ABEMA, ADN, B-Global, Bilibili, and HIDIVE.
 - Added StreamNZB compatibility fixtures covering positive service markers, boundaries and false positives, Anime scope, BluRay exclusion, and Anime Movie WEB matching.
 - Added production-profile regression coverage for all Streaming Service detection rules.
@@ -45,7 +59,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changed
 
-- Increased the production profile from **91 to 100 rules**.
+- Expanded the generated Define Library from **52 to 53** reusable classifications with `Anime Dubs Only`.
+
+- Increased the production profile from **91 to 101 rules**.
 - Updated the formatter to use matched Streaming Service rules as a fallback when `.Network` is unavailable, while preserving `.Network` as the preferred source label.
 - Removed the separate Crunchyroll and HIDIVE formatter badges now that those services participate in the unified Network-first source display.
 - Extended the StreamNZB compatibility suite to require semantic synchronization between the formatter source and `formatter.txt` and to run the published formatter regression automatically.

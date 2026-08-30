@@ -1,9 +1,9 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V4.2**
+**Current version: V4.3**
 
-V4.2 expands the V4.1 baseline with availability-aware streaming preferences and additional release-quality safeguards. It adds Adaptive HD x265 filtering, an Adaptive 1080p Remux preference over SDR 4K WEB-DL, Anime Uncensored preference and labeling, and Vidhin-backed Movie/Show Bad Dual penalties. The release also strengthens compatibility validation with production-profile regression, shared Define Library coverage, and an explicit StreamNZB profile-schema guard.
+V4.3 builds on V4.2 with Anime WEB Streaming Service classification and Network-first formatter fallback, a human-readable formatter development source with real-engine regression coverage, and availability-aware Anime Dubs Only handling. Dub-only Anime receives only a small `-10` tie-breaker when a non-dub Anime alternative exists; scarce dub-only results remain untouched, and explicit Dual/Multi Audio releases are protected.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -14,6 +14,7 @@ The profile is designed around:
 - Anime 10-bit / Hi10P detection with formatter labeling
 - Anime Uncensored preference with formatter labeling
 - Vidhin-backed Movie and Show Bad Dual release-group penalties
+- Availability-aware Vidhin-backed Anime Dubs Only preference with Dual/Multi Audio protection
 - Smart 4K Anime and BluRay filtering
 - Suspicious 4K upscale detection
 - Adaptive low-quality filtering
@@ -78,7 +79,7 @@ The proposed changes can be reviewed before they are applied.
 > [!IMPORTANT]
 > The shared Define Library must be imported before this profile. See [Quick Start](#quick-start) for the correct installation order.
 
-The latest V4.2 StreamNZB share code is always available here:
+The latest V4.3 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
@@ -88,17 +89,17 @@ For the recommended linked import, use this URL in StreamNZB:
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
-V4.2 requires the Define Library described below. Import the library before using the profile.
+V4.3 requires the Define Library described below. Import the library before using the profile.
 
 ## Define Library
 
-V4.2 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
+V4.3 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 52 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications and separate Movie/Show Bad Dual classifications used by the profile.
+The library currently provides 53 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications, separate Movie/Show Bad Dual classifications, and the Anime Dubs Only release-name classification used by the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -120,7 +121,7 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 ## Anime Scoring
 
-V4.2 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
+V4.3 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
 
 WEB release groups are scored as follows:
 - T1: +500
@@ -145,6 +146,11 @@ The profile also detects common **Streaming Services** for Anime WEB releases: C
 The formatter remains **Network-first**: when StreamNZB provides `.Network`, that value is displayed as the source. If `.Network` is absent, the formatter falls back to the matched Streaming Service rule. This provides a source label for Anime WEB releases where the service can be identified from the release name without overriding StreamNZB's parsed Network metadata.
 
 Anime releases explicitly marked as `Uncensored`, `Uncut`, `Unrated`, or with an `AT-X` source variant receive a small `+10` preference. The rule is intentionally Anime-only and acts as a tie-breaking preference rather than replacing the release-group tier hierarchy. Because most Anime BluRay releases are not necessarily labeled as uncensored in their release names, the rule should be interpreted as detecting an explicit uncensored-related marker rather than proving whether every release is censored or uncensored.
+
+
+Anime releases classified by the Vidhin-backed **Anime Dubs Only** Define receive a small `-10` preference penalty only when another Anime result exists that is not classified as dub-only. This makes the rule a ranking tie-breaker rather than a filter: when all available releases are dub-only, no penalty is applied. Explicit Dual/Multi Audio forms are excluded from the classification, including protected known dub groups.
+
+Users who prefer dubbed Anime should leave the upstream DraCuLa rule untouched and add a uniquely named local positive scoring rule instead, so their preference survives linked-profile refreshes.
 
 The formatter normalizes matching releases to `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ`.
 

@@ -699,6 +699,111 @@ def validate_repack_proper_preferences(rules):
         )
 
 
+
+def validate_anime_version_preferences(
+    rules: list[dict],
+) -> None:
+    """Validate Anime v0-v4 revision tie-breakers."""
+
+    expected_points = {
+        0: -1,
+        1: 1,
+        2: 2,
+        3: 3,
+        4: 4,
+    }
+
+    def version_marker(version: int) -> str:
+        return rf"(?i)(?:\b|\d)v{version}\b"
+
+    for version, points in expected_points.items():
+        name = f"Anime Version v{version} Preference"
+
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+
+        exclusions = [
+            (
+                "not (releaseName matches "
+                f'"{version_marker(other)}")'
+            )
+            for other in range(5)
+            if other != version
+        ]
+
+        expected_when = (
+            "isAnime and releaseName matches "
+            f'"{version_marker(version)}" and '
+            + " and ".join(exclusions)
+        )
+
+        if rule.get("points") != points:
+            raise AssertionError(
+                f"{name} must score exactly {points:+d}; "
+                f"found {rule.get('points')!r}"
+            )
+
+        if rule.get("when") != expected_when:
+            raise AssertionError(
+                f"{name} condition drifted: "
+                f"{rule.get('when')!r}"
+            )
+
+        if "action" in rule:
+            raise AssertionError(
+                f"{name} must remain a score rule "
+                "without an explicit action"
+            )
+
+        if "scope" in rule:
+            raise AssertionError(
+                f"{name} must use isAnime rather than "
+                "an explicit profile scope"
+            )
+
+        when = rule["when"]
+
+        if not when.startswith("isAnime and "):
+            raise AssertionError(
+                f"{name} must remain Anime-only"
+            )
+
+        if 'matched("' in when or "matched('" in when:
+            raise AssertionError(
+                f"{name} must use releaseName matching "
+                "without Define dependencies"
+            )
+
+        if "seadex" in when.lower():
+            raise AssertionError(
+                f"{name} must not contain SeaDex-specific "
+                "predicates"
+            )
+
+        # Each rule must explicitly exclude the four other
+        # supported revision markers so supported versions
+        # cannot stack.
+        exclusion_count = when.count(
+            "not (releaseName matches "
+        )
+
+        if exclusion_count != 4:
+            raise AssertionError(
+                f"{name} must contain exactly four "
+                "supported-version exclusions"
+            )
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -797,9 +902,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 104:
+if len(rules) != 109:
     raise AssertionError(
-        f"Expected 104 profile rules, found {len(rules)}"
+        f"Expected 109 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -838,6 +943,7 @@ validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
 validate_repack_proper_preferences(rules)
+validate_anime_version_preferences(rules)
 validate_regressions(defines)
 
 

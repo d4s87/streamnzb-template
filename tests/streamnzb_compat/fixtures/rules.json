@@ -3166,6 +3166,631 @@
           }
         }
       ]
+    },
+    {
+      "name": "Anime Version v0 Preference",
+      "productionRule": "Anime Version v0 Preference",
+      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v0\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "points": -1,
+      "cases": [
+        {
+          "name": "single_v0",
+          "release": "Anime.Title.01v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "dot_separated_v0",
+          "release": "Anime.Title.v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uppercase_V0",
+          "release": "Anime.Title.01V0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime_movie_v0",
+          "release": "Anime.Movie.2025.v0.1080p.BluRay-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "with_REPACK_v0",
+          "release": "Anime.Title.01v0.REPACK.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "non_anime_v0_negative",
+          "release": "Regular.Show.S01E01.v0.1080p.WEB-DL-GROUP",
+          "kind": "show",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v0_plus_v5_still_matches",
+          "release": "Anime.Title.01v0.v5.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded_Notv0_negative",
+          "release": "Anime.Title.Notv0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v00_negative",
+          "release": "Anime.Title.01v00.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v0_plus_v1_nonstack",
+          "release": "Anime.Title.01v0.v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v0_plus_v2_nonstack",
+          "release": "Anime.Title.01v0.v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v0_plus_v3_nonstack",
+          "release": "Anime.Title.01v0.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v0_plus_v4_nonstack",
+          "release": "Anime.Title.01v0.v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anime Version v1 Preference",
+      "productionRule": "Anime Version v1 Preference",
+      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v1\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "points": 1,
+      "cases": [
+        {
+          "name": "single_v1",
+          "release": "Anime.Title.01v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "dot_separated_v1",
+          "release": "Anime.Title.v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uppercase_V1",
+          "release": "Anime.Title.01V1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime_movie_v1",
+          "release": "Anime.Movie.2025.v1.1080p.BluRay-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "with_REPACK_v1",
+          "release": "Anime.Title.01v1.REPACK.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "non_anime_v1_negative",
+          "release": "Regular.Show.S01E01.v1.1080p.WEB-DL-GROUP",
+          "kind": "show",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v1_plus_v5_still_matches",
+          "release": "Anime.Title.01v1.v5.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded_Notv1_negative",
+          "release": "Anime.Title.Notv1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v10_negative",
+          "release": "Anime.Title.01v10.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v1_plus_v0_nonstack",
+          "release": "Anime.Title.01v1.v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v1_plus_v2_nonstack",
+          "release": "Anime.Title.01v1.v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v1_plus_v3_nonstack",
+          "release": "Anime.Title.01v1.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v1_plus_v4_nonstack",
+          "release": "Anime.Title.01v1.v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anime Version v2 Preference",
+      "productionRule": "Anime Version v2 Preference",
+      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v2\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "points": 2,
+      "cases": [
+        {
+          "name": "single_v2",
+          "release": "Anime.Title.01v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "dot_separated_v2",
+          "release": "Anime.Title.v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uppercase_V2",
+          "release": "Anime.Title.01V2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime_movie_v2",
+          "release": "Anime.Movie.2025.v2.1080p.BluRay-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "with_REPACK_v2",
+          "release": "Anime.Title.01v2.REPACK.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "non_anime_v2_negative",
+          "release": "Regular.Show.S01E01.v2.1080p.WEB-DL-GROUP",
+          "kind": "show",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v2_plus_v5_still_matches",
+          "release": "Anime.Title.01v2.v5.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded_Notv2_negative",
+          "release": "Anime.Title.Notv2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v20_negative",
+          "release": "Anime.Title.01v20.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v2_plus_v0_nonstack",
+          "release": "Anime.Title.01v2.v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v2_plus_v1_nonstack",
+          "release": "Anime.Title.01v2.v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v2_plus_v3_nonstack",
+          "release": "Anime.Title.01v2.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v2_plus_v4_nonstack",
+          "release": "Anime.Title.01v2.v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anime Version v3 Preference",
+      "productionRule": "Anime Version v3 Preference",
+      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v3\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "points": 3,
+      "cases": [
+        {
+          "name": "single_v3",
+          "release": "Anime.Title.01v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "dot_separated_v3",
+          "release": "Anime.Title.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uppercase_V3",
+          "release": "Anime.Title.01V3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime_movie_v3",
+          "release": "Anime.Movie.2025.v3.1080p.BluRay-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "with_REPACK_v3",
+          "release": "Anime.Title.01v3.REPACK.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "non_anime_v3_negative",
+          "release": "Regular.Show.S01E01.v3.1080p.WEB-DL-GROUP",
+          "kind": "show",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v3_plus_v5_still_matches",
+          "release": "Anime.Title.01v3.v5.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded_Notv3_negative",
+          "release": "Anime.Title.Notv3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v30_negative",
+          "release": "Anime.Title.01v30.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v3_plus_v0_nonstack",
+          "release": "Anime.Title.01v3.v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v3_plus_v1_nonstack",
+          "release": "Anime.Title.01v3.v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v3_plus_v2_nonstack",
+          "release": "Anime.Title.01v3.v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v3_plus_v4_nonstack",
+          "release": "Anime.Title.01v3.v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Anime Version v4 Preference",
+      "productionRule": "Anime Version v4 Preference",
+      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v4\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\")",
+      "points": 4,
+      "cases": [
+        {
+          "name": "single_v4",
+          "release": "Anime.Title.01v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "dot_separated_v4",
+          "release": "Anime.Title.v4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "uppercase_V4",
+          "release": "Anime.Title.01V4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime_movie_v4",
+          "release": "Anime.Movie.2025.v4.1080p.BluRay-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "with_REPACK_v4",
+          "release": "Anime.Title.01v4.REPACK.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "non_anime_v4_negative",
+          "release": "Regular.Show.S01E01.v4.1080p.WEB-DL-GROUP",
+          "kind": "show",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v4_plus_v5_still_matches",
+          "release": "Anime.Title.01v4.v5.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "embedded_Notv4_negative",
+          "release": "Anime.Title.Notv4.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v40_negative",
+          "release": "Anime.Title.01v40.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v4_plus_v0_nonstack",
+          "release": "Anime.Title.01v4.v0.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v4_plus_v1_nonstack",
+          "release": "Anime.Title.01v4.v1.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v4_plus_v2_nonstack",
+          "release": "Anime.Title.01v4.v2.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "v4_plus_v3_nonstack",
+          "release": "Anime.Title.01v4.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
     }
   ]
 }

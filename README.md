@@ -20,6 +20,7 @@ The profile is designed around:
 - Adaptive low-quality filtering
 - Adaptive 1080p Remux preference over SDR 4K WEB-DL
 - Corrected-release REPACK / PROPER tie-breaking preference
+- Anime revision preference for explicit `v0`–`v4` release markers
 - NZB availability and library scoring
 - Same-release failover
 - Grouped resolution + quality result limits
@@ -147,6 +148,12 @@ The profile also detects common **Streaming Services** for Anime WEB releases: C
 The formatter remains **Network-first**: when StreamNZB provides `.Network`, that value is displayed as the source. If `.Network` is absent, the formatter falls back to the matched Streaming Service rule. This provides a source label for Anime WEB releases where the service can be identified from the release name without overriding StreamNZB's parsed Network metadata.
 
 Anime releases explicitly marked as `Uncensored`, `Uncut`, `Unrated`, or with an `AT-X` source variant receive a small `+10` preference. The rule is intentionally Anime-only and acts as a tie-breaking preference rather than replacing the release-group tier hierarchy. Because most Anime BluRay releases are not necessarily labeled as uncensored in their release names, the rule should be interpreted as detecting an explicit uncensored-related marker rather than proving whether every release is censored or uncensored.
+
+The profile also recognizes explicit Anime release revision markers from `v0` through `v4`. These are deliberately small tie-breakers: `v0` receives `-1`, while `v1`, `v2`, `v3`, and `v4` receive `+1`, `+2`, `+3`, and `+4` respectively. Unversioned releases and unsupported `v5+` markers receive no Anime-version score.
+
+Anime revision matching is restricted to Anime Movies and Shows through `isAnime`. Common forms such as `01v2`, `E01v3`, dot-separated markers, brackets, and uppercase `V` are supported without treating embedded strings such as `Notv2` or `v20` as revision markers. If a release contains more than one supported `v0`–`v4` marker, the Anime-version rules intentionally apply no score rather than stacking or guessing which revision is valid.
+
+Anime revision scoring is independent of the global REPACK / PROPER preference. A release may therefore receive both its explicit Anime revision tie-breaker and the normal corrected-release bonus when both forms are legitimately present.
 
 
 Anime releases classified by the Vidhin-backed **Anime Dubs Only** Define receive a small `-10` preference penalty only when another Anime result exists that is not classified as dub-only. This makes the rule a ranking tie-breaker rather than a filter: when all available releases are dub-only, no penalty is applied. Explicit Dual/Multi Audio forms are excluded from the classification, including protected known dub groups.

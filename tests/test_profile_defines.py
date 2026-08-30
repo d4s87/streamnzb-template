@@ -700,6 +700,65 @@ def validate_repack_proper_preferences(rules):
 
 
 
+
+def validate_retag_soft_penalty(
+    rules: list[dict],
+) -> None:
+    """Validate the global Retag metadata tie-breaker."""
+
+    name = 'Retag Soft Penalty'
+    expected_when = 'releaseName matches "(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])"'
+
+    matches = [
+        rule
+        for rule in rules
+        if rule.get("name") == name
+    ]
+
+    if len(matches) != 1:
+        raise AssertionError(
+            f"Expected exactly one {name!r} rule, "
+            f"found {len(matches)}"
+        )
+
+    rule = matches[0]
+
+    if rule.get("points") != -1:
+        raise AssertionError(
+            f"{name} must score exactly -1; "
+            f"found {rule.get('points')!r}"
+        )
+
+    if rule.get("when") != expected_when:
+        raise AssertionError(
+            f"{name} condition drifted: "
+            f"{rule.get('when')!r}"
+        )
+
+    if "action" in rule:
+        raise AssertionError(
+            f"{name} must remain a score rule "
+            "without an explicit action"
+        )
+
+    if "scope" in rule:
+        raise AssertionError(
+            f"{name} must remain global and must not "
+            "define an explicit content scope"
+        )
+
+    if 'matched("' in rule["when"] or "matched('" in rule["when"]:
+        raise AssertionError(
+            f"{name} must use releaseName matching directly "
+            "without Define dependencies"
+        )
+
+    if "seadex" in rule["when"].lower():
+        raise AssertionError(
+            f"{name} must not contain SeaDex-specific predicates"
+        )
+
+
 def validate_anime_version_preferences(
     rules: list[dict],
 ) -> None:
@@ -902,9 +961,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 109:
+if len(rules) != 110:
     raise AssertionError(
-        f"Expected 109 profile rules, found {len(rules)}"
+        f"Expected 110 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -943,6 +1002,7 @@ validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
 validate_repack_proper_preferences(rules)
+validate_retag_soft_penalty(rules)
 validate_anime_version_preferences(rules)
 validate_regressions(defines)
 

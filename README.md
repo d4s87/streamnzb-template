@@ -20,6 +20,7 @@ The profile is designed around:
 - Adaptive low-quality filtering
 - Adaptive 1080p Remux preference over SDR 4K WEB-DL
 - Corrected-release REPACK / PROPER tie-breaking preference
+- Retag soft penalty for recognized redistribution markers
 - Anime revision preference for explicit `v0`–`v4` release markers
 - NZB availability and library scoring
 - Same-release failover
@@ -181,6 +182,35 @@ The rules are non-stacking: REPACK2 and REPACK3 receive only their numbered scor
 Base PROPER and REPACK detection uses StreamNZB's native `proper` and `repack` parser traits. Narrow release-name matching distinguishes REPACK2 and REPACK3 because the native `repack` trait intentionally classifies those numbered forms as repacks as well. `REAL.PROPER` and `REAL.REPACK` remain base corrected releases, while `REAL.REPACK2` and `REAL.REPACK3` retain their numbered preference.
 
 The preference applies globally, including Anime, and does not require additional Vidhin-backed Define rules.
+
+
+## Retag Soft Penalty
+
+The profile applies a tiny global `-1` preference penalty to releases
+carrying recognized redistribution / retag markers:
+
+- `.heb`
+- `[eztv]` and supported EZTV domain variants
+- `[rarbg]`
+- `[rartv]`
+- `[TGx]`
+
+This is intentionally a metadata tie-breaker rather than a quality
+judgment or filter. Retagged releases remain fully usable and are never
+rejected by this rule.
+
+The penalty is deliberately much smaller than the profile's major
+quality signals, including SeaDex prioritization, release-group tiers,
+availability, source and quality scoring. Its purpose is only to prefer
+an otherwise equivalent original release over a recognized redistributed
+copy.
+
+Matching is narrow rather than treating arbitrary bracketed text as a
+retag. This protects legitimate Anime release-group forms such as
+`[SubsPlease]`, `[Erai-raws]`, and `[Judas]`.
+
+The rule uses direct release-name matching and does not add a new
+Vidhin-backed Define or formatter badge.
 
 ## Formatter
 

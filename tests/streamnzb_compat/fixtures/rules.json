@@ -3791,6 +3791,194 @@
           }
         }
       ]
+    },
+    {
+      "name": "Retag Soft Penalty",
+      "productionRule": "Retag Soft Penalty",
+      "when": "releaseName matches \"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])\"",
+      "points": -1,
+      "cases": [
+        {
+          "name": "RARBG retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX[rarbg]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "RARBG spaced retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX [rarbg]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "RARTV retag",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb[rartv]",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "TGx retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX[TGx]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "TGx lowercase",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX[tgx]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "EZTV retag",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb[eztv]",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "EZTV IO retag",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb[eztv.io]",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "EZTV RE retag",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb[eztv-re]",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "EZTVX TO retag",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb[eztvx.to]",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "HEB retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX.heb",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Anime redistributed RARBG",
+          "release": "[SubsPlease] Frieren - 01 (1080p) [ABCDEF12][rarbg]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "clean FLUX",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "clean NTb",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.DDP5.1.H.264-NTb",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "legitimate SubsPlease bracket group",
+          "release": "[SubsPlease] Frieren - 01 (1080p) [ABCDEF12]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "legitimate Erai raws bracket group",
+          "release": "[Erai-raws] Frieren - 01 [1080p][Multiple Subtitle][ABCDEF12]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "legitimate Judas bracket group",
+          "release": "[Judas] Frieren - 01 [1080p][HEVC x265 10bit][Dual-Audio][ABCDEF12]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "RARBG plain word",
+          "release": "Movie.RARBG.Collection.2024.1080p.WEB-DL-FLUX",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "TGx extended bracket",
+          "release": "Example.Movie.2024.1080p.WEB-DL-FLUX[TGxExtra]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "RARBG extended bracket",
+          "release": "Example.Movie.2024.1080p.WEB-DL-FLUX[rarbgx]",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "HEB embedded false positive",
+          "release": "Example.Movie.2024.1080p.WEB-DL-FLUX.hebrew",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
     }
   ]
 }

@@ -42,12 +42,14 @@ Changes in this section are under development and are not part of the latest sta
 - Added Anime revision preference rules for explicit `v0`–`v4` release markers: `v0` `-1`, `v1` `+1`, `v2` `+2`, `v3` `+3`, and `v4` `+4`.
 - Added mutually exclusive Anime revision matching so releases containing multiple supported `v0`–`v4` markers receive no version score instead of stacking ambiguous revision bonuses.
 - Added pinned real-engine compatibility coverage for Anime Shows and Movies, episode-suffix forms such as `01v2`, case variants, REPACK interaction, unsupported `v5+`, false positives, and multi-version non-stacking behavior.
+- Added a global **Retag Soft Penalty** of `-1` for recognized redistribution markers including `.heb`, EZTV variants, RARBG, RARTV, and TGx. The rule is intentionally a metadata tie-breaker and never rejects a result.
+- Added pinned real-engine compatibility coverage for Retag matching, including spaced and unspaced forms, EZTV variants, case handling, Anime redistribution, clean releases, legitimate Anime bracket groups, and false-positive boundaries.
 
 ### Changed
 
 - Moved the `💚 ɴᴢʙ` availability indicator from the result name to the description score line, keeping the compact result name focused on resolution, quality, and relative ranking.
 - Updated the pinned StreamNZB compatibility revision to `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to validate the `.TopScore` and `stars` formatter API against the real engine.
-- Increased the production profile from **101 to 109 rules** across the current Unreleased scoring additions: three global corrected-release preference rules and five Anime revision preference rules. The generated Define Library remains at **53** rules because both features use native StreamNZB parser traits and/or release-name matching rather than new Vidhin-backed classifications.
+- Increased the production profile from **101 to 110 rules** across the current Unreleased scoring additions: three global corrected-release preference rules, five Anime revision preference rules, and one global Retag soft-penalty rule. The generated Define Library remains at **53** rules because these features use native StreamNZB parser traits and/or direct release-name matching rather than new Vidhin-backed classifications.
 
 ### Fixed
 

@@ -2711,6 +2711,221 @@
         }
       ],
       "productionRule": "HIDIVE"
+    },
+    {
+      "name": "Anime Dubs Only Penalty",
+      "when": "isAnime and matched(\"Anime Dubs Only\") and exists(isAnime and not matched(\"Anime Dubs Only\"))",
+      "points": -10,
+      "cases": [
+        {
+          "name": "explicit English Dub Anime show",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.English.Dub-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "known Golumpa dub group",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL-Golumpa",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Yameii bracket group",
+          "release": "[Yameii] Anime Show - 01 [1080p]",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "KaiDubs dub only",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL-KaiDubs",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "explicit Dual Audio with Dub marker",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.Dual.Audio.English.Dub-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "known dub group protected when Dual Audio",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.Dual.Audio-Golumpa",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Multi Audio explicit Dub excluded",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.Multi.Audio.English.Dub-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "KaiDubs JA plus EN excluded",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL.JA+EN-KaiDubs",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Anime Movie dubbed",
+          "release": "Anime.Movie.2026.1080p.BluRay.Dubbed-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "non Anime English Dub excluded",
+          "release": "Regular.Show.S01E01.1080p.WEB-DL.English.Dub-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "plain Anime release",
+          "release": "Anime.Show.S01E01.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ],
+      "aggregateCases": [
+        {
+          "name": "sole dub-only release remains unpenalized",
+          "candidates": [
+            {
+              "name": "only English Dub",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL.English.Dub-GROUP",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "dub-only loses tie when original release exists",
+          "candidates": [
+            {
+              "name": "English Dub",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL.English.Dub-GROUP",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "original release",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL-GROUP",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "dub-only loses tie when Dual Audio exists",
+          "candidates": [
+            {
+              "name": "English Dub",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL.English.Dub-GROUP",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "Dual Audio known dub group",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL.Dual.Audio-Golumpa",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "all dub-only releases remain unpenalized when scarce",
+          "candidates": [
+            {
+              "name": "Golumpa",
+              "release": "Anime.Show.S01E01.1080p.WEB-DL-Golumpa",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            },
+            {
+              "name": "Yameii",
+              "release": "[Yameii] Anime Show S01E01 [1080p][WEB-DL]",
+              "kind": "anime_show",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anime Movie dub-only loses tie to original",
+          "candidates": [
+            {
+              "name": "dubbed Anime Movie",
+              "release": "Anime.Movie.2026.1080p.WEB-DL.Dubbed-GROUP",
+              "kind": "anime_movie",
+              "anime": true,
+              "expected": {
+                "match": true
+              }
+            },
+            {
+              "name": "original Anime Movie",
+              "release": "Anime.Movie.2026.1080p.WEB-DL-GROUP",
+              "kind": "anime_movie",
+              "anime": true,
+              "expected": {
+                "match": false
+              }
+            }
+          ]
+        }
+      ],
+      "productionRule": "Anime Dubs Only Penalty"
     }
   ]
 }

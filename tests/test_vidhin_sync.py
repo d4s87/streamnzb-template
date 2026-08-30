@@ -801,3 +801,87 @@ print(
     "All v2.4 compatibility, LQ, Anime tier and "
     "tier-movement tests passed."
 )
+
+# Dubs Only raw-release-name regression tests.
+#
+# Vidhin's Dubs Only classification is a release-name classifier rather
+# than a simple release-group list. Preserve the complete upstream regex
+# semantics, including explicit dub markers, known groups, and Dual/Multi
+# exclusions.
+dubs_only_upstream=[
+    {
+        "name":"Dubs Only",
+        "pattern":(
+            r"/\b(Golumpa|KamiFS|torenter69)\b|"
+            r"\[Yameii\]|-Yameii\b|"
+            r"^(?!.*(Dual|Multi)[-_. ]?Audio).*"
+            r"((?<!multi-)\b(dub(bed)?)\b|(funi|eng(lish)?)_?dub)|"
+            r"^(?!.*(dual[ ._-]?audio|(JA|ZH|KO)\+EN|EN\+(JA|ZH|KO))).*"
+            r"\b(KaiDubs|KS)\b/i"
+        ),
+        "score":0,
+    }
+]
+
+dubs_only_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Anime Dubs Only":{
+            "sources":["Dubs Only"],
+            "scope":None,
+            "field":"releaseName",
+            "mode":"dubs_only",
+        }
+    },
+}
+
+dubs_only=m.resolve(
+    dubs_only_mapping,
+    dubs_only_upstream,
+)
+
+assert len(dubs_only)==1
+
+dubs_entry=dubs_only["Anime Dubs Only"]
+
+assert dubs_entry["scope"] is None
+assert dubs_entry["field"]=="releaseName"
+assert dubs_entry["mode"]=="dubs_only"
+assert dubs_entry["tokens"]==[]
+
+dubs_pattern=dubs_entry["records"][0]["raw_release_name_pattern"]
+
+assert dubs_pattern.startswith("(?i)")
+assert "Golumpa" in dubs_pattern
+assert "KamiFS" in dubs_pattern
+assert "torenter69" in dubs_pattern
+assert "Yameii" in dubs_pattern
+assert "KaiDubs" in dubs_pattern
+assert "(Dual|Multi)" in dubs_pattern
+assert "dual[ ._-]?audio" in dubs_pattern
+assert "(JA|ZH|KO)\\+EN" in dubs_pattern
+assert "EN\\+(JA|ZH|KO)" in dubs_pattern
+
+dubs_library=m.render(
+    dubs_only,
+    dubs_only_mapping,
+)
+
+assert "Anime Dubs Only: define if " in dubs_library
+assert "Anime Dubs Only [" not in dubs_library
+
+# The raw upstream classifier is retained for synchronization...
+assert "(?!.*(Dual|Multi)" in dubs_pattern
+assert "(?<!multi-)" in dubs_pattern
+
+# ...but unsupported PCRE lookaround must never reach StreamNZB.
+assert "(?!" not in dubs_library
+assert "(?<!" not in dubs_library
+
+assert 'releaseName matches "(?i)\\b(Golumpa|KamiFS|torenter69)' in dubs_library
+assert 'releaseName matches "(?i)\\b(dub(bed)?)' in dubs_library
+assert 'not (releaseName matches "(?i)(Dual|Multi)[-_. ]?Audio")' in dubs_library
+assert 'not (releaseName matches "(?i)multi-\\bdub(bed)?\\b")' in dubs_library
+assert 'releaseName matches "(?i)\\b(KaiDubs|KS)\\b"' in dubs_library
+assert 'not (releaseName matches "(?i)dual[ ._-]?audio|' in dubs_library

@@ -507,6 +507,14 @@
       "release_name_fallbacks": [
         "Feranki1980"
       ]
+    },
+    "Anime Dubs Only": {
+      "sources": [
+        "Dubs Only"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "dubs_only"
     }
   }
 }

@@ -1,14 +1,17 @@
 # Vidhin sync report
 
-## Movies Bad Dual Groups
+## Anime Dubs Only
 
-Raw upstream regex changed, but the extracted release-group set did not.
+**Generated metadata changed**
+- `mode`: `"raw_release_name"` → `"dubs_only"`
 
-## Shows Bad Dual Groups
+**Upstream source(s)**
+- `Dubs Only`
 
-Raw upstream regex changed, but the extracted release-group set did not.
+**Upstream source(s)**
+- `Dubs Only`
 
 ---
-Tracked StreamNZB Defines: **52**
+Tracked StreamNZB Defines: **53**
 
 > `profile.txt` is not modified. Generated Defines require review.

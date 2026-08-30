@@ -700,16 +700,16 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 100:
+if len(rules) != 101:
     raise AssertionError(
-        f"Expected 100 profile rules, found {len(rules)}"
+        f"Expected 101 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
 
-if len(defines) != 52:
+if len(defines) != 53:
     raise AssertionError(
-        f"Expected 52 generated Defines, found {len(defines)}"
+        f"Expected 53 generated Defines, found {len(defines)}"
     )
 
 dependencies = extract_matched_dependencies(profile)
@@ -741,6 +741,101 @@ validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
 validate_regressions(defines)
+
+
+# ---------------------------------------------------------------------------
+# Anime Dubs Only production policy
+# ---------------------------------------------------------------------------
+
+dubs_only_define_name = "Anime Dubs Only"
+
+if dubs_only_define_name not in defines:
+    raise AssertionError(
+        "Required Anime Dubs Only Define is missing"
+    )
+
+dubs_only_define = defines[dubs_only_define_name]
+
+if dubs_only_define["scope"] is not None:
+    raise AssertionError(
+        "Anime Dubs Only Define must use All Content "
+        "(no explicit Define scope)"
+    )
+
+dubs_only_condition = dubs_only_define["condition"]
+
+if not isinstance(dubs_only_condition, str) or not dubs_only_condition.strip():
+    raise AssertionError(
+        "Anime Dubs Only Define has no valid condition"
+    )
+
+if "releaseName matches" not in dubs_only_condition:
+    raise AssertionError(
+        "Anime Dubs Only Define must classify releaseName"
+    )
+
+# StreamNZB uses Go/RE2. PCRE lookarounds from the raw upstream
+# Vidhin expression must never leak into the generated Define.
+for unsupported in ("(?=", "(?!", "(?<=", "(?<!"):
+    if unsupported in dubs_only_condition:
+        raise AssertionError(
+            "Anime Dubs Only Define contains unsupported "
+            f"lookaround syntax: {unsupported}"
+        )
+
+dubs_only_rules = [
+    rule
+    for rule in rules
+    if rule.get("name") == "Anime Dubs Only Penalty"
+]
+
+if len(dubs_only_rules) != 1:
+    raise AssertionError(
+        "Expected exactly one Anime Dubs Only Penalty rule, "
+        f"found {len(dubs_only_rules)}"
+    )
+
+dubs_only_rule = dubs_only_rules[0]
+
+expected_dubs_only_when = (
+    'isAnime and matched("Anime Dubs Only") '
+    'and exists(isAnime and not matched("Anime Dubs Only"))'
+)
+
+if dubs_only_rule.get("points") != -10:
+    raise AssertionError(
+        "Anime Dubs Only Penalty must score exactly -10"
+    )
+
+if dubs_only_rule.get("when") != expected_dubs_only_when:
+    raise AssertionError(
+        "Anime Dubs Only Penalty condition drifted: "
+        f"{dubs_only_rule.get('when')!r}"
+    )
+
+if "action" in dubs_only_rule:
+    raise AssertionError(
+        "Anime Dubs Only Penalty must remain a score rule "
+        "and must not hard-reject releases"
+    )
+
+if "scope" in dubs_only_rule:
+    raise AssertionError(
+        "Anime Dubs Only Penalty must use isAnime rather than "
+        "an explicit profile scope"
+    )
+
+if "seadex" in dubs_only_rule.get("when", "").lower():
+    raise AssertionError(
+        "Anime Dubs Only Penalty must not trigger SeaDex predicates"
+    )
+
+if 'exists(isAnime and not matched("Anime Dubs Only"))' not in \
+        dubs_only_rule["when"]:
+    raise AssertionError(
+        "Anime Dubs Only Penalty must preserve scarce dub-only "
+        "results by requiring a non-dub Anime alternative"
+    )
 
 print(
     "Profile/Define validation passed: "

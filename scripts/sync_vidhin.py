@@ -352,7 +352,7 @@ def resolve(mapping,upstream):
                         "source":src,"pattern":pat,"tokens":tt,
                         "case_sensitive":case_sensitive
                     })
-                elif mode=="raw_release_name":
+                elif mode in ("raw_release_name","dubs_only"):
                     recs.append({
                         "source":src,
                         "pattern":pat,
@@ -381,7 +381,11 @@ def resolve(mapping,upstream):
             "mode":mode,"records":recs,"tokens":dedupe_casefold(toks)
         }
 
-        for field in ("tier_family","tier_report_family","tier"):
+        for field in (
+            "tier_family",
+            "tier_report_family",
+            "tier",
+        ):
             if field in cfg:
                 out[target][field]=cfg[field]
         if mode=="lq":
@@ -540,6 +544,133 @@ def render_raw_release_name_condition(entry):
 
     return " or ".join(conditions)
 
+def render_dubs_only_condition(entry):
+    """
+    Translate Vidhin's Dubs Only classifier into StreamNZB-safe
+    Boolean conditions.
+
+    Vidhin uses PCRE lookaround that Go/RE2 cannot compile. The raw
+    upstream expression remains stored in the synchronization
+    baseline so upstream drift is detected.
+
+    StreamNZB currently does not expose a reliable `dual_audio`
+    trait for release names such as `Dual.Audio`, so explicit
+    Dual/Multi Audio protection is implemented here against
+    releaseName itself.
+
+    The global Dual/Multi exclusion intentionally also protects
+    known dub groups such as Golumpa. This is slightly more
+    conservative than Vidhin's first alternation and is required by
+    DraCuLa policy: legitimate Dual Audio must not receive the
+    dub-only penalty.
+    """
+    records=entry.get("records",[])
+
+    if len(records)!=1:
+        raise ValueError(
+            "Dubs Only classification must resolve to exactly one "
+            "upstream regex record"
+        )
+
+    pattern=records[0].get("raw_release_name_pattern","")
+
+    required_fragments=(
+        "Golumpa",
+        "KamiFS",
+        "torenter69",
+        "Yameii",
+        "(Dual|Multi)",
+        "(?<!multi-)",
+        "dub(bed)?",
+        "(funi|eng(lish)?)_?dub",
+        "dual[ ._-]?audio",
+        "(JA|ZH|KO)\\+EN",
+        "EN\\+(JA|ZH|KO)",
+        "KaiDubs",
+        "KS",
+    )
+
+    missing=[
+        fragment
+        for fragment in required_fragments
+        if fragment not in pattern
+    ]
+
+    if missing:
+        raise ValueError(
+            "Vidhin Dubs Only regex changed; manual translation "
+            "review required. Missing expected fragment(s): "
+            + ", ".join(missing)
+        )
+
+    if not pattern.startswith("(?i)"):
+        raise ValueError(
+            "Vidhin Dubs Only regex is no longer "
+            "case-insensitive"
+        )
+
+    known=(
+        r'(?i)\b(Golumpa|KamiFS|torenter69)\b|'
+        r'\[Yameii\]|-Yameii\b'
+    )
+
+    generic_dub=(
+        r'(?i)\b(dub(bed)?)\b|'
+        r'(funi|eng(lish)?)_?dub'
+    )
+
+    dual_multi_audio=(
+        r'(?i)(Dual|Multi)[-_. ]?Audio'
+    )
+
+    multi_dash_dub=(
+        r'(?i)multi-\bdub(bed)?\b'
+    )
+
+    kaidubs=(
+        r'(?i)\b(KaiDubs|KS)\b'
+    )
+
+    kaidubs_exclusions=(
+        r'(?i)dual[ ._-]?audio|'
+        r'(JA|ZH|KO)\+EN|'
+        r'EN\+(JA|ZH|KO)'
+    )
+
+    # Global protection goes beyond the generic-dub branch so that
+    # known groups such as Golumpa cannot penalize a release that
+    # explicitly identifies itself as Dual/Multi Audio.
+    global_dual_exclusions=(
+        r'(?i)(Dual|Multi)[-_. ]?Audio|'
+        r'(JA|ZH|KO)\+EN|'
+        r'EN\+(JA|ZH|KO)'
+    )
+
+    return (
+        "("
+        f'not (releaseName matches "{global_dual_exclusions}")'
+        " and "
+        "("
+        f'releaseName matches "{known}"'
+        " or "
+        "("
+        f'releaseName matches "{generic_dub}"'
+        " and "
+        f'not (releaseName matches "{dual_multi_audio}")'
+        " and "
+        f'not (releaseName matches "{multi_dash_dub}")'
+        ")"
+        " or "
+        "("
+        f'releaseName matches "{kaidubs}"'
+        " and "
+        f'not (releaseName matches "{kaidubs_exclusions}")'
+        ")"
+        ")"
+        ")"
+    )
+
+
 def render_raw_regex_condition(entry):
     conditions=[]
 
@@ -577,6 +708,8 @@ def render(current,mapping):
         e=current[name]
         if e.get("mode")=="lq":
             cond=render_lq_condition(e)
+        elif e.get("mode")=="dubs_only":
+            cond=render_dubs_only_condition(e)
         elif e.get("mode")=="raw_release_name":
             cond=render_raw_release_name_condition(e)
         elif e.get("mode")=="raw_regex":

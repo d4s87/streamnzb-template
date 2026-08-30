@@ -358,12 +358,13 @@
         "Uncensored": true,
         "Season": 1,
         "Episode": 28,
-        "EpisodeCode": "S01E28"
+        "EpisodeCode": "S01E28",
+        "TopScore": 1234
       },
       "name_contains": [
         "4K",
         "〈ᴡᴇʙ-ᴅʟ〉",
-        "💚 ɴᴢʙ"
+        "★★★★★"
       ],
       "contains": [
         "✎ Frieren",
@@ -390,7 +391,8 @@
         "₁₀ʙɪᴛ",
         "ᴜɴᴄᴇɴꜱᴏʀᴇᴅ",
         "₁₂₃₄",
-        "♛ ɴᴇᴛꜰʟɪx · ᴅɪʀᴇᴄᴛᴏʀ'ꜱ ᴄᴜᴛ »"
+        "♛ ɴᴇᴛꜰʟɪx · ᴅɪʀᴇᴄᴛᴏʀ'ꜱ ᴄᴜᴛ »",
+        "💚 ɴᴢʙ"
       ],
       "excludes": [
         "♛ ᴄʀ",
@@ -402,7 +404,10 @@
         "ᴅᴜᴀʟ": 1,
         "₁₀ʙɪᴛ": 1,
         "ᴜɴᴄᴇɴꜱᴏʀᴇᴅ": 1
-      }
+      },
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ]
     },
     {
       "name": "Rich Anime WEB service-fallback final render",
@@ -483,11 +488,13 @@
         "Complete": true,
         "Season": 1,
         "Episode": 12,
-        "EpisodeCode": "S01E12"
+        "EpisodeCode": "S01E12",
+        "TopScore": 1234
       },
       "name_contains": [
         "FHD",
-        "〈ᴡᴇʙ-ᴅʟ〉"
+        "〈ᴡᴇʙ-ᴅʟ〉",
+        "★★★★☆"
       ],
       "name_excludes": [
         "💚 ɴᴢʙ"
@@ -518,7 +525,8 @@
       ],
       "excludes": [
         "♛ ɴᴇᴛꜰʟɪx",
-        "♛ ᴄʀ  »"
+        "♛ ᴄʀ  »",
+        "💚 ɴᴢʙ"
       ],
       "counts": {
         "♛ ᴄʀ": 1,
@@ -590,12 +598,13 @@
           "7.1"
         ],
         "HDR": [],
-        "Complete": true
+        "Complete": true,
+        "TopScore": 1800
       },
       "name_contains": [
         "FHD",
         "〈ʀᴇᴍᴜx〉",
-        "💚 ɴᴢʙ"
+        "★★★★★"
       ],
       "contains": [
         "✎ Blade Runner 2049",
@@ -614,7 +623,8 @@
         "ꜰɪɴᴀʟ ᴄᴜᴛ",
         "ᴛ₁",
         "₁₈₀₀",
-        "⛿ EN\nꜰɪɴᴀʟ ᴄᴜᴛ »"
+        "⛿ EN\nꜰɪɴᴀʟ ᴄᴜᴛ »",
+        "💚 ɴᴢʙ"
       ],
       "excludes": [
         "♛",
@@ -623,7 +633,113 @@
       ],
       "counts": {
         "ᴛ₁": 1
-      }
+      },
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "TopScore winner renders five stars",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "Score": 1000,
+        "TopScore": 1000,
+        "Avail": true
+      },
+      "name_contains": [
+        "4K",
+        "〈ᴡᴇʙ-ᴅʟ〉",
+        "★★★★★"
+      ],
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "₁₀₀₀ · 💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "TopScore partial result renders relative stars",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 600,
+        "TopScore": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉",
+        "★★★☆☆"
+      ],
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ],
+      "excludes": [
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Negative score renders empty stars",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": -10,
+        "TopScore": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "FHD",
+        "☆☆☆☆☆"
+      ],
+      "name_excludes": [
+        "★",
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Zero TopScore suppresses meaningless stars",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 0,
+        "TopScore": 0,
+        "Avail": false
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉"
+      ],
+      "name_excludes": [
+        "★",
+        "☆",
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Available zero-score result has clean NZB badge",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 0,
+        "TopScore": 0,
+        "Avail": true
+      },
+      "name_contains": [
+        "FHD"
+      ],
+      "name_excludes": [
+        "★",
+        "☆",
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "💚 ɴᴢʙ"
+      ],
+      "excludes": [
+        "· 💚 ɴᴢʙ"
+      ]
     }
   ]
 }

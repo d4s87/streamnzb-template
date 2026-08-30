@@ -35,9 +35,16 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added relative five-star result ranking using StreamNZB's `.TopScore` and `stars` formatter helper. The highest-scoring result renders as `★★★★★`, while lower-scoring results are scaled against the current result-set winner.
+- Added real-engine formatter regression coverage for full, partial, negative, and zero-TopScore star rendering.
+
 ### Changed
 
+- Moved the `💚 ɴᴢʙ` availability indicator from the result name to the description score line, keeping the compact result name focused on resolution, quality, and relative ranking.
+- Updated the pinned StreamNZB compatibility revision to `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to validate the `.TopScore` and `stars` formatter API against the real engine.
+
 ### Fixed
+
 
 ## V4.3
 

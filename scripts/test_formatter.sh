@@ -3,7 +3,7 @@
 set -u
 
 STREAMNZB_REPO="https://github.com/Gaisberg/streamnzb.git"
-STREAMNZB_REF="9b577f7fc226446dc74f7bc2724b102c725eef8a"
+STREAMNZB_REF="4c0f7b385e5f7bfb514523b908fa04f153dfbbe2"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHECKOUT="${ROOT}/.streamnzb-compat"

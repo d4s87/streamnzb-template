@@ -1111,6 +1111,95 @@ def validate_anime_version_preferences(
                 "supported-version exclusions"
             )
 
+
+def validate_movie_edition_preferences(
+    rules: list[dict],
+) -> None:
+    """
+    Validate DraCuLa's Movie-version preference policy.
+
+    IMAX is intentionally a strong Movie preference and may outrank
+    release-group tiers. Open Matte is deliberately a small edition
+    preference and must not act as a tier-replacing bonus.
+
+    Neither preference may leak into Shows or Anime.
+    """
+
+    expected = {
+        "IMAX": {
+            "points": 800,
+            "when": 'releaseName matches "(?i)\\\\bIMAX\\\\b"',
+        },
+        "Open matte": {
+            "points": 25,
+            "when": (
+                'releaseName matches '
+                '"(?i)\\\\bOpen[. _-]?Matte\\\\b"'
+            ),
+        },
+    }
+
+    resolved = {}
+
+    for name, spec in expected.items():
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+        resolved[name] = rule
+
+        if rule.get("points") != spec["points"]:
+            raise AssertionError(
+                f"{name} must score exactly "
+                f"{spec['points']:+d}; "
+                f"found {rule.get('points')!r}"
+            )
+
+        if rule.get("scope") != "movie":
+            raise AssertionError(
+                f"{name} must use explicit movie scope; "
+                f"found {rule.get('scope')!r}"
+            )
+
+        if rule.get("when") != spec["when"]:
+            raise AssertionError(
+                f"{name} condition drifted: "
+                f"{rule.get('when')!r}"
+            )
+
+        if "action" in rule:
+            raise AssertionError(
+                f"{name} must remain a score rule "
+                "without an explicit action"
+            )
+
+        if 'matched("' in rule["when"] or "matched('" in rule["when"]:
+            raise AssertionError(
+                f"{name} must use releaseName matching directly "
+                "without Define dependencies"
+            )
+
+    if resolved["Open matte"]["points"] >= 200:
+        raise AssertionError(
+            "Open matte must remain below the 200-point "
+            "Movie release-group tier gap"
+        )
+
+    if resolved["IMAX"]["points"] <= 500:
+        raise AssertionError(
+            "IMAX must remain an intentional strong Movie-version "
+            "preference rather than a minor tie-breaker"
+        )
+
 def validate_regressions(defines: dict[str, dict]) -> None:
     full_library = DEFINES_PATH.read_text(encoding="utf-8")
 
@@ -1254,6 +1343,7 @@ validate_repack_proper_preferences(rules)
 validate_retag_soft_penalty(rules)
 validate_audio_preferences(rules)
 validate_anime_version_preferences(rules)
+validate_movie_edition_preferences(rules)
 validate_regressions(defines)
 
 

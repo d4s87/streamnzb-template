@@ -179,6 +179,21 @@ The formatter normalizes matching releases to `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ`.
 
 The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8 hierarchy. Known Anime release groups can therefore pass the 4K release-group trust check regardless of tier, while unknown 4K Anime groups remain filtered.
 
+## Movie Edition Preferences
+
+Movie-version preferences are explicitly limited to **Movies** so edition markers cannot alter Show or Anime ranking.
+
+- **IMAX:** `+800`
+- **Open Matte:** `+25`
+
+IMAX is intentionally a strong Movie-version preference. It may outrank a higher release-group tier when the user is choosing between otherwise eligible Movie releases; this is deliberate rather than a tier-ceiling bug.
+
+Open Matte is intentionally much smaller. Its `+25` score acts as an edition preference without replacing the Movie release-group hierarchy. For example, a T2 WEB release with Open Matte remains below a clean T1 release, and a T3 Open Matte release remains below clean T2.
+
+A Movie carrying both markers may receive both preferences for a combined `+825`. Shows and Anime receive no IMAX or Open Matte score.
+
+Pinned real-engine regression coverage protects the score values, Movie-only scopes, matching boundaries, stacking behavior, and release-tier interactions.
+
 ## Corrected Release Preference
 
 The profile gives legitimate corrected releases a small global scoring preference:

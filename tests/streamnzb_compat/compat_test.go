@@ -847,3 +847,357 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 		}
 	}
 }
+
+func TestMovieEditionPreferenceCeilings(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	imax := findProductionRule(
+		t,
+		productionRules,
+		"IMAX",
+	)
+	openMatte := findProductionRule(
+		t,
+		productionRules,
+		"Open matte",
+	)
+
+	if imax.Points != 800 || imax.Scope != "movie" {
+		t.Fatalf(
+			"IMAX policy drifted: points=%d scope=%q",
+			imax.Points,
+			imax.Scope,
+		)
+	}
+
+	if openMatte.Points != 25 ||
+		openMatte.Scope != "movie" {
+		t.Fatalf(
+			"Open matte policy drifted: points=%d scope=%q",
+			openMatte.Points,
+			openMatte.Scope,
+		)
+	}
+
+	set, err := rules.Compile(
+		productionRules,
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile production profile: %v",
+			err,
+		)
+	}
+
+	data, err := os.ReadFile(
+		"../../generated/vidhin-defines.json",
+	)
+	if err != nil {
+		t.Fatalf(
+			"read generated Vidhin data: %v",
+			err,
+		)
+	}
+
+	var generated struct {
+		Defines map[string]struct {
+			Tokens []string `json:"tokens"`
+		} `json:"defines"`
+	}
+
+	if err := json.Unmarshal(data, &generated); err != nil {
+		t.Fatalf(
+			"decode generated Vidhin data: %v",
+			err,
+		)
+	}
+
+	defineToken := func(name string) string {
+		entry, ok := generated.Defines[name]
+		if !ok {
+			t.Fatalf("missing Define %q", name)
+		}
+
+		if len(entry.Tokens) == 0 {
+			t.Fatalf(
+				"Define %q has no tokens",
+				name,
+			)
+		}
+
+		tokens := append(
+			[]string(nil),
+			entry.Tokens...,
+		)
+		slices.Sort(tokens)
+
+		return tokens[0]
+	}
+
+	movieT1 := defineToken("Movies WEB T1 Groups")
+	movieT2 := defineToken("Movies WEB T2 Groups")
+	movieT3 := defineToken("Movies WEB T3 Groups")
+	showT3 := defineToken("Shows WEB T3 Groups")
+	animeBDT8 := defineToken(
+		"Anime Shows BluRay T8 Groups",
+	)
+	animeWEBT6 := defineToken(
+		"Anime Shows WEB T6 Groups",
+	)
+
+	type auditCase struct {
+		name      string
+		release   string
+		kind      string
+		anime     bool
+		wantScore int
+		wantRules []string
+		noRules   []string
+	}
+
+	makeRelease := func(
+		prefix string,
+		group string,
+		extra string,
+	) string {
+		parts := []string{prefix}
+
+		if extra != "" {
+			parts = append(parts, extra)
+		}
+
+		return strings.Join(parts, ".") + "-" + group
+	}
+
+	cases := []auditCase{
+		{
+			name: "Movie T1 clean",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT1,
+				"",
+			),
+			kind:      "movie",
+			wantScore: 500,
+		},
+		{
+			name: "Movie T2 IMAX",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT2,
+				"IMAX",
+			),
+			kind:      "movie",
+			wantScore: 1100,
+			wantRules: []string{"IMAX"},
+		},
+		{
+			name: "Movie T3 IMAX",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT3,
+				"IMAX",
+			),
+			kind:      "movie",
+			wantScore: 900,
+			wantRules: []string{"IMAX"},
+		},
+		{
+			name: "Movie T2 Open Matte",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT2,
+				"Open.Matte",
+			),
+			kind:      "movie",
+			wantScore: 325,
+			wantRules: []string{
+				"Open matte",
+			},
+		},
+		{
+			name: "Movie T3 Open Matte",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT3,
+				"Open.Matte",
+			),
+			kind:      "movie",
+			wantScore: 125,
+			wantRules: []string{
+				"Open matte",
+			},
+		},
+		{
+			name: "Movie T3 IMAX Open Matte",
+			release: makeRelease(
+				"Example.Movie.2026.1080p.WEB-DL.x264",
+				movieT3,
+				"IMAX.Open.Matte",
+			),
+			kind:      "movie",
+			wantScore: 925,
+			wantRules: []string{
+				"IMAX",
+				"Open matte",
+			},
+		},
+		{
+			name: "Show T3 IMAX Open Matte",
+			release: makeRelease(
+				"Example.Show.S01E01.1080p.WEB-DL.x264",
+				showT3,
+				"IMAX.Open.Matte",
+			),
+			kind:      "series",
+			wantScore: 100,
+			noRules: []string{
+				"IMAX",
+				"Open matte",
+			},
+		},
+		{
+			name: "Anime BluRay T8 IMAX Open Matte",
+			release: makeRelease(
+				"Example.Anime.S01E01.1080p.BluRay.x264",
+				animeBDT8,
+				"IMAX.Open.Matte",
+			),
+			kind:      "anime_show",
+			anime:     true,
+			wantScore: 10,
+			noRules: []string{
+				"IMAX",
+				"Open matte",
+			},
+		},
+		{
+			name: "Anime WEB T6 IMAX Open Matte",
+			release: makeRelease(
+				"Example.Anime.S01E01.1080p.WEB-DL.x264",
+				animeWEBT6,
+				"IMAX.Open.Matte",
+			),
+			kind:      "anime_show",
+			anime:     true,
+			wantScore: 50,
+			noRules: []string{
+				"IMAX",
+				"Open matte",
+			},
+		},
+	}
+
+	envs := make([]rules.Env, len(cases))
+
+	for i, c := range cases {
+		envs[i] = buildEnv(
+			CaseFixture{
+				Release: c.release,
+				Kind:    c.kind,
+				Anime:   c.anime,
+			},
+		)
+	}
+
+	state := set.ComputeAggregates(envs)
+
+	if state == nil {
+		t.Fatal("ComputeAggregates returned nil")
+	}
+
+	results := map[string]int{}
+
+	for i, c := range cases {
+		state.Inject(&envs[i])
+
+		out := set.Evaluate(
+			envs[i],
+			c.kind,
+		)
+
+		names := make(
+			[]string,
+			0,
+			len(out.Matched),
+		)
+
+		for _, matched := range out.Matched {
+			names = append(
+				names,
+				matched.Name,
+			)
+		}
+
+		slices.Sort(names)
+
+		if out.Points != c.wantScore {
+			t.Fatalf(
+				"%s score=%+d want=%+d matched=%v",
+				c.name,
+				out.Points,
+				c.wantScore,
+				names,
+			)
+		}
+
+		for _, want := range c.wantRules {
+			if !slices.Contains(names, want) {
+				t.Fatalf(
+					"%s missing rule %q; matched=%v",
+					c.name,
+					want,
+					names,
+				)
+			}
+		}
+
+		for _, unwanted := range c.noRules {
+			if slices.Contains(names, unwanted) {
+				t.Fatalf(
+					"%s unexpectedly matched rule %q",
+					c.name,
+					unwanted,
+				)
+			}
+		}
+
+		results[c.name] = out.Points
+	}
+
+	if results["Movie T2 Open Matte"] >=
+		results["Movie T1 clean"] {
+		t.Fatal(
+			"Open Matte must not override clean Movie T1",
+		)
+	}
+
+	if results["Movie T3 Open Matte"] >= 300 {
+		t.Fatal(
+			"Open Matte must not move Movie T3 into T2 range",
+		)
+	}
+
+	if results["Movie T2 IMAX"] <=
+		results["Movie T1 clean"] {
+		t.Fatal(
+			"IMAX must remain a strong Movie-version preference",
+		)
+	}
+
+	if results["Movie T3 IMAX"] <=
+		results["Movie T1 clean"] {
+		t.Fatal(
+			"IMAX must intentionally override Movie tiers",
+		)
+	}
+
+	if results["Movie T3 IMAX Open Matte"]-
+		results["Movie T3 IMAX"] != 25 {
+		t.Fatal(
+			"Open Matte contribution beside IMAX must remain +25",
+		)
+	}
+}

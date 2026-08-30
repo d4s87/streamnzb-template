@@ -62,6 +62,8 @@ Changes in this section are under development and are not part of the latest sta
 
 - Fixed a reachable Anime scoring inversion where StreamNZB's `dubbed` parser trait caused Dual/Multi Audio Anime releases to inherit the generic `+500` Dubbed bonus in addition to the legacy `+200` Dual/Multi score. Anime Dual/Multi Audio now receives one `+10` same-tier preference instead of an effective `+700` bonus.
 
+- Fixed **Movie-version preference scoring** so `IMAX` and `Open matte` are explicitly Movie-only instead of global rules that could override Show and Anime release-group hierarchies.
+- Corrected the Movie edition preference scale from `IMAX +1000` / `Open Matte +500` to `IMAX +800` / `Open Matte +25`. IMAX remains an intentional strong Movie preference, while Open Matte now remains below the 200-point Movie release-group tier gap. Real-engine regression coverage verifies Movie-only scope, matching boundaries, `+825` combined stacking, and representative tier interactions.
 
 ## V4.3
 

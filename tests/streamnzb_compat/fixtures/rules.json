@@ -4187,6 +4187,123 @@
           }
         }
       ]
+    },
+    {
+      "name": "IMAX Movie Edition Preference",
+      "productionRule": "IMAX",
+      "scope": "movie",
+      "when": "releaseName matches \"(?i)\\\\bIMAX\\\\b\"",
+      "points": 800,
+      "cases": [
+        {
+          "name": "movie IMAX",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.IMAX-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie lowercase imax",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.imax-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show IMAX excluded by scope",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.x264.IMAX-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime IMAX excluded by scope",
+          "release": "Example.Anime.S01E01.1080p.BluRay.x264.IMAX-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "embedded imax negative",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.IMAXED-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Open Matte Movie Edition Preference",
+      "productionRule": "Open matte",
+      "scope": "movie",
+      "when": "releaseName matches \"(?i)\\\\bOpen[. _-]?Matte\\\\b\"",
+      "points": 25,
+      "cases": [
+        {
+          "name": "movie Open Matte dotted",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.Open.Matte-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Open Matte spaced",
+          "release": "Example Movie 2026 1080p WEB-DL x264 Open Matte-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Open-Matte",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.Open-Matte-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show Open Matte excluded by scope",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.x264.Open.Matte-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime Open Matte excluded by scope",
+          "release": "Example.Anime.S01E01.1080p.BluRay.x264.Open.Matte-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "OpenMatte supported compact form",
+          "release": "Example.Movie.2026.1080p.WEB-DL.x264.OpenMatte-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        }
+      ]
     }
   ]
 }

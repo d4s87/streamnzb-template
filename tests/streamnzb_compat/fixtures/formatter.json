@@ -1,0 +1,629 @@
+{
+  "cases": [
+    {
+      "name": "CR service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴄʀ"
+      ],
+      "counts": {
+        "♛ ᴄʀ": 1
+      }
+    },
+    {
+      "name": "DSNP service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "DSNP",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴅꜱɴᴘ"
+      ],
+      "counts": {
+        "♛ ᴅꜱɴᴘ": 1
+      }
+    },
+    {
+      "name": "NF service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "NF",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ɴꜰ"
+      ],
+      "counts": {
+        "♛ ɴꜰ": 1
+      }
+    },
+    {
+      "name": "AMZN service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "AMZN",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴀᴍᴢɴ"
+      ],
+      "counts": {
+        "♛ ᴀᴍᴢɴ": 1
+      }
+    },
+    {
+      "name": "VRV service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "VRV",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴠʀᴠ"
+      ],
+      "counts": {
+        "♛ ᴠʀᴠ": 1
+      }
+    },
+    {
+      "name": "FUNi service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "FUNi",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ꜰᴜɴɪ"
+      ],
+      "counts": {
+        "♛ ꜰᴜɴɪ": 1
+      }
+    },
+    {
+      "name": "ABEMA service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "ABEMA",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴀʙᴇᴍᴀ"
+      ],
+      "counts": {
+        "♛ ᴀʙᴇᴍᴀ": 1
+      }
+    },
+    {
+      "name": "ADN service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "ADN",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴀᴅɴ"
+      ],
+      "counts": {
+        "♛ ᴀᴅɴ": 1
+      }
+    },
+    {
+      "name": "B-Global service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "B-Global",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ʙ-ɢʟᴏʙᴀʟ"
+      ],
+      "counts": {
+        "♛ ʙ-ɢʟᴏʙᴀʟ": 1
+      }
+    },
+    {
+      "name": "Bilibili service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "Bilibili",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ʙɪʟɪʙɪʟɪ"
+      ],
+      "counts": {
+        "♛ ʙɪʟɪʙɪʟɪ": 1
+      }
+    },
+    {
+      "name": "HIDIVE service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "HIDIVE",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ʜɪᴅɪᴠᴇ"
+      ],
+      "counts": {
+        "♛ ʜɪᴅɪᴠᴇ": 1
+      }
+    },
+    {
+      "name": "Network wins over service fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ᴄʀ"
+      ]
+    },
+    {
+      "name": "Streaming Service priority",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          },
+          {
+            "Name": "NF",
+            "Score": 0
+          },
+          {
+            "Name": "HIDIVE",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴄʀ"
+      ],
+      "excludes": [
+        "♛ ɴꜰ",
+        "♛ ʜɪᴅɪᴠᴇ"
+      ]
+    },
+    {
+      "name": "CR is not duplicated",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          }
+        ]
+      },
+      "counts": {
+        "ᴄʀ": 1
+      }
+    },
+    {
+      "name": "HIDIVE is not duplicated",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "HIDIVE",
+            "Score": 0
+          }
+        ]
+      },
+      "counts": {
+        "ʜɪᴅɪᴠᴇ": 1
+      }
+    },
+    {
+      "name": "No source without Network or service",
+      "context": {},
+      "excludes": [
+        "♛"
+      ]
+    },
+    {
+      "name": "Rich Anime WEB Network-first final render",
+      "context": {
+        "Service": "StreamNZB",
+        "Stream": "Standalone",
+        "Content": "Frieren: Beyond Journey's End",
+        "ReleaseTitle": "Frieren.Beyond.Journeys.End.S01E28.2160p.NF.WEB-DL.DV.HDR10.HEVC.TrueHD.Atmos.7.1-FraMeSToR",
+        "Index": 1,
+        "Count": 12,
+        "Score": 1234,
+        "Avail": true,
+        "Library": false,
+        "Size": 25769803776,
+        "Indexer": "DrunkenSlug",
+        "Variants": 3,
+        "VariantIndexers": [
+          "DrunkenSlug",
+          "NZBGeek",
+          "NinjaCentral"
+        ],
+        "Grabs": 321,
+        "Age": "2d",
+        "Duration": "24m",
+        "Languages": [
+          "ja",
+          "en"
+        ],
+        "Kind": "anime_show",
+        "IsAnime": true,
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          },
+          {
+            "Name": "Anime Shows T1",
+            "Score": 500
+          },
+          {
+            "Name": "Dual audio",
+            "Score": 0
+          },
+          {
+            "Name": "10bit",
+            "Score": 0
+          },
+          {
+            "Name": "Uncensored",
+            "Score": 10
+          }
+        ],
+        "Availability": {
+          "Status": "available",
+          "Known": true,
+          "OnMyBackbone": true,
+          "CheckedDaysAgo": 2,
+          "Compression": ""
+        },
+        "Seadex": {
+          "Checked": true,
+          "Known": true,
+          "Best": true,
+          "Alternative": false
+        },
+        "ParsedTitle": "Frieren: Beyond Journey's End",
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Bitrate": "65Mbps",
+        "Container": "MKV",
+        "Extension": "mkv",
+        "Group": "FraMeSToR",
+        "Edition": "Director's Cut",
+        "Network": "Netflix",
+        "Country": "JP",
+        "Year": 2023,
+        "Audio": [
+          "TRUEHD",
+          "ATMOS"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "HDR": [
+          "DV",
+          "HDR10"
+        ],
+        "Complete": true,
+        "Uncensored": true,
+        "Season": 1,
+        "Episode": 28,
+        "EpisodeCode": "S01E28"
+      },
+      "name_contains": [
+        "4K",
+        "〈ᴡᴇʙ-ᴅʟ〉",
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "✎ Frieren",
+        "· JP",
+        "₂₀₂₃",
+        "s₁",
+        "ᴇ₂₈",
+        "▣ HEVC",
+        "✦ DV · HDR10",
+        "♬ TRUEHD · ATMOS",
+        "♯ 7.1",
+        "❖",
+        "65ᴹᵇᵖˢ",
+        "◷ 2d",
+        "⇩ 321",
+        "⛉ DrunkenSlug",
+        "· FraMeSToR",
+        "⛿ JA · EN",
+        "♛ ɴᴇᴛꜰʟɪx",
+        "ᴅɪʀᴇᴄᴛᴏʀ'ꜱ ᴄᴜᴛ",
+        "ꜱᴅx ʙᴇꜱᴛ",
+        "ᴛ₁",
+        "ᴅᴜᴀʟ",
+        "₁₀ʙɪᴛ",
+        "ᴜɴᴄᴇɴꜱᴏʀᴇᴅ",
+        "₁₂₃₄",
+        "♛ ɴᴇᴛꜰʟɪx · ᴅɪʀᴇᴄᴛᴏʀ'ꜱ ᴄᴜᴛ »"
+      ],
+      "excludes": [
+        "♛ ᴄʀ",
+        "♛ ɴᴇᴛꜰʟɪx  ·"
+      ],
+      "counts": {
+        "♛": 1,
+        "ᴛ₁": 1,
+        "ᴅᴜᴀʟ": 1,
+        "₁₀ʙɪᴛ": 1,
+        "ᴜɴᴄᴇɴꜱᴏʀᴇᴅ": 1
+      }
+    },
+    {
+      "name": "Rich Anime WEB service-fallback final render",
+      "context": {
+        "Service": "StreamNZB",
+        "Stream": "Standalone",
+        "Content": "Dandadan",
+        "ReleaseTitle": "Dandadan.S01E12.1080p.CR.WEB-DL.AV1.AAC.2.0-SubsPlease",
+        "Index": 2,
+        "Count": 8,
+        "Score": 950,
+        "Avail": false,
+        "Library": true,
+        "Size": 3221225472,
+        "Indexer": "NZBGeek",
+        "Variants": 2,
+        "VariantIndexers": [
+          "NZBGeek",
+          "DrunkenSlug"
+        ],
+        "Grabs": 87,
+        "Age": "5d",
+        "Duration": "24m",
+        "Languages": [
+          "ja",
+          "en"
+        ],
+        "Kind": "anime_show",
+        "IsAnime": true,
+        "MatchedRules": [
+          {
+            "Name": "CR",
+            "Score": 0
+          },
+          {
+            "Name": "Anime Shows T2",
+            "Score": 300
+          },
+          {
+            "Name": "Dual audio",
+            "Score": 0
+          }
+        ],
+        "Availability": {
+          "Status": "unknown",
+          "Known": false,
+          "OnMyBackbone": false,
+          "CheckedDaysAgo": -1,
+          "Compression": ""
+        },
+        "Seadex": {
+          "Checked": true,
+          "Known": true,
+          "Best": false,
+          "Alternative": true
+        },
+        "ParsedTitle": "Dandadan",
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Codec": "AV1",
+        "Bitrate": "12Mbps",
+        "Container": "MKV",
+        "Extension": "mkv",
+        "Group": "SubsPlease",
+        "Edition": "",
+        "Network": "",
+        "Country": "JP",
+        "Year": 2024,
+        "Audio": [
+          "AAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "HDR": [
+          "HDR10"
+        ],
+        "Complete": true,
+        "Season": 1,
+        "Episode": 12,
+        "EpisodeCode": "S01E12"
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉"
+      ],
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "☁︎ Dandadan",
+        "· JP",
+        "₂₀₂₄",
+        "s₁",
+        "ᴇ₁₂",
+        "▣ AV1",
+        "✦ HDR10",
+        "♬ AAC",
+        "♯ 2.0",
+        "❖",
+        "12ᴹᵇᵖˢ",
+        "◷ 5d",
+        "⇩ 87",
+        "⛉ NZBGeek",
+        "· SubsPlease",
+        "⛿ JA · EN",
+        "♛ ᴄʀ",
+        "ꜱᴅx ᴀʟᴛ",
+        "ᴛ₂",
+        "ᴅᴜᴀʟ",
+        "₉₅₀",
+        "♛ ᴄʀ »"
+      ],
+      "excludes": [
+        "♛ ɴᴇᴛꜰʟɪx",
+        "♛ ᴄʀ  »"
+      ],
+      "counts": {
+        "♛ ᴄʀ": 1,
+        "ᴛ₂": 1,
+        "ᴅᴜᴀʟ": 1
+      }
+    },
+    {
+      "name": "Rich Movie Remux final render",
+      "context": {
+        "Service": "StreamNZB",
+        "Stream": "Standalone",
+        "Content": "Blade Runner 2049",
+        "ReleaseTitle": "Blade.Runner.2049.2017.1080p.BluRay.REMUX.AVC.TrueHD.7.1-HiFi",
+        "Index": 1,
+        "Count": 5,
+        "Score": 1800,
+        "Avail": true,
+        "Library": false,
+        "Size": 53687091200,
+        "Indexer": "NinjaCentral",
+        "Variants": 1,
+        "VariantIndexers": [
+          "NinjaCentral"
+        ],
+        "Grabs": 742,
+        "Age": "3y",
+        "Duration": "2h 44m",
+        "Languages": [
+          "en"
+        ],
+        "Kind": "movie",
+        "IsAnime": false,
+        "MatchedRules": [
+          {
+            "Name": "Movies T1",
+            "Score": 500
+          }
+        ],
+        "Availability": {
+          "Status": "available",
+          "Known": true,
+          "OnMyBackbone": true,
+          "CheckedDaysAgo": 3,
+          "Compression": ""
+        },
+        "Seadex": {
+          "Checked": false,
+          "Known": false,
+          "Best": false,
+          "Alternative": false
+        },
+        "ParsedTitle": "Blade Runner 2049",
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "Codec": "AVC",
+        "Bitrate": "42Mbps",
+        "Container": "MKV",
+        "Extension": "mkv",
+        "Group": "HiFi",
+        "Edition": "Final Cut",
+        "Network": "",
+        "Country": "US",
+        "Year": 2017,
+        "Audio": [
+          "TRUEHD"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "HDR": [],
+        "Complete": true
+      },
+      "name_contains": [
+        "FHD",
+        "〈ʀᴇᴍᴜx〉",
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "✎ Blade Runner 2049",
+        "· US",
+        "₂₀₁₇",
+        "▣ AVC",
+        "♬ TRUEHD",
+        "♯ 7.1",
+        "❖",
+        "42ᴹᵇᵖˢ",
+        "◷ 3y",
+        "⇩ 742",
+        "⛉ NinjaCentral",
+        "· HiFi",
+        "⛿ EN",
+        "ꜰɪɴᴀʟ ᴄᴜᴛ",
+        "ᴛ₁",
+        "₁₈₀₀",
+        "⛿ EN\nꜰɪɴᴀʟ ᴄᴜᴛ »"
+      ],
+      "excludes": [
+        "♛",
+        "ꜱᴅx",
+        "\n · ꜰɪɴᴀʟ ᴄᴜᴛ"
+      ],
+      "counts": {
+        "ᴛ₁": 1
+      }
+    }
+  ]
+}

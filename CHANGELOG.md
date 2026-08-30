@@ -37,14 +37,22 @@ Changes in this section are under development and are not part of the latest sta
 - Added Anime WEB **Streaming Service** detection for Crunchyroll (`CR`), Disney+ (`DSNP`), Netflix (`NF`), Amazon (`AMZN`), VRV, Funimation (`FUNi`), ABEMA, ADN, B-Global, Bilibili, and HIDIVE.
 - Added StreamNZB compatibility fixtures covering positive service markers, boundaries and false positives, Anime scope, BluRay exclusion, and Anime Movie WEB matching.
 - Added production-profile regression coverage for all Streaming Service detection rules.
+- Added a human-readable formatter development source at `tests/streamnzb_compat/formatter.source.json`.
+- Added `scripts/build_formatter.py` to build `formatter.txt` from the human-readable source and verify source/published semantic synchronization.
+- Added a formatter render regression harness using StreamNZB's pinned real formatter engine for candidate and production simulation.
+- Added formatter fixtures covering Network-first display, Streaming Service fallback priority, duplicate prevention, source/Edition presentation, and representative full Anime WEB and Movie Remux renders.
+- Added fresh-render safeguards by disabling the Go test cache and logging SHA-256 fingerprints of the formatter and fixture inputs.
 
 ### Changed
 
 - Increased the production profile from **91 to 100 rules**.
 - Updated the formatter to use matched Streaming Service rules as a fallback when `.Network` is unavailable, while preserving `.Network` as the preferred source label.
 - Removed the separate Crunchyroll and HIDIVE formatter badges now that those services participate in the unified Network-first source display.
+- Extended the StreamNZB compatibility suite to require semantic synchronization between the formatter source and `formatter.txt` and to run the published formatter regression automatically.
 
 ### Fixed
+
+- Fixed formatter source/Edition spacing so source plus Edition renders as `♛ source · edition »`, source-only renders as `♛ source »`, and Edition-only no longer receives an orphan leading separator.
 
 ## V4.2
 

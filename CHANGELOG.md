@@ -36,10 +36,29 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added **Complete Season Pack Preference**: explicitly complete season packs
+  for Series and Anime Shows receive a small `+10` ranking preference.
+  Ordinary season packs, individual and multi-episode releases, complete
+  show packs, Movies, and Anime Movies remain neutral.
+- Added pinned real-engine compatibility coverage for the exact published
+  Complete Season Pack rule, including Series and Anime Show positives plus
+  ordinary packs, single/multi-episode releases, complete show packs, Movies,
+  and Anime Movies.
+
 - Added production compatibility validation for Jhin v0.6 rule-name semantics: published profile rule names must be non-empty and unique, and case-only `matched()` / Define-name drift is reported explicitly because `matched()` references are case-sensitive.
 - Added permanent real-engine episode-parsing regression coverage for normal multi-episode releases, Anime hybrid season/absolute numbering, absolute episode ranges, dashed Anime season/episode notation, season ranges, and complete season packs against the pinned StreamNZB/Jhin v0.6 engine.
 
 ### Changed
+
+- Increased the production profile from **103 to 104 rules** with Complete
+  Season Pack Preference. The generated Define Library remains at **53**
+  rules because the feature uses native StreamNZB/Jhin facts and introduces
+  no new Define dependency.
+- Updated the Anime BluRay tier-ceiling regression for Anime Shows: the
+  maximum known effective positive minor-metadata stack increases from
+  `+31` to `+41` when Complete Season Pack Preference applies, while the
+  existing 70-point tier gaps still leave `29` points of headroom below the
+  next-higher clean tier.
 
 - Updated the pinned StreamNZB compatibility revision from `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to `f1d55a294b98f4ae7c685ea17cec230b1d12a2bc`, migrating the compatibility harness and formatter regression suite to StreamNZB's Jhin v0.6 rule engine.
 - Adapted aggregate compatibility tests to StreamNZB's request-kind-aware Jhin v0.6 aggregate API and updated Unknown Resolution diagnostic assertions for the new engine reporting without changing production scoring or filtering policy.

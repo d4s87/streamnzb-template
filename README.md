@@ -179,6 +179,42 @@ The formatter normalizes matching releases to `ᴜɴᴄᴇɴꜱᴏʀᴇᴅ`.
 
 The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8 hierarchy. Known Anime release groups can therefore pass the 4K release-group trust check regardless of tier, while unknown 4K Anime groups remain filtered.
 
+## Complete Season Pack Preference
+
+> [!NOTE]
+> This capability is currently **Unreleased** on `main`. V4.4 remains the
+> latest stable release; V4.5 is the next release target.
+
+Series and Anime Show releases explicitly parsed by StreamNZB as both a
+`seasonPack` and `complete` receive a small `+10` ranking preference.
+
+The rule is deliberately narrow. The following remain neutral:
+
+- ordinary season packs such as `S01`
+- individual episodes
+- multi-episode releases
+- complete show-wide packs
+- Movies
+- Anime Movies
+
+The preference is a tie-breaker rather than a quality override. For Anime
+Shows, adding the Complete Season Pack preference raises the maximum known
+effective positive minor-metadata stack from `+31` to `+41`. The 70-point
+Anime BluRay tier gaps therefore still leave `29` points of headroom below
+the next-higher clean tier.
+
+Real-engine validation against the pinned StreamNZB/Jhin v0.6 runtime
+confirms the `seasonPack` and `complete` facts, their combined condition,
+and the expected parser behavior for ordinary packs, complete packs,
+individual episodes, multi-episode releases, and complete show packs.
+
+StreamNZB currently exposes these as release-side facts only. It does not
+expose request-side metadata telling the profile whether the requested
+season has actually finished airing. DraCuLa therefore does not infer that
+an ordinary `S01` pack represents a completed season. Automatically
+preferring unmarked packs for seasons known to be complete would require
+additional upstream season-completion or episode-count request metadata.
+
 ## Movie Edition Preferences
 
 Movie-version preferences are explicitly limited to **Movies** so edition markers cannot alter Show or Anime ranking.

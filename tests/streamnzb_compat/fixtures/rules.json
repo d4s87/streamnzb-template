@@ -4304,6 +4304,95 @@
           }
         }
       ]
+    },
+    {
+      "name": "Complete Season Pack Preference",
+      "productionRule": "Complete Season Pack Preference",
+      "when": "(kind == \"series\" or kind == \"anime_show\") and seasonPack and complete",
+      "points": 10,
+      "cases": [
+        {
+          "name": "explicit complete series season pack",
+          "release": "Example.Show.S01.COMPLETE.1080p.WEB-DL-GRP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "ordinary series season pack stays neutral",
+          "release": "Example.Show.S01.1080p.WEB-DL-GRP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "single series episode stays neutral",
+          "release": "Example.Show.S01E05.1080p.WEB-DL-GRP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "multi episode stays neutral",
+          "release": "Example.Show.S01E05E06.1080p.WEB-DL-GRP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "complete show pack is not a season pack",
+          "release": "Example.Show.COMPLETE.1080p.WEB-DL-GRP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "explicit complete Anime season pack",
+          "release": "Example.Anime.S01.COMPLETE.1080p.WEB-DL-GRP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "ordinary Anime season pack stays neutral",
+          "release": "Example.Anime.S01.1080p.WEB-DL-GRP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie with season-like token is excluded",
+          "release": "Example.Movie.S01.COMPLETE.1080p.WEB-DL-GRP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "Anime movie with season-like token is excluded",
+          "release": "Example.Anime.Movie.S01.COMPLETE.1080p.WEB-DL-GRP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
     }
   ]
 }

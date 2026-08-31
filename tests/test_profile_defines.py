@@ -299,14 +299,15 @@ def validate_anime_bluray_tier_scores(
         T7  80
         T8  10
 
-    The known maximum positive minor Anime metadata stack is +31:
+    The known maximum positive minor Anime Show metadata stack is +41:
 
-        Dual/Multi Audio +10 effective
-        Uncensored       +10
-        Anime v4          +4
-        REPACK3           +7
+        Dual/Multi Audio          +10 effective
+        Uncensored                +10
+        Anime v4                   +4
+        REPACK3                    +7
+        Complete Season Pack      +10
 
-    This leaves 39 points of headroom between adjacent BluRay tiers.
+    This leaves 29 points of headroom between adjacent BluRay tiers.
 
     Tier conditions may contain intentional classification logic such
     as the LazyRemux / UltraRemux exception, so this validation does
@@ -380,7 +381,7 @@ def validate_anime_bluray_tier_scores(
             f"70-point gaps; found {gaps}"
         )
 
-    max_positive_minor_stack = 10 + 10 + 4 + 7
+    max_positive_minor_stack = 10 + 10 + 4 + 7 + 10
 
     for gap in gaps:
         if gap <= max_positive_minor_stack:
@@ -1546,9 +1547,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 103:
+if len(rules) != 104:
     raise AssertionError(
-        f"Expected 103 profile rules, found {len(rules)}"
+        f"Expected 104 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

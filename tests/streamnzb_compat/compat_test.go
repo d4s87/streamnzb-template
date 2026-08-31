@@ -884,9 +884,10 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 	}
 
 	type auditCase struct {
-		name     string
-		tier     int
-		metadata string
+		name       string
+		tier       int
+		metadata   string
+		seasonPack bool
 	}
 
 	var cases []auditCase
@@ -911,8 +912,9 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 						"T%d full positive minor stack",
 						tier,
 					),
-					tier:     tier,
-					metadata: "Dual.Audio.Uncensored.v4.REPACK3",
+					tier:       tier,
+					metadata:   "Dual.Audio.Uncensored.v4.REPACK3",
+					seasonPack: true,
 				},
 			)
 		}
@@ -921,10 +923,16 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 	buildRelease := func(
 		group string,
 		metadata string,
+		seasonPack bool,
 	) string {
+		episodeToken := "S01E01"
+		if seasonPack {
+			episodeToken = "S01.COMPLETE"
+		}
+
 		parts := []string{
 			"Example.Anime",
-			"S01E01",
+			episodeToken,
 			"1080p",
 			"BluRay",
 			"x264",
@@ -948,6 +956,7 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 				Release: buildRelease(
 					tokenForTier(c.tier),
 					c.metadata,
+					c.seasonPack,
 				),
 				Kind:  "anime_show",
 				Anime: true,
@@ -1041,20 +1050,25 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 		//
 		// The raw rules-layer metadata stack is therefore:
 		//
-		//   Dual/Multi +1010
-		//   Uncensored   +10
-		//   Anime v4      +4
-		//   REPACK3       +7
-		//                -----
-		//                +1031
+		//   Dual/Multi          +1010
+		//   Uncensored            +10
+		//   Anime v4               +4
+		//   REPACK3                +7
+		//   Complete Season Pack  +10
+		//                         -----
+		//                         +1041
+		//
+		// The test release is an explicit S01.COMPLETE season pack,
+		// so the production Complete Season Pack Preference must
+		// participate in this maximum-stack regression.
 		//
 		// Normalize the +1000 compensation before checking the
 		// effective tier ceiling.
 		const audioNativeCompensation = 1000
 
-		if lowerStackRaw-lowerClean != 1031 {
+		if lowerStackRaw-lowerClean != 1041 {
 			t.Fatalf(
-				"T%d raw positive minor stack adds %d points; want 1031",
+				"T%d raw positive minor stack adds %d points; want 1041",
 				lowerTier,
 				lowerStackRaw-lowerClean,
 			)
@@ -1063,9 +1077,9 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 		lowerStackEffective :=
 			lowerStackRaw - audioNativeCompensation
 
-		if lowerStackEffective-lowerClean != 31 {
+		if lowerStackEffective-lowerClean != 41 {
 			t.Fatalf(
-				"T%d effective positive minor stack adds %d points; want 31",
+				"T%d effective positive minor stack adds %d points; want 41",
 				lowerTier,
 				lowerStackEffective-lowerClean,
 			)
@@ -1081,9 +1095,9 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 			)
 		}
 
-		if higherClean-lowerStackEffective != 39 {
+		if higherClean-lowerStackEffective != 29 {
 			t.Fatalf(
-				"T%d -> T%d effective ceiling headroom=%d want=39",
+				"T%d -> T%d effective ceiling headroom=%d want=29",
 				higherTier,
 				lowerTier,
 				higherClean-lowerStackEffective,

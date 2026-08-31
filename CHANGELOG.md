@@ -44,6 +44,15 @@ Changes in this section are under development and are not part of the latest sta
   Complete Season Pack rule, including Series and Anime Show positives plus
   ordinary packs, single/multi-episode releases, complete show packs, Movies,
   and Anime Movies.
+- Added **Movie Edition Preference** for parser-backed Movie editions:
+  Director's Cut and Extended Edition share one non-stacking `+25`
+  preference using Jhin v0.6's native `edition` metadata.
+- Added pinned real-engine coverage for Director's Cut, apostrophe variants,
+  Extended Edition, Extended Cut, Movie-only scope, and neutral unsupported
+  Final Cut / Criterion Collection / Special Edition forms.
+- Added explicit IMAX Enhanced regression coverage. IMAX Enhanced continues
+  to receive the existing `+800` IMAX preference and does not receive a
+  second stacked edition bonus.
 
 - Added production compatibility validation for Jhin v0.6 rule-name semantics: published profile rule names must be non-empty and unique, and case-only `matched()` / Define-name drift is reported explicitly because `matched()` references are case-sensitive.
 - Added permanent real-engine episode-parsing regression coverage for normal multi-episode releases, Anime hybrid season/absolute numbering, absolute episode ranges, dashed Anime season/episode notation, season ranges, and complete season packs against the pinned StreamNZB/Jhin v0.6 engine.
@@ -54,6 +63,14 @@ Changes in this section are under development and are not part of the latest sta
   Season Pack Preference. The generated Define Library remains at **53**
   rules because the feature uses native StreamNZB/Jhin facts and introduces
   no new Define dependency.
+- Increased the production profile from **104 to 105 rules** with Movie
+  Edition Preference. The generated Define Library remains at **53** rules
+  because the preference uses native StreamNZB/Jhin `edition` metadata and
+  introduces no new Define dependency.
+- Expanded the Movie edition ceiling policy so the low-weight Open Matte
+  `+25` and Director's Cut / Extended Edition `+25` preferences may combine
+  to at most `+50`, remaining below the `200`-point Movie release-group tier
+  gap. IMAX remains the deliberate strong exception at `+800`.
 - Updated the Anime BluRay tier-ceiling regression for Anime Shows: the
   maximum known effective positive minor-metadata stack increases from
   `+31` to `+41` when Complete Season Pack Preference applies, while the

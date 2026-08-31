@@ -217,18 +217,56 @@ additional upstream season-completion or episode-count request metadata.
 
 ## Movie Edition Preferences
 
-Movie-version preferences are explicitly limited to **Movies** so edition markers cannot alter Show or Anime ranking.
+> [!NOTE]
+> The additional Director's Cut / Extended Edition preference is currently
+> **Unreleased** on `main`. V4.4 remains the latest stable release; V4.5 is
+> the next release target.
+
+Movie-version preferences are explicitly limited to **Movies** so edition
+markers cannot alter Show or Anime ranking.
+
+Current Movie edition scoring:
 
 - **IMAX:** `+800`
 - **Open Matte:** `+25`
+- **Director's Cut / Extended Edition:** one shared, non-stacking `+25`
 
-IMAX is intentionally a strong Movie-version preference. It may outrank a higher release-group tier when the user is choosing between otherwise eligible Movie releases; this is deliberate rather than a tier-ceiling bug.
+IMAX is intentionally a strong Movie-version preference. It may outrank a
+higher release-group tier when the user is choosing between otherwise
+eligible Movie releases; this is deliberate rather than a tier-ceiling bug.
 
-Open Matte is intentionally much smaller. Its `+25` score acts as an edition preference without replacing the Movie release-group hierarchy. For example, a T2 WEB release with Open Matte remains below a clean T1 release, and a T3 Open Matte release remains below clean T2.
+**IMAX Enhanced does not receive a second bonus.** Pinned Jhin v0.6 parses
+`IMAX Enhanced` as edition `IMAX`, and the existing bounded IMAX production
+rule already matches the release-name marker. It therefore receives the
+existing `+800` IMAX preference rather than stacking to `+1600`.
 
-A Movie carrying both markers may receive both preferences for a combined `+825`. Shows and Anime receive no IMAX or Open Matte score.
+Open Matte and Director's Cut / Extended Edition are deliberately much
+smaller. Director's Cut and Extended Edition use StreamNZB/Jhin's parsed
+`edition` metadata and share one `+25` rule, so alternate spellings such as
+`Directors Cut`, `Director's Cut`, `Extended Edition`, and `Extended Cut`
+cannot stack with each other.
 
-Pinned real-engine regression coverage protects the score values, Movie-only scopes, matching boundaries, stacking behavior, and release-tier interactions.
+The maximum low-weight Movie edition stack is therefore `+50` when Open
+Matte and the shared Director's Cut / Extended Edition preference both
+apply. This remains safely below the `200`-point Movie release-group tier
+gap.
+
+Criterion Collection, Final Cut, and generic Special Edition currently
+remain score-neutral. The pinned Jhin v0.6 parser does not classify those
+forms as edition metadata. DraCuLa deliberately avoids broad raw release-name
+fallbacks that could confuse title text or loose markers with canonical
+edition metadata.
+
+Pinned real-engine regression coverage protects:
+
+- IMAX and IMAX Enhanced behavior
+- Movie-only scope
+- Open Matte matching
+- Director's Cut / Extended Edition parsing and scoring
+- non-stacking alternate-cut behavior
+- neutral Criterion / Final Cut / Special Edition behavior
+- representative Movie release-tier ceiling interactions
+
 
 ## Corrected Release Preference
 

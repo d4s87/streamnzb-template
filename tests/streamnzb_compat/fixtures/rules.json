@@ -4239,6 +4239,15 @@
           "expected": {
             "match": false
           }
+        },
+        {
+          "name": "movie IMAX Enhanced",
+          "release": "Example.Movie.2026.2160p.WEB-DL.HEVC.IMAX.Enhanced-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
         }
       ]
     },
@@ -4301,6 +4310,114 @@
           "anime": false,
           "expected": {
             "match": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "Movie Edition Preference",
+      "productionRule": "Movie Edition Preference",
+      "scope": "movie",
+      "when": "edition == \"Directors Cut\" or edition == \"Extended Edition\"",
+      "points": 25,
+      "cases": [
+        {
+          "name": "movie Directors Cut",
+          "release": "Example.Movie.2026.Directors.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Director apostrophe Cut",
+          "release": "Example.Movie.2026.Director's.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Extended Edition",
+          "release": "Example.Movie.2026.Extended.Edition.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Extended Cut",
+          "release": "Example.Movie.2026.Extended.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "plain movie neutral",
+          "release": "Example.Movie.2026.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie IMAX Enhanced not alternate cut",
+          "release": "Example.Movie.2026.IMAX.Enhanced.2160p.WEB-DL.HEVC-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie Final Cut not parser classified",
+          "release": "Example.Movie.2026.Final.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie Criterion not parser classified",
+          "release": "Example.Movie.2026.Criterion.Collection.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie Special Edition not parser classified",
+          "release": "Example.Movie.2026.Special.Edition.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "show Directors Cut excluded by scope",
+          "release": "Example.Show.S01E01.Directors.Cut.1080p.WEB-DL.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "anime movie Directors Cut excluded by scope",
+          "release": "Example.Anime.Movie.2026.Directors.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": false
           }
         }
       ]

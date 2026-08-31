@@ -1156,22 +1156,35 @@ def validate_movie_edition_preferences(
     Validate DraCuLa's Movie-version preference policy.
 
     IMAX is intentionally a strong Movie preference and may outrank
-    release-group tiers. Open Matte is deliberately a small edition
-    preference and must not act as a tier-replacing bonus.
+    release-group tiers.
 
-    Neither preference may leak into Shows or Anime.
+    Open Matte and the parser-backed Director's Cut / Extended Edition
+    preference are deliberately small Movie-only tie-breakers.
+
+    Director's Cut and Extended Edition share one +25 rule, preventing
+    equivalent alternate-cut labels from stacking with each other.
     """
 
     expected = {
         "IMAX": {
+            "scope": "movie",
             "points": 800,
             "when": 'releaseName matches "(?i)\\\\bIMAX\\\\b"',
         },
         "Open matte": {
+            "scope": "movie",
             "points": 25,
             "when": (
                 'releaseName matches '
                 '"(?i)\\\\bOpen[. _-]?Matte\\\\b"'
+            ),
+        },
+        "Movie Edition Preference": {
+            "scope": "movie",
+            "points": 25,
+            "when": (
+                'edition == "Directors Cut" or '
+                'edition == "Extended Edition"'
             ),
         },
     }
@@ -1194,17 +1207,17 @@ def validate_movie_edition_preferences(
         rule = matches[0]
         resolved[name] = rule
 
+        if rule.get("scope") != spec["scope"]:
+            raise AssertionError(
+                f"{name} must use explicit movie scope; "
+                f"found {rule.get('scope')!r}"
+            )
+
         if rule.get("points") != spec["points"]:
             raise AssertionError(
                 f"{name} must score exactly "
                 f"{spec['points']:+d}; "
                 f"found {rule.get('points')!r}"
-            )
-
-        if rule.get("scope") != "movie":
-            raise AssertionError(
-                f"{name} must use explicit movie scope; "
-                f"found {rule.get('scope')!r}"
             )
 
         if rule.get("when") != spec["when"]:
@@ -1219,16 +1232,26 @@ def validate_movie_edition_preferences(
                 "without an explicit action"
             )
 
-        if 'matched("' in rule["when"] or "matched('" in rule["when"]:
+        if (
+            'matched("' in rule["when"]
+            or "matched('" in rule["when"]
+        ):
             raise AssertionError(
-                f"{name} must use releaseName matching directly "
-                "without Define dependencies"
+                f"{name} must not depend on a Define"
             )
 
-    if resolved["Open matte"]["points"] >= 200:
+    movie_tier_gap = 200
+
+    minor_edition_stack = (
+        resolved["Open matte"]["points"]
+        + resolved["Movie Edition Preference"]["points"]
+    )
+
+    if minor_edition_stack >= movie_tier_gap:
         raise AssertionError(
-            "Open matte must remain below the 200-point "
-            "Movie release-group tier gap"
+            "Minor Movie edition preferences must remain below the "
+            f"{movie_tier_gap}-point Movie release-group tier gap; "
+            f"found reachable +{minor_edition_stack}"
         )
 
     if resolved["IMAX"]["points"] <= 500:
@@ -1547,9 +1570,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 104:
+if len(rules) != 105:
     raise AssertionError(
-        f"Expected 104 profile rules, found {len(rules)}"
+        f"Expected 105 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

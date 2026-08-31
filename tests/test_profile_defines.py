@@ -199,6 +199,41 @@ def extract_matched_dependencies(profile: dict) -> dict[str, list[str]]:
     return dependencies
 
 
+def validate_profile_rule_names(rules: list[dict]) -> None:
+    """
+    Validate the production rule-name contract required by Jhin v0.6.
+
+    The current StreamNZB profile schema has no enabled/disabled field,
+    so every published rule is active. Jhin v0.6 forbids duplicate
+    enabled rule names.
+    """
+    seen: dict[str, int] = {}
+
+    for index, rule in enumerate(rules, start=1):
+        if not isinstance(rule, dict):
+            raise AssertionError(
+                f"Profile rule #{index} is not an object"
+            )
+
+        name = rule.get("name")
+
+        if not isinstance(name, str) or not name.strip():
+            raise AssertionError(
+                f"Profile rule #{index} has an empty or invalid name"
+            )
+
+        previous = seen.get(name)
+
+        if previous is not None:
+            raise AssertionError(
+                "Duplicate production rule name "
+                f"{name!r}: rules #{previous} and #{index}. "
+                "Jhin v0.6 forbids duplicate enabled rule names."
+            )
+
+        seen[name] = index
+
+
 def validate_required_anime_structure(defines: dict[str, dict]) -> None:
     expected = {}
 
@@ -1523,6 +1558,8 @@ if len(defines) != 53:
         f"Expected 53 generated Defines, found {len(defines)}"
     )
 
+validate_profile_rule_names(rules)
+
 dependencies = extract_matched_dependencies(profile)
 
 missing_dependencies = sorted(
@@ -1532,19 +1569,63 @@ missing_dependencies = sorted(
 )
 
 if missing_dependencies:
-    details = []
+    defines_by_casefold: dict[str, list[str]] = {}
+
+    for define_name in defines:
+        defines_by_casefold.setdefault(
+            define_name.casefold(),
+            [],
+        ).append(define_name)
+
+    case_mismatches = []
+    truly_missing = []
 
     for name in missing_dependencies:
-        used_by = ", ".join(dependencies[name])
-
-        details.append(
-            f'{name!r} used by: {used_by}'
+        candidates = sorted(
+            defines_by_casefold.get(name.casefold(), [])
         )
 
-    raise AssertionError(
-        "Profile references missing Define(s):\n  - "
-        + "\n  - ".join(details)
-    )
+        if candidates:
+            case_mismatches.append((name, candidates))
+        else:
+            truly_missing.append(name)
+
+    sections = []
+
+    if case_mismatches:
+        details = []
+
+        for name, candidates in case_mismatches:
+            used_by = ", ".join(dependencies[name])
+            available = ", ".join(repr(item) for item in candidates)
+
+            details.append(
+                f"{name!r} used by: {used_by}; "
+                f"case-matching Define(s): {available}"
+            )
+
+        sections.append(
+            "Profile matched() reference case mismatch(es). "
+            "Jhin v0.6 matched() names are case-sensitive:\n  - "
+            + "\n  - ".join(details)
+        )
+
+    if truly_missing:
+        details = []
+
+        for name in truly_missing:
+            used_by = ", ".join(dependencies[name])
+
+            details.append(
+                f"{name!r} used by: {used_by}"
+            )
+
+        sections.append(
+            "Profile references missing Define(s):\n  - "
+            + "\n  - ".join(details)
+        )
+
+    raise AssertionError("\n\n".join(sections))
 
 validate_required_anime_structure(defines)
 validate_anime_bluray_tier_scores(rules)

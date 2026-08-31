@@ -420,7 +420,19 @@ func runAggregateCases(
 				envs[i] = buildEnv(cf)
 			}
 
-			state := set.ComputeAggregates(envs)
+			kind := ac.Candidates[0].Kind
+
+			for _, cf := range ac.Candidates {
+				if cf.Kind != kind {
+					t.Fatalf(
+						"aggregate fixture mixes request kinds: %q and %q",
+						kind,
+						cf.Kind,
+					)
+				}
+			}
+
+			state := set.ComputeAggregates(envs, kind)
 			if state == nil {
 				t.Fatal("ComputeAggregates returned nil state")
 			}
@@ -445,7 +457,7 @@ func runAggregateCases(
 				}
 
 				if got != want {
-					_, reports := set.ReportAggregates(envs)
+					_, reports := set.ReportAggregates(envs, kind)
 
 					t.Errorf(
 						"aggregate rule %s = %v, want %v\n"+
@@ -744,7 +756,7 @@ func TestAnimeBluRayTierCeilings(t *testing.T) {
 		)
 	}
 
-	state := set.ComputeAggregates(envs)
+	state := set.ComputeAggregates(envs, "anime_show")
 	if state == nil {
 		t.Fatal(
 			"ComputeAggregates returned nil state",
@@ -1135,15 +1147,37 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		)
 	}
 
-	state := set.ComputeAggregates(envs)
+	states := make(map[string]*rules.AggregateState)
 
-	if state == nil {
-		t.Fatal("ComputeAggregates returned nil")
+	for _, kind := range []string{"movie", "series", "anime_show"} {
+		kindEnvs := make([]rules.Env, 0)
+
+		for i, c := range cases {
+			if c.kind == kind {
+				kindEnvs = append(kindEnvs, envs[i])
+			}
+		}
+
+		if len(kindEnvs) == 0 {
+			continue
+		}
+
+		state := set.ComputeAggregates(kindEnvs, kind)
+		if state == nil {
+			t.Fatalf("ComputeAggregates returned nil for %s", kind)
+		}
+
+		states[kind] = state
 	}
 
 	results := map[string]int{}
 
 	for i, c := range cases {
+		state := states[c.kind]
+		if state == nil {
+			t.Fatalf("missing aggregate state for %s", c.kind)
+		}
+
 		state.Inject(&envs[i])
 
 		out := set.Evaluate(
@@ -1980,13 +2014,20 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			hasSeaDexSkip := false
 
 			for _, skipped := range target.SkippedRules {
-				if strings.Contains(
+				if !strings.Contains(
 					skipped,
 					"Unknown resolution",
-				) &&
+				) {
+					continue
+				}
+
+				if strings.Contains(
+					skipped,
+					"no SeaDex lookup",
+				) ||
 					strings.Contains(
 						skipped,
-						"no SeaDex lookup",
+						"needs a SeaDex lookup",
 					) {
 					hasSeaDexSkip = true
 					break
@@ -2015,8 +2056,19 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			)
 
 			for _, report := range aggregates {
-				if report.Source ==
-					`resolution != "" and quality != ""` {
+				source := strings.NewReplacer(
+					" ", "",
+					"(", "",
+					")", "",
+				).Replace(report.Source)
+
+				hasResolutionCheck :=
+					strings.Contains(source, `resolution!=""`)
+
+				hasQualityCheck :=
+					strings.Contains(source, `quality!=""`)
+
+				if hasResolutionCheck && hasQualityCheck {
 					foundAggregate = true
 					aggregateCount = report.Count
 					break

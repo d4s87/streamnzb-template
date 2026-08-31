@@ -34,7 +34,15 @@ This testing layer complements the existing profile, Define Library, Vidhin sync
 
 Changes in this section are under development and are not part of the latest stable release.
 
-No unreleased changes yet.
+### Added
+
+- Added production compatibility validation for Jhin v0.6 rule-name semantics: published profile rule names must be non-empty and unique, and case-only `matched()` / Define-name drift is reported explicitly because `matched()` references are case-sensitive.
+
+### Changed
+
+- Updated the pinned StreamNZB compatibility revision from `4c0f7b385e5f7bfb514523b908fa04f153dfbbe2` to `f1d55a294b98f4ae7c685ea17cec230b1d12a2bc`, migrating the compatibility harness and formatter regression suite to StreamNZB's Jhin v0.6 rule engine.
+- Adapted aggregate compatibility tests to StreamNZB's request-kind-aware Jhin v0.6 aggregate API and updated Unknown Resolution diagnostic assertions for the new engine reporting without changing production scoring or filtering policy.
+- Removed the obsolete direct `expr-lang` compatibility-harness dependency after the StreamNZB rule engine migration; Jhin v0.6 now provides the rule-expression engine used by the pinned runtime.
 
 ## V4.4
 

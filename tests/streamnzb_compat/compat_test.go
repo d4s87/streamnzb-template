@@ -18,6 +18,7 @@ import (
 
 	"streamnzb/pkg/core/config"
 	"streamnzb/pkg/release"
+	streamparser "streamnzb/pkg/search/parser"
 	"streamnzb/pkg/search/ranking"
 	"streamnzb/pkg/search/rules"
 	"streamnzb/pkg/search/triage"
@@ -494,6 +495,204 @@ func runAggregateCases(
 						out.Rejections,
 						out.Skipped,
 						reports,
+					)
+				}
+			}
+		})
+	}
+}
+
+func TestEpisodeParsingCompatibility(t *testing.T) {
+	type rankCheck struct {
+		season  int
+		episode int
+		want    int
+	}
+
+	tests := []struct {
+		name         string
+		release      string
+		wantSeasons  []int
+		wantEpisodes []int
+		wantComplete bool
+		ranks        []rankCheck
+	}{
+		{
+			name:         "hybrid Anime season episode plus absolute number",
+			release:      "Dr.STONE.2019.S04E16-074.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{4},
+			wantEpisodes: []int{16},
+			ranks: []rankCheck{
+				{season: 4, episode: 16, want: 4},
+				{season: 4, episode: 74, want: 0},
+			},
+		},
+		{
+			name:         "multi episode with repeated E prefix",
+			release:      "Show.S01E01-E02.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{1},
+			wantEpisodes: []int{1, 2},
+			ranks: []rankCheck{
+				{season: 1, episode: 1, want: 3},
+				{season: 1, episode: 2, want: 3},
+				{season: 1, episode: 3, want: 0},
+			},
+		},
+		{
+			name:         "compact multi episode",
+			release:      "Show.S01E01E02.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{1},
+			wantEpisodes: []int{1, 2},
+			ranks: []rankCheck{
+				{season: 1, episode: 1, want: 3},
+				{season: 1, episode: 2, want: 3},
+			},
+		},
+		{
+			name:         "compact episode range",
+			release:      "Show.S01E01-02.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{1},
+			wantEpisodes: []int{1, 2},
+			ranks: []rankCheck{
+				{season: 1, episode: 1, want: 3},
+				{season: 1, episode: 2, want: 3},
+			},
+		},
+		{
+			name:         "expanded episode range",
+			release:      "Show.S01E01-E03.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{1},
+			wantEpisodes: []int{1, 2, 3},
+			ranks: []rankCheck{
+				{season: 1, episode: 1, want: 3},
+				{season: 1, episode: 3, want: 3},
+			},
+		},
+		{
+			name:         "Anime absolute episode range",
+			release:      "[Group] Anime Title 001-012 [1080p]",
+			wantEpisodes: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+			ranks: []rankCheck{
+				{season: 0, episode: 1, want: 3},
+				{season: 0, episode: 12, want: 3},
+			},
+		},
+		{
+			name:         "dashed Anime season episode",
+			release:      "[SubsPlease] Anime Title S4 - 03 (1080p)",
+			wantSeasons:  []int{4},
+			wantEpisodes: []int{3},
+			ranks: []rankCheck{
+				{season: 4, episode: 3, want: 4},
+			},
+		},
+		{
+			name:        "compact season range remains a season pack",
+			release:     "Show.S03-08.1080p.WEB-DL-GROUP",
+			wantSeasons: []int{3, 4, 5, 6, 7, 8},
+			ranks: []rankCheck{
+				{season: 4, episode: 3, want: 2},
+				{season: 8, episode: 20, want: 2},
+			},
+		},
+		{
+			name:         "complete single season remains a season pack",
+			release:      "Show.S01.COMPLETE.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{1},
+			wantComplete: true,
+			ranks: []rankCheck{
+				{season: 1, episode: 1, want: 2},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			raw := jhin.Parse(tc.release)
+			if raw == nil {
+				t.Fatal("jhin.Parse returned nil")
+			}
+
+			parsed := streamparser.ParseReleaseTitle(tc.release)
+			if parsed == nil {
+				t.Fatal("ParseReleaseTitle returned nil")
+			}
+
+			if !slices.Equal(raw.Seasons, tc.wantSeasons) {
+				t.Fatalf(
+					"Jhin seasons = %v, want %v\nrelease: %s",
+					raw.Seasons,
+					tc.wantSeasons,
+					tc.release,
+				)
+			}
+
+			if !slices.Equal(raw.Episodes, tc.wantEpisodes) {
+				t.Fatalf(
+					"Jhin episodes = %v, want %v\nrelease: %s",
+					raw.Episodes,
+					tc.wantEpisodes,
+					tc.release,
+				)
+			}
+
+			if raw.Complete != tc.wantComplete {
+				t.Fatalf(
+					"Jhin complete = %v, want %v\nrelease: %s",
+					raw.Complete,
+					tc.wantComplete,
+					tc.release,
+				)
+			}
+
+			if !slices.Equal(parsed.Seasons, tc.wantSeasons) {
+				t.Fatalf(
+					"StreamNZB seasons = %v, want %v\nrelease: %s",
+					parsed.Seasons,
+					tc.wantSeasons,
+					tc.release,
+				)
+			}
+
+			if !slices.Equal(parsed.Episodes, tc.wantEpisodes) {
+				t.Fatalf(
+					"StreamNZB episodes = %v, want %v\nrelease: %s",
+					parsed.Episodes,
+					tc.wantEpisodes,
+					tc.release,
+				)
+			}
+
+			if parsed.Complete != tc.wantComplete {
+				t.Fatalf(
+					"StreamNZB complete = %v, want %v\nrelease: %s",
+					parsed.Complete,
+					tc.wantComplete,
+					tc.release,
+				)
+			}
+
+			for _, check := range tc.ranks {
+				got := parsed.EpisodeMatchRank(
+					check.season,
+					check.episode,
+				)
+
+				if got != check.want {
+					t.Errorf(
+						"EpisodeMatchRank(%d, %d) = %d, want %d\n"+
+							"release: %s\n"+
+							"seasons: %v\n"+
+							"episodes: %v",
+						check.season,
+						check.episode,
+						got,
+						check.want,
+						tc.release,
+						parsed.Seasons,
+						parsed.Episodes,
 					)
 				}
 			}

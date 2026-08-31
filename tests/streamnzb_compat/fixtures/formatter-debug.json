@@ -1,0 +1,204 @@
+{
+  "cases": [
+    {
+      "name": "rich diagnostic release",
+      "context": {
+        "Service": "StreamNZB",
+        "Stream": "Standalone",
+        "Content": "Example Anime",
+        "ReleaseTitle": "Example.Anime.S01E12.2160p.NF.WEB-DL.DV.HDR10.HEVC.TrueHD.Atmos.7.1-GROUP",
+        "Index": 1,
+        "Count": 9,
+        "TopScore": 1500,
+        "Score": 1234,
+        "Kind": "anime_show",
+        "IsAnime": true,
+        "ParsedTitle": "Example Anime",
+        "Year": 2026,
+        "Season": 1,
+        "Episode": 12,
+        "EpisodeCode": "S01E12",
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "HDR": [
+          "DV",
+          "HDR10"
+        ],
+        "Audio": [
+          "Atmos",
+          "TrueHD"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "Group": "GROUP",
+        "Edition": "Extended Edition",
+        "Network": "Netflix",
+        "Indexer": "DrunkenSlug",
+        "Size": 25769803776,
+        "Age": "2d",
+        "Grabs": 321,
+        "Variants": 3,
+        "VariantIndexers": [
+          "DrunkenSlug",
+          "NZBGeek",
+          "NinjaCentral"
+        ],
+        "Availability": {
+          "Status": "available",
+          "Known": true,
+          "OnMyBackbone": true,
+          "CheckedDaysAgo": 2,
+          "Compression": "rar"
+        },
+        "Seadex": {
+          "Checked": true,
+          "Known": true,
+          "Best": true,
+          "Alternative": false
+        },
+        "Library": true,
+        "Verified": true,
+        "Probed": {
+          "VideoCodec": "HEVC",
+          "AudioCodec": "TRUEHD",
+          "Width": 3840,
+          "Height": 2160,
+          "Profile": "Main 10",
+          "BitDepth": 10,
+          "HDR": "HDR10",
+          "DolbyVision": true,
+          "HasHDRFallback": true,
+          "DynamicRange": "DV + HDR10"
+        },
+        "MatchedRules": [
+          {
+            "Name": "Anime Shows T1",
+            "Score": 500
+          },
+          {
+            "Name": "Complete Season Pack Preference",
+            "Score": 10
+          },
+          {
+            "Name": "Dual audio",
+            "Score": 1010
+          },
+          {
+            "Name": "Availability Backbone",
+            "Score": 20
+          }
+        ]
+      },
+      "name_contains": [
+        "DBG 1/9",
+        "2160p",
+        "1234"
+      ],
+      "contains": [
+        "REQ content=Example Anime",
+        "kind=anime_show",
+        "anime=true",
+        "score=+1234",
+        "top=+1500",
+        "RAW Example.Anime.S01E12.2160p.NF.WEB-DL.DV.HDR10.HEVC.TrueHD.Atmos.7.1-GROUP",
+        "PARSED title=Example Anime",
+        "episode=S01E12",
+        "res=2160p",
+        "quality=WEB-DL",
+        "codec=HEVC",
+        "hdr=DV,HDR10",
+        "audio=Atmos,TrueHD",
+        "channels=7.1",
+        "group=GROUP",
+        "edition=Extended Edition",
+        "network=Netflix",
+        "indexer=DrunkenSlug",
+        "FAILOVER variants=3",
+        "DrunkenSlug,NZBGeek,NinjaCentral",
+        "AVAIL status=available",
+        "known=true",
+        "backbone=true",
+        "checkedDays=2",
+        "compression=rar",
+        "SEADEX checked=true",
+        "best=true",
+        "LOCAL library=true",
+        "verified=true",
+        "video=HEVC",
+        "audio=TRUEHD",
+        "dynamicRange=DV + HDR10",
+        "hdrFallback=true",
+        "[Anime Shows T1=+500]",
+        "[Complete Season Pack Preference=+10]",
+        "[Dual audio=+1010]",
+        "[Availability Backbone=+20]"
+      ]
+    },
+    {
+      "name": "no matched rules",
+      "context": {
+        "Content": "Plain Movie",
+        "ReleaseTitle": "Plain.Movie.2026.1080p.WEB-DL.H264.AAC2.0-GROUP",
+        "Index": 2,
+        "Count": 4,
+        "TopScore": 100,
+        "Score": 0,
+        "Kind": "movie",
+        "IsAnime": false,
+        "ParsedTitle": "Plain Movie",
+        "Year": 2026,
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Codec": "H264",
+        "Audio": [
+          "AAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "Group": "GROUP",
+        "Indexer": "NZBGeek",
+        "Variants": 1,
+        "VariantIndexers": [
+          "NZBGeek"
+        ],
+        "Availability": {
+          "Status": "unknown",
+          "Known": false,
+          "OnMyBackbone": false,
+          "CheckedDaysAgo": -1,
+          "Compression": ""
+        },
+        "Seadex": {
+          "Checked": false,
+          "Known": false,
+          "Best": false,
+          "Alternative": false
+        },
+        "Library": false,
+        "Verified": false,
+        "MatchedRules": []
+      },
+      "contains": [
+        "kind=movie",
+        "anime=false",
+        "FAILOVER variants=1",
+        "AVAIL status=unknown",
+        "known=false",
+        "backbone=false",
+        "checkedDays=-1",
+        "SEADEX checked=false",
+        "LOCAL library=false",
+        "verified=false",
+        "RULES none"
+      ],
+      "excludes": [
+        "dynamicRange=",
+        "hdrFallback="
+      ]
+    }
+  ]
+}

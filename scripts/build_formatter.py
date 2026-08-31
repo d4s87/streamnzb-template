@@ -132,7 +132,7 @@ def atomic_write(path: Path, text: str):
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            "Build formatter.txt from formatter.source.json "
+            "Build a formatter share code from source JSON "
             "or verify semantic synchronization."
         )
     )
@@ -141,22 +141,29 @@ def main():
         "--check",
         action="store_true",
         help=(
-            "verify formatter.source.json and formatter.txt "
+            "verify source and published formatter "
             "are semantically synchronized"
         ),
+    )
+
+    parser.add_argument(
+        "--source",
+        default="tests/streamnzb_compat/formatter.source.json",
+        help="formatter source JSON path relative to repository root",
+    )
+
+    parser.add_argument(
+        "--output",
+        default="formatter.txt",
+        help="published SNZBF1 output path relative to repository root",
     )
 
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parents[1]
 
-    source_path = (
-        root / "tests/streamnzb_compat/formatter.source.json"
-    )
-
-    output_path = (
-        root / "formatter.txt"
-    )
+    source_path = root / args.source
+    output_path = root / args.output
 
     try:
         source = load_source(
@@ -191,14 +198,14 @@ def main():
     if args.check:
         if not synchronized:
             print(
-                "ERROR: formatter.source.json and formatter.txt "
+                f"ERROR: {source_path} and {output_path} "
                 "are not semantically synchronized.",
                 file=sys.stderr,
             )
             return 1
 
         print(
-            "PASS: formatter.source.json and formatter.txt "
+            f"PASS: {source_path} and {output_path} "
             "are semantically synchronized."
         )
 
@@ -206,7 +213,7 @@ def main():
 
     if synchronized:
         print(
-            "No formatter.txt update required; source and "
+            f"No {output_path.name} update required; source and "
             "published formatter are already equivalent."
         )
         return 0
@@ -248,7 +255,7 @@ def main():
         return 1
 
     print(
-        "Generated formatter.txt from formatter.source.json."
+        f"Generated {output_path} from {source_path}."
     )
 
     print(

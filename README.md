@@ -341,6 +341,47 @@ The latest formatter is available here:
 
 **[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**
 
+
+### Optional Debug Formatter
+
+> [!NOTE]
+> The debug formatter is currently **Unreleased** on `main`. V4.4 remains
+> the latest stable release; V4.5 is the next release target.
+
+For troubleshooting, DraCuLa also provides an optional diagnostic formatter:
+
+**[formatter-debug.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter-debug.txt)**
+
+For a linked StreamNZB import, use:
+
+**[Raw debug formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter-debug.txt)**
+
+The debug formatter is intentionally verbose and is not intended to replace
+the normal formatter for everyday use. For each result that survives
+StreamNZB filtering it exposes:
+
+- request content kind and Anime classification
+- final result score and current top score
+- raw release name and parsed title/media metadata
+- release group, edition, network, indexer, size, age, and grabs
+- same-release failover variant count and indexers
+- availability status, backbone result, age, and compression
+- SeaDex lookup/result state
+- Library and ffprobe verification state
+- measured codec/profile/dynamic-range information when available
+- every matched profile rule with that rule's individual score contribution
+
+The formatter also makes an important runtime boundary explicit:
+**rejected releases and rejecting rules cannot be displayed**, because
+StreamNZB removes rejected candidates before result formatting runs. Use
+StreamNZB's own validation/rule diagnostics when troubleshooting releases
+that never reach the result list.
+
+Both the normal and debug formatters are built from readable JSON sources
+and exercised through the pinned real StreamNZB formatter engine. Their
+published `SNZBF1:` artifacts are checked for semantic synchronization in
+the compatibility suite.
+
 The formatter is my attempt to reproduce and adapt the look and presentation of **[Tamtaro's SEL Template](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)** formatter for AIOStreams within StreamNZB's formatter capabilities. It is not a direct port and has been adapted to work with StreamNZB's available data and formatting system.
 
 For the recommended linked import, use:

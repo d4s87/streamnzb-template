@@ -53,6 +53,14 @@ Changes in this section are under development and are not part of the latest sta
 - Added explicit IMAX Enhanced regression coverage. IMAX Enhanced continues
   to receive the existing `+800` IMAX preference and does not receive a
   second stacked edition bonus.
+- Added optional **DraCuLa Debug V1** formatter artifact for live
+  troubleshooting. It exposes request context, final/top scores, raw and
+  parsed release metadata, same-release variants, availability, SeaDex,
+  Library/ffprobe state, and every matched profile rule with its individual
+  score contribution.
+- Added pinned real-StreamNZB regression fixtures for both candidate and
+  published debug formatter rendering, including rich diagnostic and
+  no-matched-rule cases.
 
 - Added production compatibility validation for Jhin v0.6 rule-name semantics: published profile rule names must be non-empty and unique, and case-only `matched()` / Define-name drift is reported explicitly because `matched()` references are case-sensitive.
 - Added permanent real-engine episode-parsing regression coverage for normal multi-episode releases, Anime hybrid season/absolute numbering, absolute episode ranges, dashed Anime season/episode notation, season ranges, and complete season packs against the pinned StreamNZB/Jhin v0.6 engine.
@@ -71,6 +79,10 @@ Changes in this section are under development and are not part of the latest sta
   `+25` and Director's Cut / Extended Edition `+25` preferences may combine
   to at most `+50`, remaining below the `200`-point Movie release-group tier
   gap. IMAX remains the deliberate strong exception at `+800`.
+- Generalized the formatter build/check tooling so multiple `SNZBF1:`
+  artifacts can share the same deterministic source-to-published workflow.
+  The compatibility runner now checks and renders both the normal and debug
+  published formatters against the pinned StreamNZB runtime.
 - Updated the Anime BluRay tier-ceiling regression for Anime Shows: the
   maximum known effective positive minor-metadata stack increases from
   `+31` to `+41` when Complete Season Pack Preference applies, while the

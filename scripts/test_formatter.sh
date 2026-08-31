@@ -11,18 +11,34 @@ HARNESS="${ROOT}/tests/streamnzb_compat"
 
 TEST_SOURCE="${HARNESS}/upstream/dracula_formatter_compat_test.go"
 TEST_TARGET="${CHECKOUT}/pkg/server/stremio/dracula_formatter_compat_test.go"
-CASES="${HARNESS}/fixtures/formatter.json"
-
 MODE="candidate"
 FORMATTER="${ROOT}/tests/streamnzb_compat/formatter.source.json"
+CASES="${HARNESS}/fixtures/formatter.json"
 
-if [[ "${1:-}" == "--production" ]]; then
-    MODE="production"
-    FORMATTER="${ROOT}/formatter.txt"
-elif [[ "${1:-}" != "" ]]; then
-    echo "Usage: $0 [--production]" >&2
-    exit 2
-fi
+case "${1:-}" in
+    "")
+        ;;
+    --production)
+        MODE="production"
+        FORMATTER="${ROOT}/formatter.txt"
+        ;;
+    --debug)
+        MODE="debug-candidate"
+        FORMATTER="${HARNESS}/formatter-debug.source.json"
+        CASES="${HARNESS}/fixtures/formatter-debug.json"
+        ;;
+    --debug-production)
+        MODE="debug-production"
+        FORMATTER="${ROOT}/formatter-debug.txt"
+        CASES="${HARNESS}/fixtures/formatter-debug.json"
+        ;;
+    *)
+        echo \
+            "Usage: $0 [--production|--debug|--debug-production]" \
+            >&2
+        exit 2
+        ;;
+esac
 
 echo "==> DraCuLa formatter simulation"
 echo "    mode: ${MODE}"

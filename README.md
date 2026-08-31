@@ -1,9 +1,9 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V4.4**
+**Current version: V4.5**
 
-V4.4 builds on V4.3 with a broad ranking and scoring hardening pass: relative result-score stars, corrected-release and Anime revision preferences, Retag tie-breaking, tier-safe Anime and non-Anime audio scoring, corrected Movie edition preferences, normalized availability and Library interactions, explicit same-release failover regression protection, and Intelligent Unknown Resolution fallback.
+V4.5 builds on V4.4 with StreamNZB/Jhin v0.6 compatibility hardening, permanent episode-parsing regression coverage, a small Complete Season Pack preference, parser-backed Director's Cut / Extended Edition Movie preferences, and an optional dedicated debug formatter for live troubleshooting.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -82,7 +82,7 @@ The proposed changes can be reviewed before they are applied.
 > [!IMPORTANT]
 > The shared Define Library must be imported before this profile. See [Quick Start](#quick-start) for the correct installation order.
 
-The latest V4.4 StreamNZB share code is always available here:
+The latest V4.5 StreamNZB share code is always available here:
 
 **[profile.txt](https://github.com/d4s87/streamnzb-template/blob/main/profile.txt)**
 
@@ -92,11 +92,11 @@ For the recommended linked import, use this URL in StreamNZB:
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
-V4.4 requires the Define Library described below. Import the library before using the profile.
+V4.5 requires the Define Library described below. Import the library before using the profile.
 
 ## Define Library
 
-V4.4 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
+V4.5 uses a shared StreamNZB Define Library for its Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
@@ -124,7 +124,7 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 ## Anime Scoring
 
-V4.4 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
+V4.5 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows.
 
 WEB release groups are scored as follows:
 - T1: +500
@@ -144,7 +144,7 @@ BluRay release groups use a wider 70-point tier ladder:
 - T7: +80
 - T8: +10
 
-The wider BluRay gaps protect the release-group hierarchy from cumulative minor metadata preferences. The current maximum known positive Anime metadata stack is `+31` (`Dual/Multi Audio +10`, `Uncensored +10`, `v4 +4`, and `REPACK3 +7`), leaving `39` points of headroom below every next-higher clean BluRay tier. Anime WEB scores are intentionally unchanged.
+The wider BluRay gaps protect the release-group hierarchy from cumulative minor metadata preferences. The current maximum known positive Anime metadata stack is `+41` (`Dual/Multi Audio +10`, `Uncensored +10`, `v4 +4`, `REPACK3 +7`, and Complete Season Pack `+10`), leaving `29` points of headroom below every next-higher clean BluRay tier. Anime WEB scores are intentionally unchanged.
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
@@ -181,10 +181,6 @@ The Smart 4K Anime filter recognizes the complete WEB T1–T6 and BluRay T1–T8
 
 ## Complete Season Pack Preference
 
-> [!NOTE]
-> This capability is currently **Unreleased** on `main`. V4.4 remains the
-> latest stable release; V4.5 is the next release target.
-
 Series and Anime Show releases explicitly parsed by StreamNZB as both a
 `seasonPack` and `complete` receive a small `+10` ranking preference.
 
@@ -216,11 +212,6 @@ preferring unmarked packs for seasons known to be complete would require
 additional upstream season-completion or episode-count request metadata.
 
 ## Movie Edition Preferences
-
-> [!NOTE]
-> The additional Director's Cut / Extended Edition preference is currently
-> **Unreleased** on `main`. V4.4 remains the latest stable release; V4.5 is
-> the next release target.
 
 Movie-version preferences are explicitly limited to **Movies** so edition
 markers cannot alter Show or Anime ranking.
@@ -343,10 +334,6 @@ The latest formatter is available here:
 
 
 ### Optional Debug Formatter
-
-> [!NOTE]
-> The debug formatter is currently **Unreleased** on `main`. V4.4 remains
-> the latest stable release; V4.5 is the next release target.
 
 For troubleshooting, DraCuLa also provides an optional diagnostic formatter:
 

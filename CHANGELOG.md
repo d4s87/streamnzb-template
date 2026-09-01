@@ -35,7 +35,19 @@ This testing layer complements the existing profile, Define Library, Vidhin sync
 
 Changes in this section are under development and are not part of the latest stable release.
 
-No unreleased changes yet.
+### Changed
+
+- Synchronized the generated Vidhin-backed classification data with current
+  upstream mappings. `ATELiER` moves from Movie HD BluRay T2 to T1, and
+  `OldT` is added to both Movie and Show Bad Dual Groups.
+
+- Completed the post-V4.5 Vidhin synchronization audit. Upstream
+  EVO/PiRaTeS LQ release-title corrections, the new FAND/Fandango
+  classification, and TrueHD exclusion-group additions such as `3L` and
+  `HQMUX` do not change any currently mapped DraCuLa Define and were not
+  manually imported. The production profile remains at 105 rules, the
+  generated Define Library remains at 53 rules, and the pinned StreamNZB
+  compatibility revision is unchanged.
 
 ## V4.5
 

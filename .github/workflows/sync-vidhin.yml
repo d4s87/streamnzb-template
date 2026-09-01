@@ -32,6 +32,68 @@ jobs:
       - name: Track mapped Vidhin rules
         run: python scripts/sync_vidhin.py
 
+      - name: Ignore metadata-only sync changes
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          baseline_path = "generated/vidhin-defines.json"
+          library_path = "generated/streamnzb-defines.txt"
+
+          def from_head(path):
+              result = subprocess.run(
+                  ["git", "show", f"HEAD:{path}"],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              )
+              return result.stdout
+
+          old_defines = json.loads(from_head(baseline_path))
+          new_defines = json.loads(
+              Path(baseline_path).read_text(encoding="utf-8")
+          )
+
+          # generated_at_utc is informational and must not create
+          # metadata-only synchronization pull requests.
+          old_defines.pop("generated_at_utc", None)
+          new_defines.pop("generated_at_utc", None)
+
+          old_library = from_head(library_path)
+          new_library = Path(library_path).read_text(
+              encoding="utf-8"
+          )
+
+          semantic_change = (
+              old_defines != new_defines
+              or old_library != new_library
+          )
+
+          if semantic_change:
+              print(
+                  "Semantic Vidhin changes detected; "
+                  "keeping generated files."
+              )
+          else:
+              print("No semantic Vidhin changes detected.")
+              print("Restoring metadata/report-only changes.")
+
+              subprocess.run(
+                  [
+                      "git",
+                      "restore",
+                      "--source=HEAD",
+                      "--",
+                      "generated/vidhin-defines.json",
+                      "generated/vidhin-sync-report.md",
+                      "generated/streamnzb-defines.txt",
+                  ],
+                  check=True,
+              )
+          PY
+
       - name: Create or update sync PR
         uses: peter-evans/create-pull-request@v8
         with:

@@ -11,6 +11,7 @@
 - **V4.3** — Added Anime Streaming Service classification and Network-first formatter fallback, real-engine formatter regression infrastructure, and availability-aware Anime Dubs Only handling.
 - **V4.4** — Added ranking and scoring hardening with relative result-score stars, corrected-release and Anime revision preferences, tier-safe audio and availability scoring, Movie edition corrections, same-release failover regression protection, and Intelligent Unknown Resolution fallback.
 - **V4.5** — Added StreamNZB/Jhin v0.6 compatibility hardening, episode-parsing regression protection, Complete Season Pack and parser-backed Movie edition preferences, and an optional dedicated debug formatter.
+- **V5.0** — Introduced generated Samsung and hardware-neutral profile variants from one canonical rule registry, preserving the existing `profile.txt` behavior while adding `profile-neutral.txt` as an explicit hardware-neutral alternative.
 
 ### Subsequent Improvements
 
@@ -37,11 +38,26 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## V5.0
+
+V5.0 introduces the generated multi-profile architecture. The existing Samsung QN90A-oriented `profile.txt` remains behavior-compatible, while the new `profile-neutral.txt` provides a hardware-neutral alternative generated from the same canonical rule source.
+
+### Added
+
+- Added the V5.0 generated multi-profile architecture with a canonical ordered rule registry (`profiles/rules.json`), explicit profile variants (`profiles/variants.json`), and deterministic `scripts/build_profiles.py` generation.
+- Added `profile-neutral.txt`, a 100-rule hardware-neutral profile generated from the same policy source as `profile.txt`. It excludes exactly five Samsung/device-specific playback compensation rules while retaining the shared Core and presentation policy, including `Reject 3D`.
+- Added permanent profile-variant regression coverage for ownership, deterministic generation, exact Samsung reproduction, neutral rule membership/order, shared-rule identity, and real StreamNZB compilation of the complete neutral artifact.
 - Added a GitHub Actions Discord notification for published semantic Vidhin Define Library updates. Notifications are sent only after the changed generated library reaches `main`, summarize added, changed, and removed Define names, suppress metadata-only synchronization changes, and remind linked StreamNZB users to refresh the Define Library first.
 - Added permanent regression coverage for notification semantics, including metadata-only suppression, added/changed/removed Defines, published-library-only changes, Discord message construction, and disabled mentions. Webhook delivery is intentionally non-fatal.
 
 ### Changed
 
+- Preserved `profile.txt` as the existing 105-rule Samsung QN90A-oriented linked profile while moving profile maintenance to generated variants. Its generated output remains byte-for-byte identical to the pre-V5 artifact.
+- Defined the V5 migration contract: existing `profile.txt` users continue refreshing normally; users who want the hardware-neutral policy import `profile-neutral.txt` as a new linked profile and switch their StreamNZB assignments. V5.0 does not redesign `Unknown resolution` or change `Adaptive HD x265`.
 - Synchronized the generated Vidhin-backed classification data with current
   upstream mappings. `ATELiER` moves from Movie HD BluRay T2 to T1, and
   `OldT` is added to both Movie and Show Bad Dual Groups.

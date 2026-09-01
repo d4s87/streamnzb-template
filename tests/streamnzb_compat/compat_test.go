@@ -105,40 +105,64 @@ func validateProfileSchema(schema int) error {
 	return nil
 }
 
-func loadProductionRules(t *testing.T) []config.RuleConfig {
+func loadProfileRules(
+	t *testing.T,
+	path string,
+	label string,
+) []config.RuleConfig {
 	t.Helper()
 
-	data, err := os.ReadFile("../../profile.txt")
+	data, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read production profile: %v", err)
+		t.Fatalf("read %s profile: %v", label, err)
 	}
 
 	code := strings.TrimSpace(string(data))
 	if !strings.HasPrefix(code, profilePrefix) {
-		t.Fatalf("production profile does not start with %q", profilePrefix)
+		t.Fatalf(
+			"%s profile does not start with %q",
+			label,
+			profilePrefix,
+		)
 	}
 
 	encoded := strings.TrimPrefix(code, profilePrefix)
 
 	compressed, err := base64.RawURLEncoding.DecodeString(encoded)
 	if err != nil {
-		t.Fatalf("decode production profile Base64URL: %v", err)
+		t.Fatalf(
+			"decode %s profile Base64URL: %v",
+			label,
+			err,
+		)
 	}
 
 	reader, err := gzip.NewReader(bytes.NewReader(compressed))
 	if err != nil {
-		t.Fatalf("open production profile gzip payload: %v", err)
+		t.Fatalf(
+			"open %s profile gzip payload: %v",
+			label,
+			err,
+		)
 	}
 	defer reader.Close()
 
 	raw, err := io.ReadAll(reader)
 	if err != nil {
-		t.Fatalf("read production profile gzip payload: %v", err)
+		t.Fatalf(
+			"read %s profile gzip payload: %v",
+			label,
+			err,
+		)
 	}
 
 	var profile profilePayload
 	if err := json.Unmarshal(raw, &profile); err != nil {
-		t.Fatalf("decode production profile JSON: %v", err)
+		t.Fatalf(
+			"decode %s profile JSON: %v",
+			label,
+			err,
+		)
 	}
 
 	if err := validateProfileSchema(profile.StreamNZBProfile); err != nil {
@@ -146,10 +170,91 @@ func loadProductionRules(t *testing.T) []config.RuleConfig {
 	}
 
 	if len(profile.Rules) == 0 {
-		t.Fatal("production profile contains no rules")
+		t.Fatalf("%s profile contains no rules", label)
 	}
 
 	return profile.Rules
+}
+
+func loadProductionRules(t *testing.T) []config.RuleConfig {
+	t.Helper()
+
+	return loadProfileRules(
+		t,
+		"../../profile.txt",
+		"production",
+	)
+}
+
+func loadNeutralRules(t *testing.T) []config.RuleConfig {
+	t.Helper()
+
+	return loadProfileRules(
+		t,
+		"../../profile-neutral.txt",
+		"neutral",
+	)
+}
+
+func TestNeutralProfileSchemaCompatibility(t *testing.T) {
+	neutralRules := loadNeutralRules(t)
+
+	if len(neutralRules) != 100 {
+		t.Fatalf(
+			"neutral profile contains %d rules; want 100",
+			len(neutralRules),
+		)
+	}
+
+	deviceRules := map[string]bool{
+		"DV without HDR fallback":   false,
+		"Neutralize Dolby Vision":   false,
+		"Reduce Atmos":              false,
+		"Reduce TrueHD bonus":       false,
+		"Reduce DTS Lossless bonus": false,
+	}
+
+	reject3D := false
+
+	for _, rule := range neutralRules {
+		if _, ok := deviceRules[rule.Name]; ok {
+			deviceRules[rule.Name] = true
+		}
+
+		if rule.Name == "Reject 3D" {
+			reject3D = true
+		}
+	}
+
+	for name, present := range deviceRules {
+		if present {
+			t.Fatalf(
+				"neutral profile unexpectedly contains device rule %q",
+				name,
+			)
+		}
+	}
+
+	if !reject3D {
+		t.Fatal("neutral profile is missing core rule \"Reject 3D\"")
+	}
+
+	defineLibrary := loadDefineLibrary(t)
+
+	set, err := rules.Compile(
+		neutralRules,
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile complete neutral profile: %v",
+			err,
+		)
+	}
+
+	if set == nil {
+		t.Fatal("compiled neutral profile is nil")
+	}
 }
 
 func findProductionRule(

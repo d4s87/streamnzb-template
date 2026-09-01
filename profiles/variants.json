@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "variants": [
+    {
+      "artifact": "profile.txt",
+      "name": "Samsung QN90A",
+      "preset": "4k",
+      "owners": [
+        "core",
+        "presentation",
+        "device:samsung-qn90a"
+      ],
+      "expected_rules": 105
+    },
+    {
+      "artifact": "profile-neutral.txt",
+      "name": "DraCuLa Neutral",
+      "preset": "4k",
+      "owners": [
+        "core",
+        "presentation"
+      ],
+      "expected_rules": 100
+    }
+  ]
+}

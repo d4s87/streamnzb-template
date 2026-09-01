@@ -1,0 +1,905 @@
+{
+  "schema_version": 1,
+  "streamnzb_profile": 1,
+  "rules": [
+    {
+      "owner": "device:samsung-qn90a",
+      "rule": {
+        "action": "reject",
+        "name": "DV without HDR fallback",
+        "when": "dolbyVision and not hdrFallback"
+      }
+    },
+    {
+      "owner": "device:samsung-qn90a",
+      "rule": {
+        "name": "Neutralize Dolby Vision",
+        "points": -3000,
+        "when": "dolbyVision"
+      }
+    },
+    {
+      "owner": "device:samsung-qn90a",
+      "rule": {
+        "name": "Reduce Atmos",
+        "points": -800,
+        "when": "\"atmos\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "IMAX",
+        "points": 800,
+        "when": "releaseName matches \"(?i)\\\\bIMAX\\\\b\"",
+        "scope": "movie"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Open matte",
+        "points": 25,
+        "when": "releaseName matches \"(?i)\\\\bOpen[. _-]?Matte\\\\b\"",
+        "scope": "movie"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movie Edition Preference",
+        "points": 25,
+        "when": "edition == \"Directors Cut\" or edition == \"Extended Edition\"",
+        "scope": "movie"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Non-Anime Dubbed/Dual/Multi Audio Preference",
+        "when": "not isAnime and \"dubbed\" in traits",
+        "points": 1010
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "10bit",
+        "points": 0,
+        "when": "isAnime and (parsed.bitDepth == 10 or releaseName matches \"(?i)(?:^|[. _\\[\\]-])Hi10P(?:$|[. _\\[\\]-])\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Uncensored",
+        "points": 10,
+        "when": "isAnime and releaseName matches \"(?i)\\\\b(?:Uncut|Unrated|Uncensored|AT[-_. ]?X)\\\\b\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Dubs Only Penalty",
+        "points": -10,
+        "when": "isAnime and matched(\"Anime Dubs Only\") and exists(isAnime and not matched(\"Anime Dubs Only\"))"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Hardcoded subs",
+        "points": -3000,
+        "when": "hardcoded"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies Remux T1",
+        "points": 500,
+        "scope": "movie",
+        "when": "\"remux\" in traits\nand matched(\"Movies Remux T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies Remux T2",
+        "points": 300,
+        "scope": "movie",
+        "when": "\"remux\" in traits\nand matched(\"Movies Remux T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies Remux T3",
+        "points": 100,
+        "scope": "movie",
+        "when": "\"remux\" in traits\nand matched(\"Movies Remux T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies WEB T1",
+        "points": 500,
+        "scope": "movie",
+        "when": "\"webdl\" in traits\nand matched(\"Movies WEB T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies WEB T2",
+        "points": 300,
+        "scope": "movie",
+        "when": "\"webdl\" in traits\nand matched(\"Movies WEB T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies WEB T3",
+        "points": 100,
+        "scope": "movie",
+        "when": "\"webdl\" in traits\nand matched(\"Movies WEB T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies UHD BluRay T1",
+        "points": 500,
+        "scope": "movie",
+        "when": "resolution == \"2160p\"\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies UHD BluRay T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies UHD BluRay T2",
+        "points": 300,
+        "scope": "movie",
+        "when": "resolution == \"2160p\"\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies UHD BluRay T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies UHD BluRay T3",
+        "points": 100,
+        "scope": "movie",
+        "when": "resolution == \"2160p\"\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies UHD BluRay T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies HD BluRay T1",
+        "points": 500,
+        "scope": "movie",
+        "when": "(resolution == \"1080p\" or resolution == \"720p\")\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies HD BluRay T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies HD BluRay T2",
+        "points": 300,
+        "scope": "movie",
+        "when": "(resolution == \"1080p\" or resolution == \"720p\")\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies HD BluRay T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies HD BluRay T3",
+        "points": 100,
+        "scope": "movie",
+        "when": "(resolution == \"1080p\" or resolution == \"720p\")\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Movies HD BluRay T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows Remux T1",
+        "points": 500,
+        "scope": "series",
+        "when": "\"remux\" in traits\nand matched(\"Shows Remux T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows Remux T2",
+        "points": 300,
+        "scope": "series",
+        "when": "\"remux\" in traits\nand matched(\"Shows Remux T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows WEB T1",
+        "points": 500,
+        "scope": "series",
+        "when": "\"webdl\" in traits\nand matched(\"Shows WEB T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows WEB T2",
+        "points": 300,
+        "scope": "series",
+        "when": "\"webdl\" in traits\nand matched(\"Shows WEB T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows WEB T3",
+        "points": 100,
+        "scope": "series",
+        "when": "\"webdl\" in traits\nand matched(\"Shows WEB T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows BluRay T1",
+        "points": 500,
+        "scope": "series",
+        "when": "(resolution == \"1080p\" or resolution == \"720p\")\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Shows BluRay T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows BluRay T2",
+        "points": 300,
+        "scope": "series",
+        "when": "(resolution == \"1080p\" or resolution == \"720p\")\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand matched(\"Shows BluRay T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T1",
+        "points": 500,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T2",
+        "points": 400,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T3",
+        "points": 300,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T4",
+        "points": 200,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T4 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T5",
+        "points": 100,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T5 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows WEB T6",
+        "points": 50,
+        "scope": "anime_show",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Shows WEB T6 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T1",
+        "points": 500,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T2",
+        "points": 430,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T3",
+        "points": 360,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T4",
+        "points": 290,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T4 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T5",
+        "points": 220,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T5 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T6",
+        "points": 150,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T6 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T7",
+        "points": 80,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T7 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Shows BluRay T8",
+        "points": 10,
+        "scope": "anime_show",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T8 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T1",
+        "points": 500,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T2",
+        "points": 400,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T3",
+        "points": 300,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T4",
+        "points": 200,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T4 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T5",
+        "points": 100,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T5 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies WEB T6",
+        "points": 50,
+        "scope": "anime_movie",
+        "when": "\"webdl\" in traits\nand matched(\"Anime Movies WEB T6 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T1",
+        "points": 500,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T1 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T2",
+        "points": 430,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T2 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T3",
+        "points": 360,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T3 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T4",
+        "points": 290,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T4 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T5",
+        "points": 220,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T5 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T6",
+        "points": 150,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T6 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T7",
+        "points": 80,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T7 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Movies BluRay T8",
+        "points": 10,
+        "scope": "anime_movie",
+        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T8 Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Reject 3D",
+        "when": "threeD"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Reject Upscaled",
+        "when": "upscaled"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Converted penalty",
+        "points": -1000,
+        "when": "\"converted\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Dual/Multi Audio Preference",
+        "when": "isAnime and releaseName matches \"(?i)\\\\b(?:Dual|Multi)[. _-]?Audio\\\\b\"",
+        "points": 1010
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Alive on our backbone",
+        "points": 20,
+        "when": "avail.onMyBackbone"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Recently confirmed",
+        "points": 10,
+        "when": "avail.checkedDaysAgo >= 0 and avail.checkedDaysAgo < 30"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Known unavailable",
+        "when": "avail.status == \"unavailable\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "limit",
+        "count": 3,
+        "group_by": "resolution + \" \" + quality",
+        "name": "Best 3 per R/Q",
+        "when": "true"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Unknown resolution",
+        "when": "resolution == \"\"\nand not library\nand not seadex.best\nand not seadex.alternative\nand quality == \"\"\nand not (\n        matched(\"Anime Movies BluRay T1 Groups\")\n        or matched(\"Anime Movies BluRay T2 Groups\")\n        or matched(\"Anime Movies BluRay T3 Groups\")\n        or matched(\"Anime Movies BluRay T4 Groups\")\n        or matched(\"Anime Movies BluRay T5 Groups\")\n        or matched(\"Anime Movies BluRay T6 Groups\")\n        or matched(\"Anime Movies BluRay T7 Groups\")\n        or matched(\"Anime Movies BluRay T8 Groups\")\n        or matched(\"Anime Movies WEB T1 Groups\")\n        or matched(\"Anime Movies WEB T2 Groups\")\n        or matched(\"Anime Movies WEB T3 Groups\")\n        or matched(\"Anime Movies WEB T4 Groups\")\n        or matched(\"Anime Movies WEB T5 Groups\")\n        or matched(\"Anime Movies WEB T6 Groups\")\n        or matched(\"Anime Shows BluRay T1 Groups\")\n        or matched(\"Anime Shows BluRay T2 Groups\")\n        or matched(\"Anime Shows BluRay T3 Groups\")\n        or matched(\"Anime Shows BluRay T4 Groups\")\n        or matched(\"Anime Shows BluRay T5 Groups\")\n        or matched(\"Anime Shows BluRay T6 Groups\")\n        or matched(\"Anime Shows BluRay T7 Groups\")\n        or matched(\"Anime Shows BluRay T8 Groups\")\n        or matched(\"Anime Shows WEB T1 Groups\")\n        or matched(\"Anime Shows WEB T2 Groups\")\n        or matched(\"Anime Shows WEB T3 Groups\")\n        or matched(\"Anime Shows WEB T4 Groups\")\n        or matched(\"Anime Shows WEB T5 Groups\")\n        or matched(\"Anime Shows WEB T6 Groups\")\n        or matched(\"Movies HD BluRay T1 Groups\")\n        or matched(\"Movies HD BluRay T2 Groups\")\n        or matched(\"Movies HD BluRay T3 Groups\")\n        or matched(\"Movies Remux T1 Groups\")\n        or matched(\"Movies Remux T2 Groups\")\n        or matched(\"Movies Remux T3 Groups\")\n        or matched(\"Movies UHD BluRay T1 Groups\")\n        or matched(\"Movies UHD BluRay T2 Groups\")\n        or matched(\"Movies UHD BluRay T3 Groups\")\n        or matched(\"Movies WEB T1 Groups\")\n        or matched(\"Movies WEB T2 Groups\")\n        or matched(\"Movies WEB T3 Groups\")\n        or matched(\"Shows BluRay T1 Groups\")\n        or matched(\"Shows BluRay T2 Groups\")\n        or matched(\"Shows Remux T1 Groups\")\n        or matched(\"Shows Remux T2 Groups\")\n        or matched(\"Shows WEB T1 Groups\")\n        or matched(\"Shows WEB T2 Groups\")\n        or matched(\"Shows WEB T3 Groups\")\n)\nand count(\n    resolution != \"\"\n    and quality != \"\"\n) > 6"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "CR",
+        "points": 6,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:CR|Crunchyroll)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "DSNP",
+        "points": 5,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:DSNP|Disney[ ._-]?(?:Plus|\\+))(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "NF",
+        "points": 4,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:NF|Netflix)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "AMZN",
+        "points": 3,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:AMZN|Amazon)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "VRV",
+        "points": 3,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])VRV(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "FUNi",
+        "points": 2,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:FUNi|Funimation)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "ABEMA",
+        "points": 1,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])ABEMA(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "ADN",
+        "points": 1,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])ADN(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "B-Global",
+        "points": 0,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])B[ ._-]?Global(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Bilibili",
+        "points": 0,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])Bilibili(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "HIDIVE",
+        "points": 0,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])HIDI(?:VE)?(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Seadex Best",
+        "points": 150000,
+        "when": "seadex.best"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Seadex Alternative",
+        "points": 75000,
+        "when": "seadex.alternative"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "limit",
+        "count": 1,
+        "name": "At most 1 SeaDex Best",
+        "when": "seadex.best"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "limit",
+        "count": 1,
+        "name": "At most 1 SeaDex Alternative",
+        "when": "seadex.alternative"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Reject bad 4K BluRay",
+        "scope": "movie",
+        "when": "resolution == \"2160p\"\nand \"bluray\" in traits\nand not (\"remux\" in traits)\nand not library\nand none(\n    resolution == \"2160p\"\n    and (\n        \"remux\" in traits\n        or matched(\"Movies UHD BluRay T1 Groups\")\n        or matched(\"Movies UHD BluRay T2 Groups\")\n        or matched(\"Movies UHD BluRay T3 Groups\")\n    )\n)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Reject bad 4K Anime",
+        "when": "isAnime\nand resolution == \"2160p\"\nand not library\nand none(\n    resolution == \"2160p\"\n    and (\n        \"remux\" in traits\n        or seadex.best\n        or seadex.alternative\n        or matched(\"Anime Shows WEB T1 Groups\")\n        or matched(\"Anime Shows WEB T2 Groups\")\n        or matched(\"Anime Shows WEB T3 Groups\")\n        or matched(\"Anime Shows WEB T4 Groups\")\n        or matched(\"Anime Shows WEB T5 Groups\")\n        or matched(\"Anime Shows WEB T6 Groups\")\n        or matched(\"Anime Shows BluRay T1 Groups\")\n        or matched(\"Anime Shows BluRay T2 Groups\")\n        or matched(\"Anime Shows BluRay T3 Groups\")\n        or matched(\"Anime Shows BluRay T4 Groups\")\n        or matched(\"Anime Shows BluRay T5 Groups\")\n        or matched(\"Anime Shows BluRay T6 Groups\")\n        or matched(\"Anime Shows BluRay T7 Groups\")\n        or matched(\"Anime Shows BluRay T8 Groups\")\n        or matched(\"Anime Movies WEB T1 Groups\")\n        or matched(\"Anime Movies WEB T2 Groups\")\n        or matched(\"Anime Movies WEB T3 Groups\")\n        or matched(\"Anime Movies WEB T4 Groups\")\n        or matched(\"Anime Movies WEB T5 Groups\")\n        or matched(\"Anime Movies WEB T6 Groups\")\n        or matched(\"Anime Movies BluRay T1 Groups\")\n        or matched(\"Anime Movies BluRay T2 Groups\")\n        or matched(\"Anime Movies BluRay T3 Groups\")\n        or matched(\"Anime Movies BluRay T4 Groups\")\n        or matched(\"Anime Movies BluRay T5 Groups\")\n        or matched(\"Anime Movies BluRay T6 Groups\")\n        or matched(\"Anime Movies BluRay T7 Groups\")\n        or matched(\"Anime Movies BluRay T8 Groups\")\n    )\n)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Reject suspicious 4K upscale",
+        "when": "(kind == \"movie\" or kind == \"series\")\nand resolution == \"2160p\"\nand not library\nand exists(\n    resolution == \"1080p\"\n    and \"remux\" in traits\n)\nand none(\n    resolution == \"2160p\"\n    and \"remux\" in traits\n)\nand none(\n    resolution == \"2160p\"\n    and (\n        matched(\"Movies UHD BluRay T1 Groups\")\n        or matched(\"Movies UHD BluRay T2 Groups\")\n        or matched(\"Movies UHD BluRay T3 Groups\")\n        or matched(\"Movies WEB T1 Groups\")\n        or matched(\"Movies WEB T2 Groups\")\n        or matched(\"Movies WEB T3 Groups\")\n        or matched(\"Shows BluRay T1 Groups\")\n        or matched(\"Shows BluRay T2 Groups\")\n        or matched(\"Shows WEB T1 Groups\")\n        or matched(\"Shows WEB T2 Groups\")\n        or matched(\"Shows WEB T3 Groups\")\n    )\n)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Adaptive low-quality filtering",
+        "when": "not library\nand (\n    \"hdrip\" in traits\n    or \"dvdrip\" in traits\n    or \"hdtv\" in traits\n)\nand count(\n    (\n        resolution == \"2160p\"\n        or resolution == \"1440p\"\n        or resolution == \"1080p\"\n        or resolution == \"720p\"\n    )\n    and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n    )\n) > 6"
+      }
+    },
+    {
+      "owner": "device:samsung-qn90a",
+      "rule": {
+        "name": "Reduce TrueHD bonus",
+        "points": -1000,
+        "when": "\"truehd\" in traits"
+      }
+    },
+    {
+      "owner": "device:samsung-qn90a",
+      "rule": {
+        "name": "Reduce DTS Lossless bonus",
+        "points": -1000,
+        "when": "\"dts_lossless\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movies LQ Penalty",
+        "points": -10000,
+        "scope": "movie",
+        "when": "matched(\"Movies LQ Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Shows LQ Penalty",
+        "points": -10000,
+        "scope": "series",
+        "when": "matched(\"Shows LQ Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Movie Bad Dual Penalty",
+        "points": -10000,
+        "scope": "movie",
+        "when": "matched(\"Movies Bad Dual Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Show Bad Dual Penalty",
+        "points": -10000,
+        "scope": "series",
+        "when": "not isAnime and matched(\"Shows Bad Dual Groups\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime LQ Penalty",
+        "points": -10000,
+        "when": "isAnime\nand matched(\"Anime LQ Groups\")\nand not (seadex.best or seadex.alternative)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Adaptive HD x265",
+        "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "1080p Remux Preference",
+        "points": 50,
+        "when": "(kind == \"movie\" or kind == \"series\")\nand not isAnime\nand resolution == \"1080p\"\nand \"remux\" in traits\nand not library\nand count(\n  resolution == \"2160p\"\n  and \"webdl\" in traits\n  and not any(hdr, # == \"HDR\" or # == \"HDR10+\")\n) > 0\nand count(\n  resolution == \"2160p\"\n  and \"webdl\" in traits\n  and any(hdr, # == \"HDR\" or # == \"HDR10+\")\n) == 0"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Repack/Proper Preference",
+        "points": 5,
+        "when": "(proper or repack) and not (releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?(?:2|3)(?:$|[. _\\\\[\\\\]-])\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Repack2 Preference",
+        "points": 6,
+        "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?2(?:$|[. _\\\\[\\\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Repack3 Preference",
+        "points": 7,
+        "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?3(?:$|[. _\\\\[\\\\]-])\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Retag Soft Penalty",
+        "when": "releaseName matches \"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])\"",
+        "points": -1
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Version v0 Preference",
+        "points": -1,
+        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v0\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Version v1 Preference",
+        "points": 1,
+        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v1\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Version v2 Preference",
+        "points": 2,
+        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v2\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Version v3 Preference",
+        "points": 3,
+        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v3\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Anime Version v4 Preference",
+        "points": 4,
+        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v4\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Complete Season Pack Preference",
+        "when": "(kind == \"series\" or kind == \"anime_show\") and seasonPack and complete",
+        "points": 10
+      }
+    }
+  ]
+}

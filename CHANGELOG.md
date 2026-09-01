@@ -6,12 +6,15 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **testing:** extend the real-StreamNZB Intelligent Unknown Resolution regression to Anime Movies, completing explicit trusted-tier protection coverage for Movies, Series, Anime Shows, and Anime Movies.
 - **automation:** notify Discord when a GitHub Release is published. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
 - **testing:** add regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
 
 
 ### Changes
 
+- **profile:** simplify Intelligent Unknown Resolution trusted-tier protection by replacing 47 direct `matched()` tier references with one generated `Trusted Release Groups` Define. The helper is derived from the synchronized Movie, Show, Anime Movie, and Anime Show tier Defines, is published only in the StreamNZB Define Library, and does not alter the 53-entry semantic Vidhin baseline.
+- **tooling:** remove the one-time V5 migration guard that prevented intentional post-V5 changes from regenerating `profile.txt`. `scripts/build_profiles.py` continues to validate canonical source structure, ownership, variants, and encode/decode round trips before writing generated artifacts.
 - **compatibility:** advance the pinned StreamNZB runtime to the released 5.16.0 commit `4c3c29df4eb02e9e001fa841d9431a629858c2d7`, enabling candidate-relative prune aggregates through `current.finalScore` / `current.finalRank` while preserving the existing V5 profile and formatter compatibility contract.
 - **testing:** add a permanent real-StreamNZB regression for candidate-relative pruning, proving that only a sufficiently weak tail release is removed when at least three alternatives beat it by 5000 points and that the same release remains available as a fallback when the result set is sparse.
 

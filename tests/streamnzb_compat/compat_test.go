@@ -2057,6 +2057,10 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 		"Anime Shows WEB T1 Groups",
 	)
 
+	animeMovieTierGroup := defineToken(
+		"Anime Movies WEB T1 Groups",
+	)
+
 	knownAlternatives := func(
 		kind string,
 		count int,
@@ -2071,7 +2075,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 
 		for i := 0; i < count; i++ {
 			switch kind {
-			case ranking.KindMovie:
+			case ranking.KindMovie, ranking.KindAnimeMovie:
 				titles = append(
 					titles,
 					fmt.Sprintf(
@@ -2177,6 +2181,17 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 				animeTierGroup,
 			),
 			kind:         ranking.KindAnimeShow,
+			anime:        true,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+		},
+		{
+			name: "Anime Movie tier group protects weak metadata",
+			target: fmt.Sprintf(
+				"Example.Anime.Movie.2026-%s",
+				animeMovieTierGroup,
+			),
+			kind:         ranking.KindAnimeMovie,
 			anime:        true,
 			alternatives: 7,
 			seadex:       seadexCheckedNoMatch(),

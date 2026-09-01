@@ -522,17 +522,9 @@ def command_check(_args):
 def command_build(_args):
     payloads, encoded = build_all()
 
-    current_samsung_path = ROOT / "profile.txt"
-    current_samsung = current_samsung_path.read_text(
-        encoding="utf-8"
-    )
-
-    # Architecture migration safety: Samsung behavior may not change.
-    if encoded["profile.txt"] != current_samsung:
-        raise SystemExit(
-            "ERROR: refusing writes because generated profile.txt "
-            "does not exactly reproduce the current production artifact"
-        )
+    # Post-V5 policy changes are intentional canonical-source changes.
+    # build_all() validates source/schema/ownership/variants and performs
+    # encode/decode round-trip validation before any artifact write.
 
     # All validation above completed before any write.
     atomic_write(

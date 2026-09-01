@@ -1449,16 +1449,83 @@ def validate_unknown_resolution_policy(
             "for Unknown resolution protection"
         )
 
+    helper_name = "Trusted Release Groups"
+
+    if helper_name not in defines:
+        raise AssertionError(
+            f"Required {helper_name!r} derived Define is missing"
+        )
+
+    helper = defines[helper_name]
+
+    if helper["scope"] is not None:
+        raise AssertionError(
+            f"{helper_name} must remain All Content"
+        )
+
+    helper_condition = helper["condition"]
+
     missing_tiers = [
         define_name
         for define_name in tier_defines
-        if f'matched("{define_name}")' not in when
+        if f'matched("{define_name}")' not in helper_condition
     ]
 
     if missing_tiers:
         raise AssertionError(
-            f"{name} no longer protects tier Define(s): "
+            f"{helper_name} no longer covers tier Define(s): "
             + ", ".join(missing_tiers)
+        )
+
+    helper_refs = []
+    needle = 'matched("'
+    pos = 0
+
+    while True:
+        start = helper_condition.find(needle, pos)
+        if start < 0:
+            break
+
+        name_start = start + len(needle)
+        name_end = helper_condition.find('")', name_start)
+
+        if name_end < 0:
+            raise AssertionError(
+                f"{helper_name} contains unterminated matched() reference"
+            )
+
+        helper_refs.append(
+            helper_condition[name_start:name_end]
+        )
+
+        pos = name_end + 2
+
+    helper_refs = sorted(set(helper_refs))
+
+    if helper_refs != tier_defines:
+        extra = sorted(set(helper_refs) - set(tier_defines))
+        missing = sorted(set(tier_defines) - set(helper_refs))
+        raise AssertionError(
+            f"{helper_name} membership mismatch; "
+            f"missing={missing}, extra={extra}"
+        )
+
+    if 'matched("Trusted Release Groups")' not in when:
+        raise AssertionError(
+            f"{name} must protect recognized tier groups through "
+            f"{helper_name!r}"
+        )
+
+    direct_tier_refs = [
+        define_name
+        for define_name in tier_defines
+        if f'matched("{define_name}")' in when
+    ]
+
+    if direct_tier_refs:
+        raise AssertionError(
+            f"{name} must not directly enumerate tier Defines: "
+            + ", ".join(direct_tier_refs)
         )
 
     # Known Resolution + Unknown Quality must never fall
@@ -1577,9 +1644,9 @@ if len(rules) != 105:
 
 defines = parse_define_library(defines_text)
 
-if len(defines) != 53:
+if len(defines) != 54:
     raise AssertionError(
-        f"Expected 53 generated Defines, found {len(defines)}"
+        f"Expected 54 published Defines, found {len(defines)}"
     )
 
 validate_profile_rule_names(rules)

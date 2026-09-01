@@ -700,6 +700,38 @@ def render_raw_regex_condition(entry):
     return " or ".join(conditions)
 
 
+TRUSTED_RELEASE_GROUPS_DEFINE="Trusted Release Groups"
+
+
+def is_trusted_release_group_name(name):
+    prefixes=("Movies ","Shows ","Anime Movies ","Anime Shows ")
+    families=("UHD BluRay","HD BluRay","BluRay","WEB","Remux")
+
+    if not name.endswith(" Groups"):
+        return False
+
+    core=name[:-len(" Groups")]
+    prefix=next((v for v in prefixes if core.startswith(v)),None)
+    if prefix is None:
+        return False
+
+    rest=core[len(prefix):]
+    family=next((v for v in families if rest.startswith(v+" T")),None)
+    if family is None:
+        return False
+
+    tier=rest[len(family)+2:]
+    return tier.isdigit()
+
+
+def trusted_release_group_names(current):
+    return sorted(
+        name
+        for name in current
+        if is_trusted_release_group_name(name)
+    )
+
+
 def render(current,mapping):
     current=apply_web_precedence(current,mapping)
     lines=["# Generated from Vidhin05/Releases-Regex.",
@@ -726,6 +758,18 @@ def render(current,mapping):
         lines.append(
             f'{name}{scope_text}: define if {cond}'
         )
+
+    trusted_names=trusted_release_group_names(current)
+
+    if trusted_names:
+        lines.append(
+            f'{TRUSTED_RELEASE_GROUPS_DEFINE}: define if '
+            + " or ".join(
+                f'matched("{name}")'
+                for name in trusted_names
+            )
+        )
+
     return "\n".join(lines)+"\n"
 
 def tier_locations(data,mapping):

@@ -885,3 +885,63 @@ assert 'not (releaseName matches "(?i)(Dual|Multi)[-_. ]?Audio")' in dubs_librar
 assert 'not (releaseName matches "(?i)multi-\\bdub(bed)?\\b")' in dubs_library
 assert 'releaseName matches "(?i)\\b(KaiDubs|KS)\\b"' in dubs_library
 assert 'not (releaseName matches "(?i)dual[ ._-]?audio|' in dubs_library
+
+# Derived local helper: published in the StreamNZB Define Library only.
+trusted_name = "Trusted Release Groups"
+assert trusted_name not in baseline["defines"]
+
+published_library = (
+    ROOT / "generated" / "streamnzb-defines.txt"
+).read_text()
+
+trusted_line = next(
+    line
+    for line in published_library.splitlines()
+    if line.startswith(f"{trusted_name}: define if ")
+)
+
+def is_trusted_tier_name(name):
+    prefixes = ("Movies ", "Shows ", "Anime Movies ", "Anime Shows ")
+    families = ("UHD BluRay", "HD BluRay", "BluRay", "WEB", "Remux")
+
+    if not name.endswith(" Groups"):
+        return False
+
+    core = name[:-len(" Groups")]
+    prefix = next((v for v in prefixes if core.startswith(v)), None)
+    if prefix is None:
+        return False
+
+    rest = core[len(prefix):]
+    family = next((v for v in families if rest.startswith(v + " T")), None)
+    if family is None:
+        return False
+
+    tier = rest[len(family) + 2:]
+    return tier.isdigit()
+
+expected_trusted = sorted(
+    name
+    for name in baseline["defines"]
+    if is_trusted_tier_name(name)
+)
+
+assert expected_trusted
+for define_name in expected_trusted:
+    assert f'matched("{define_name}")' in trusted_line
+
+trusted_refs = []
+needle = 'matched("'
+pos = 0
+
+while True:
+    start = trusted_line.find(needle, pos)
+    if start < 0:
+        break
+    name_start = start + len(needle)
+    name_end = trusted_line.find('")', name_start)
+    assert name_end >= 0
+    trusted_refs.append(trusted_line[name_start:name_end])
+    pos = name_end + 2
+
+assert sorted(set(trusted_refs)) == expected_trusted

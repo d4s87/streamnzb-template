@@ -140,7 +140,7 @@ Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 53 Define rules covering Movie, Show and Anime release-group classifications, including Movie, Show and Anime LQ classifications, separate Movie/Show Bad Dual classifications, and the Anime Dubs Only release-name classification used by the profile.
+The library currently provides 54 published Define rules. Fifty-three are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, and Anime Dubs Only classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -470,7 +470,7 @@ GitHub's raw-file CDN may take a few minutes to reflect a newly published update
 
 The profile uses an adaptive **Intelligent Unknown Resolution** rule instead of unconditionally rejecting every result whose resolution could not be parsed. Unknown-resolution results remain available when the result set is scarce, and weak unknowns are rejected only when more than six alternatives have both a known resolution and known quality.
 
-The rule deliberately protects useful incomplete results. An unknown-resolution result is retained when it still has a recognized quality, matches a trusted Movie, Show, or Anime release-group tier, is a **Library** result, or is a **SeaDex Best / Alternative** recommendation. If SeaDex lookup data is unavailable for the request, the rule fails open rather than rejecting the result.
+The rule deliberately protects useful incomplete results. An unknown-resolution result is retained when it still has a recognized quality, matches a trusted Movie, Show, Anime Movie, or Anime Show release-group tier, is a **Library** result, or is a **SeaDex Best / Alternative** recommendation. Trusted tiers are resolved through the generated `Trusted Release Groups` Define, so changes to synchronized tier membership automatically flow into this protection without maintaining a second hard-coded tier list in the profile. If SeaDex lookup data is unavailable for the request, the rule fails open rather than rejecting the result.
 
 This policy applies only to **Unknown Resolution**. A result with a known resolution but Unknown Quality is not rejected by this rule. StreamNZB already places Unknown Resolution at the bottom of its native resolution ranking, so the profile does not add a separate score penalty; it only prunes weak unknowns when the result set has enough well-identified alternatives.
 

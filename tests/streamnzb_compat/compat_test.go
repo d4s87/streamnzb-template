@@ -2409,3 +2409,91 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestCandidateRelativePruneCompatibility(t *testing.T) {
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Candidate-relative prune compatibility",
+			Preset: "4k",
+			Rules: []config.RuleConfig{
+				{Name: "A", When: `group == "AAA"`, Points: 20000},
+				{Name: "B", When: `group == "BBB"`, Points: 15000},
+				{Name: "C", When: `group == "CCC"`, Points: 10000},
+				{Name: "D", When: `group == "DDD"`, Points: 5000},
+				{
+					Name:   "Candidate-relative weak tail",
+					When:   `count(finalScore >= current.finalScore + 5000) >= 3`,
+					Action: config.RuleActionPrune,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("compile candidate-relative prune profile: %v", err)
+	}
+
+	titles := []string{
+		"Movie.2020.1080p.WEB-DL.H264-AAA",
+		"Movie.2020.1080p.WEB-DL.H264-BBB",
+		"Movie.2020.1080p.WEB-DL.H264-CCC",
+		"Movie.2020.1080p.WEB-DL.H264-DDD",
+	}
+
+	candidates := make([]triage.Candidate, len(titles))
+	for i, title := range titles {
+		candidates[i] = triage.Candidate{
+			Release: &release.Release{Title: title},
+		}
+	}
+
+	kept, rejected := profile.ApplyWithRejected(
+		ranking.Request{
+			Kind:  ranking.KindMovie,
+			Title: "Movie",
+		},
+		candidates,
+		jhinrank.RankOptions{},
+	)
+
+	if len(kept) != 3 || len(rejected) != 1 {
+		t.Fatalf(
+			"dense set: kept=%d rejected=%d, want kept=3 rejected=1",
+			len(kept),
+			len(rejected),
+		)
+	}
+
+	if rejected[0].Candidate.Release == nil {
+		t.Fatal("rejected candidate has nil release")
+	}
+
+	if got := rejected[0].Candidate.Release.Title; got != titles[3] {
+		t.Fatalf(
+			"rejected release = %q, want %q",
+			got,
+			titles[3],
+		)
+	}
+
+	sparse := []triage.Candidate{
+		{Release: &release.Release{Title: titles[0]}},
+		{Release: &release.Release{Title: titles[3]}},
+	}
+
+	kept, rejected = profile.ApplyWithRejected(
+		ranking.Request{
+			Kind:  ranking.KindMovie,
+			Title: "Movie",
+		},
+		sparse,
+		jhinrank.RankOptions{},
+	)
+
+	if len(kept) != 2 || len(rejected) != 0 {
+		t.Fatalf(
+			"sparse fallback: kept=%d rejected=%d, want kept=2 rejected=0",
+			len(kept),
+			len(rejected),
+		)
+	}
+}

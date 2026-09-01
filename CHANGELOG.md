@@ -8,6 +8,13 @@ Changes in this section are under development and are not part of the latest sta
 
 - **automation:** notify Discord when a GitHub Release is published. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
 - **testing:** add regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
+
+
+### Changes
+
+- **compatibility:** advance the pinned StreamNZB runtime to the released 5.16.0 commit `4c3c29df4eb02e9e001fa841d9431a629858c2d7`, enabling candidate-relative prune aggregates through `current.finalScore` / `current.finalRank` while preserving the existing V5 profile and formatter compatibility contract.
+- **testing:** add a permanent real-StreamNZB regression for candidate-relative pruning, proving that only a sufficiently weak tail release is removed when at least three alternatives beat it by 5000 points and that the same release remains available as a fallback when the result set is sparse.
+
 ## [5.0](https://github.com/d4s87/streamnzb-template/compare/v4.5...v5.0) (2026-09-01)
 
 V5.0 introduces the generated multi-profile architecture. The existing Samsung QN90A-oriented `profile.txt` remains behavior-compatible, while the new `profile-neutral.txt` provides a hardware-neutral alternative generated from the same canonical rule source.

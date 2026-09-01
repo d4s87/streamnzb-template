@@ -1,54 +1,18 @@
 # Changelog
 
-## Version History
-
-- **V1** — Initial StreamNZB filtering, scoring and formatter profile.
-- **V2** — Major expansion and refinement of the monolithic profile.
-- **V3** — Introduced the shared linked Define Library architecture and Vidhin synchronization.
-- **V4** — Expanded Anime classification to the full Vidhin WEB T1–T6 and BluRay T1–T8 hierarchy.
-- **V4.1** — Added Vidhin-backed Anime LQ filtering and subsequent Anime detection, formatter and compatibility-testing improvements.
-- **V4.2** — Added availability-aware HD x265 filtering, adaptive 1080p Remux preference, Anime Uncensored preference, Vidhin-backed Bad Dual penalties, and expanded compatibility validation.
-- **V4.3** — Added Anime Streaming Service classification and Network-first formatter fallback, real-engine formatter regression infrastructure, and availability-aware Anime Dubs Only handling.
-- **V4.4** — Added ranking and scoring hardening with relative result-score stars, corrected-release and Anime revision preferences, tier-safe audio and availability scoring, Movie edition corrections, same-release failover regression protection, and Intelligent Unknown Resolution fallback.
-- **V4.5** — Added StreamNZB/Jhin v0.6 compatibility hardening, episode-parsing regression protection, Complete Season Pack and parser-backed Movie edition preferences, and an optional dedicated debug formatter.
-- **V5.0** — Introduced generated Samsung and hardware-neutral profile variants from one canonical rule registry, preserving the existing `profile.txt` behavior while adding `profile-neutral.txt` as an explicit hardware-neutral alternative.
-
-### Subsequent Improvements
-
-- Added Anime **10-bit** detection using StreamNZB's parsed bit depth.
-- Added a `Hi10P` fallback for Anime release names not identified as 10-bit by the parser.
-- Added `₁₀ʙɪᴛ` formatter labeling for detected Anime 10-bit releases.
-- Added `DUAL` formatter labeling for the existing Dual Audio scoring rule.
-- Expanded formatter tier labels to expose Anime WEB T4–T6 and BluRay T4–T8 while preserving the existing non-Anime T1–T3 display behavior.
-- Added Vidhin tier-movement reporting to identify release groups moving between upstream tiers.
-- Added a StreamNZB compatibility test harness using a pinned real StreamNZB engine.
-- Added production-profile regression testing so compatibility fixtures can be validated against the exact rule published in `profile.txt`.
-
-### Testing Approach
-
-Compatibility fixtures are intended for rules where StreamNZB parser or rule-engine behavior requires explicit behavioral validation. Fixtures contain representative positive and negative release names and are evaluated using the real StreamNZB engine.
-
-Published rules can be linked to their fixture through a production-rule reference. CI then verifies that the tested expression and score match the rule embedded in `profile.txt` and executes the same fixture cases against the production rule.
-
-This testing layer complements the existing profile, Define Library, Vidhin synchronization and Anime tier-integrity validation rather than duplicating every profile rule into fixtures.
-
-## Unreleased
+## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.0...HEAD)
 
 Changes in this section are under development and are not part of the latest stable release.
 
-### Added
+### Features
 
-- Added Discord notifications for newly published GitHub Releases. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
-- Added regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
-### Changed
-
-### Fixed
-
-## V5.0
+- **automation:** notify Discord when a GitHub Release is published. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
+- **testing:** add regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
+## [5.0](https://github.com/d4s87/streamnzb-template/compare/v4.5...v5.0) (2026-09-01)
 
 V5.0 introduces the generated multi-profile architecture. The existing Samsung QN90A-oriented `profile.txt` remains behavior-compatible, while the new `profile-neutral.txt` provides a hardware-neutral alternative generated from the same canonical rule source.
 
-### Added
+### Features
 
 - Added the V5.0 generated multi-profile architecture with a canonical ordered rule registry (`profiles/rules.json`), explicit profile variants (`profiles/variants.json`), and deterministic `scripts/build_profiles.py` generation.
 - Added `profile-neutral.txt`, a 100-rule hardware-neutral profile generated from the same policy source as `profile.txt`. It excludes exactly five Samsung/device-specific playback compensation rules while retaining the shared Core and presentation policy, including `Reject 3D`.
@@ -56,7 +20,7 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added a GitHub Actions Discord notification for published semantic Vidhin Define Library updates. Notifications are sent only after the changed generated library reaches `main`, summarize added, changed, and removed Define names, suppress metadata-only synchronization changes, and remind linked StreamNZB users to refresh the Define Library first.
 - Added permanent regression coverage for notification semantics, including metadata-only suppression, added/changed/removed Defines, published-library-only changes, Discord message construction, and disabled mentions. Webhook delivery is intentionally non-fatal.
 
-### Changed
+### Changes
 
 - Preserved `profile.txt` as the existing 105-rule Samsung QN90A-oriented linked profile while moving profile maintenance to generated variants. Its generated output remains byte-for-byte identical to the pre-V5 artifact.
 - Defined the V5 migration contract: existing `profile.txt` users continue refreshing normally; users who want the hardware-neutral policy import `profile-neutral.txt` as a new linked profile and switch their StreamNZB assignments. V5.0 does not redesign `Unknown resolution` or change `Adaptive HD x265`.
@@ -72,9 +36,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
   generated Define Library remains at 53 rules, and the pinned StreamNZB
   compatibility revision is unchanged.
 
-## V4.5
+## [4.5](https://github.com/d4s87/streamnzb-template/compare/v4.4...v4.5) (2026-08-31)
 
-### Added
+### Features
 
 - Added **Complete Season Pack Preference**: explicitly complete season packs
   for Series and Anime Shows receive a small `+10` ranking preference.
@@ -105,7 +69,7 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added production compatibility validation for Jhin v0.6 rule-name semantics: published profile rule names must be non-empty and unique, and case-only `matched()` / Define-name drift is reported explicitly because `matched()` references are case-sensitive.
 - Added permanent real-engine episode-parsing regression coverage for normal multi-episode releases, Anime hybrid season/absolute numbering, absolute episode ranges, dashed Anime season/episode notation, season ranges, and complete season packs against the pinned StreamNZB/Jhin v0.6 engine.
 
-### Changed
+### Changes
 
 - Increased the production profile from **103 to 104 rules** with Complete
   Season Pack Preference. The generated Define Library remains at **53**
@@ -133,9 +97,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Adapted aggregate compatibility tests to StreamNZB's request-kind-aware Jhin v0.6 aggregate API and updated Unknown Resolution diagnostic assertions for the new engine reporting without changing production scoring or filtering policy.
 - Removed the obsolete direct `expr-lang` compatibility-harness dependency after the StreamNZB rule engine migration; Jhin v0.6 now provides the rule-expression engine used by the pinned runtime.
 
-## V4.4
+## [4.4](https://github.com/d4s87/streamnzb-template/compare/v4.3...v4.4) (2026-08-30)
 
-### Added
+### Features
 
 - Added relative five-star result ranking using StreamNZB's `.TopScore` and `stars` formatter helper. The highest-scoring result renders as `★★★★★`, while lower-scoring results are scaled against the current result-set winner.
 - Added real-engine formatter regression coverage for full, partial, negative, and zero-TopScore star rendering.
@@ -150,7 +114,7 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added pinned real-engine compatibility coverage for Anime/non-Anime Dubbed, Dual Audio and Multi Audio behavior, including Anime Movies and combined Dual+Multi release names.
 - Added structural validation for the split Anime/non-Anime audio policy so Anime cannot silently inherit the legacy high-value audio bonuses again.
 
-### Changed
+### Changes
 
 - Replaced the unconditional Unknown Resolution rejection with adaptive **Intelligent Unknown Resolution** handling. Weak unknown-resolution results are pruned only when more than six alternatives have both known resolution and known quality; scarce fallbacks remain available.
 
@@ -165,7 +129,7 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Removed the `Very fresh NZB`, `Recent NZB`, `Popular NZB`, `Very popular NZB`, and `Highly popular NZB` score rules. Freshness and grab-count metadata remain formatter-visible but no longer affect ranking directly.
 - Reduced the current production profile from **109 to 103 rules** after removing the redundant Library rule and five freshness/popularity scoring rules. The generated Define Library remains at **53** rules.
 
-### Fixed
+### Bug Fixes
 - Protected useful incomplete-metadata results from adaptive Unknown Resolution pruning when they have recognized quality, match a trusted Movie/Show/Anime release-group tier, are Library results, or are SeaDex Best/Alternative recommendations. Missing SeaDex lookup data fails open, and known-resolution Unknown Quality results remain unaffected. Pinned real-engine regression coverage verifies the complete production policy.
 - Rescaled Anime BluRay release-group tiers to +500/+430/+360/+290/+220/+150/+80/+10 (T1–T8), creating uniform 70-point gaps so the known +31 cumulative positive minor-metadata stack cannot overtake the next-higher clean tier; Anime WEB tier scores remain unchanged.
 
@@ -178,9 +142,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added full-pipeline regression coverage for native Library scoring, the `+30` positive availability ceiling, and effective Anime/non-Anime audio scoring, and updated the Anime BluRay ceiling regression to distinguish raw audio compensation from its effective `+10` preference.
 
 
-## V4.3
+## [4.3](https://github.com/d4s87/streamnzb-template/compare/v4.2...v4.3) (2026-08-30)
 
-### Added
+### Features
 
 - Added Vidhin-backed **Anime Dubs Only** classification with a StreamNZB-safe translation of the upstream release-name expression.
 - Added an availability-aware **Anime Dubs Only Penalty** of `-10`: dub-only Anime is demoted only when a non-dub Anime alternative exists, so scarce dub-only results remain available.
@@ -196,7 +160,7 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added formatter fixtures covering Network-first display, Streaming Service fallback priority, duplicate prevention, source/Edition presentation, and representative full Anime WEB and Movie Remux renders.
 - Added fresh-render safeguards by disabling the Go test cache and logging SHA-256 fingerprints of the formatter and fixture inputs.
 
-### Changed
+### Changes
 
 - Expanded the generated Define Library from **52 to 53** reusable classifications with `Anime Dubs Only`.
 
@@ -205,13 +169,13 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Removed the separate Crunchyroll and HIDIVE formatter badges now that those services participate in the unified Network-first source display.
 - Extended the StreamNZB compatibility suite to require semantic synchronization between the formatter source and `formatter.txt` and to run the published formatter regression automatically.
 
-### Fixed
+### Bug Fixes
 
 - Fixed formatter source/Edition spacing so source plus Edition renders as `♛ source · edition »`, source-only renders as `♛ source »`, and Edition-only no longer receives an orphan leading separator.
 
-## V4.2
+## [4.2](https://github.com/d4s87/streamnzb-template/compare/v4.1...v4.2) (2026-08-29)
 
-### Added
+### Features
 
 - Added an availability-aware **1080p Remux Preference** rule: non-Anime, non-Library 1080p Remuxes receive a `+50` bonus when SDR 2160p WEB-DL alternatives exist but no HDR/HDR10+ 2160p WEB-DL is available.
 - Added aggregate compatibility coverage for the 1080p Remux preference across Movies and Shows, including SDR 4K WEB-DL, HDR, HDR10+, Dolby Vision-only, Dolby Vision with HDR fallback, Anime, Library, 2160p Remux, and unsupported content-kind cases.
@@ -229,19 +193,19 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Added Define-Library-aware compatibility testing so `matched()`-based rules can be exercised against the generated shared Defines and exact production rules.
 - Added an explicit StreamNZB profile-schema compatibility guard that pins `streamnzb_profile == 1` and fails when a missing or future schema version requires compatibility review.
 
-### Changed
+### Changes
 
 - Increased the production profile from **86 to 91 rules** across the current Unreleased changes.
 - Expanded the generated Define Library from **50 to 52** reusable classifications.
 - Extended the StreamNZB compatibility harness to load the generated Define Library when compiling rules that use `matched()`.
 
-### Fixed
+### Bug Fixes
 
 - Fixed the Movie and Show Bad Dual penalty rules to use explicit `movie` and `series` scopes instead of appearing as **All Content** in StreamNZB.
 
-## V4.1
+## [4.1](https://github.com/d4s87/streamnzb-template/releases/tag/v4.1) (2026-08-29)
 
-### Added
+### Features
 
 - Added Vidhin-backed **Anime LQ Groups** classification using the upstream release-name regex.
 - Added an **Anime LQ Penalty** of `-10,000` for matching Anime releases.
@@ -255,9 +219,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - Anime LQ matching preserves Vidhin's upstream regex semantics rather than converting the expression into release-group tokens.
 - The linked StreamNZB Define Library now contains **50** Define rules.
 
-## V4
+## 4
 
-### Changed
+### Changes
 
 * Expanded the shared Define Library from 33 to 49 reusable release-group classifications.
 * Replaced the compressed Anime T1/T2/T3 model with the full Vidhin Anime tier hierarchy:
@@ -291,9 +255,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 * Anime release-group classifications remain synchronized with `Vidhin05/Releases-Regex` through the repository's existing GitHub Actions workflow.
 * `Define` rules classify releases only; scoring and filtering behaviour remains controlled by the profile.
 
-## V3
+## 3
 
-### Changed
+### Changes
 - Refactored release-group tiers into reusable `Define` rules.
 - T1/T2/T3 scoring rules now reference shared group definitions with `matched()`.
 - Updated smart 4K filtering rules to reference the same reusable definitions.
@@ -314,9 +278,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - V3 requires the shared Define Library to be imported before using `profile.txt`.
 - This version requires a StreamNZB build with shared Define Library and `matched()` support.
 
-## V2
+## 2
 
-### Changed
+### Changes
 - Expanded and refined the original StreamNZB filtering and scoring profile.
 - Improved release-group prioritization and quality-based ranking.
 - Added more advanced filtering and scoring logic for Movies, Shows and Anime.
@@ -331,9 +295,9 @@ V5.0 introduces the generated multi-profile architecture. The existing Samsung Q
 - At this stage, GitHub was used to distribute the linked `profile.txt` and `formatter.txt`; there was no separately linked or automatically synchronized Define Library.
 - V2 formed the behavioral foundation that was later refactored into V3 without intentionally changing its overall ranking and filtering philosophy.
 
-## V1
+## 1
 
-### Added
+### Features
 - Initial public version of the custom StreamNZB profile.
 - Introduced the core filtering and scoring approach for Usenet results.
 - Added release-group prioritization for Movies, Shows and Anime.

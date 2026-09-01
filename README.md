@@ -118,6 +118,8 @@ The Define Library performs classification only. Matching non-Anime Movie and Sh
 
 The definitions are synchronized with [Vidhin05/Releases-Regex](https://github.com/Vidhin05/Releases-Regex) through GitHub Actions. Upstream changes are reviewed through a pull request before becoming part of the library.
 
+When a semantic Define Library change is published to `main`, the repository's Discord notification automation can announce the changed classifications and remind linked-library users to use StreamNZB's **Refresh** action. Metadata-only synchronization changes do not generate an update notification.
+
 Matching note: Release-group names are generally matched case-insensitively by the generated StreamNZB Define Library. Upstream case-specific distinctions may be normalized when they do not cause cross-tier ambiguity.
 
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.

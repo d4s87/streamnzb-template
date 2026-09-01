@@ -35,6 +35,11 @@ This testing layer complements the existing profile, Define Library, Vidhin sync
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Added
+
+- Added a GitHub Actions Discord notification for published semantic Vidhin Define Library updates. Notifications are sent only after the changed generated library reaches `main`, summarize added, changed, and removed Define names, suppress metadata-only synchronization changes, and remind linked StreamNZB users to refresh the Define Library first.
+- Added permanent regression coverage for notification semantics, including metadata-only suppression, added/changed/removed Defines, published-library-only changes, Discord message construction, and disabled mentions. Webhook delivery is intentionally non-fatal.
+
 ### Changed
 
 - Synchronized the generated Vidhin-backed classification data with current

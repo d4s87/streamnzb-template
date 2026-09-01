@@ -1,0 +1,73 @@
+name: Notify Vidhin Define updates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "generated/vidhin-defines.json"
+      - "generated/streamnzb-defines.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-vidhin-define-updates
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Notify semantic Define changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect semantic Define changes
+        id: diff
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/vidhin_discord.py detect \
+            --before "$BEFORE_SHA" \
+            --after "$AFTER_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Build Discord payload
+        if: steps.diff.outputs.notify == 'true'
+        env:
+          ANALYSIS_JSON: ${{ steps.diff.outputs.analysis }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          python3 scripts/vidhin_discord.py payload \
+            --analysis "$ANALYSIS_JSON" \
+            --repository "$REPOSITORY" \
+            --server-url "$SERVER_URL" \
+            --commit-sha "$COMMIT_SHA" \
+            --output discord-payload.json
+
+      - name: Send Discord notification
+        if: steps.diff.outputs.notify == 'true'
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_VIDHIN_WEBHOOK }}
+          DISCORD_THREAD_ID: "1542856068135125002"
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "::warning::DISCORD_VIDHIN_WEBHOOK is not configured."
+            exit 0
+          fi
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            -H "Content-Type: application/json" \
+            --data-binary @discord-payload.json \
+            "${DISCORD_WEBHOOK}?thread_id=${DISCORD_THREAD_ID}&wait=true"

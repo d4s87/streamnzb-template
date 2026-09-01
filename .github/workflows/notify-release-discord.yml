@@ -1,0 +1,49 @@
+name: Notify published releases
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notify-published-releases
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Notify published release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Build Discord payload
+        run: |
+          python3 scripts/release_discord.py payload \
+            --event "$GITHUB_EVENT_PATH" \
+            --output discord-release-payload.json
+
+      - name: Send Discord notification
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_VIDHIN_WEBHOOK }}
+          DISCORD_THREAD_ID: "1542856068135125002"
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "::warning::DISCORD_VIDHIN_WEBHOOK is not configured."
+            exit 0
+          fi
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            -H "Content-Type: application/json" \
+            --data-binary @discord-release-payload.json \
+            "${DISCORD_WEBHOOK}?thread_id=${DISCORD_THREAD_ID}&wait=true"

@@ -38,6 +38,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Added
 
+- Added Discord notifications for newly published GitHub Releases. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
+- Added regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
 ### Changed
 
 ### Fixed

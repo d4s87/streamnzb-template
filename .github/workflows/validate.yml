@@ -44,6 +44,9 @@ jobs:
       - name: Test Vidhin Discord notifications
         run: python tests/test_vidhin_discord.py
 
+      - name: Test release Discord notifications
+        run: python tests/test_release_discord.py
+
       - name: Validate Anime tier integrity
         run: python tests/test_tier_integrity.py
 

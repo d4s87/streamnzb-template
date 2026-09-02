@@ -27,7 +27,6 @@ EXPECTED_OWNERS = {
 
 EXPECTED_DEVICE_RULES = [
     "DV without HDR fallback",
-    "Neutralize Dolby Vision",
     "Reduce Atmos",
     "Reduce TrueHD bonus",
     "Reduce DTS Lossless bonus",
@@ -154,9 +153,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 107:
+    if len(entries) != 110:
         raise ValueError(
-            f"expected 107 source rules, found {len(entries)}"
+            f"expected 110 source rules, found {len(entries)}"
         )
 
     names = []
@@ -200,9 +199,9 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-        "core": 98,
+        "core": 102,
         "presentation": 4,
-        "device:samsung-qn90a": 5,
+        "device:samsung-qn90a": 4,
     }
 
     if owner_counts != expected_counts:
@@ -278,7 +277,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 107,
+            "expected_rules": 110,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -287,7 +286,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 102,
+            "expected_rules": 106,
         },
     }
 
@@ -516,7 +515,7 @@ def command_check(_args):
         )
 
     print("PASS: Reject 3D is present in both variants")
-    print("PASS: exactly five Samsung-only rules")
+    print("PASS: exactly four Samsung-only rules")
 
 
 def command_build(_args):
@@ -546,7 +545,7 @@ def command_build(_args):
         f"({len(payloads['profile-neutral.txt']['rules'])} rules)"
     )
     print("PASS: Reject 3D present in both profiles")
-    print("PASS: neutral excludes exactly five Samsung device rules")
+    print("PASS: neutral excludes exactly four Samsung device rules")
 
 
 def build_parser():

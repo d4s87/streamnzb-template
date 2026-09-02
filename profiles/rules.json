@@ -11,11 +11,35 @@
       }
     },
     {
-      "owner": "device:samsung-qn90a",
+      "owner": "core",
       "rule": {
         "name": "Neutralize Dolby Vision",
         "points": -3000,
         "when": "dolbyVision"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize HDR10 Plus",
+        "points": -2100,
+        "when": "any(hdr, # == \"HDR10+\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize HDR",
+        "points": -2000,
+        "when": "any(hdr, # == \"HDR\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize 10bit",
+        "points": -100,
+        "when": "parsed.bitDepth == 10"
       }
     },
     {

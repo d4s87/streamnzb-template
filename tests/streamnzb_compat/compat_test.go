@@ -199,16 +199,15 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 102 {
+	if len(neutralRules) != 106 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 102",
+			"neutral profile contains %d rules; want 106",
 			len(neutralRules),
 		)
 	}
 
 	deviceRules := map[string]bool{
 		"DV without HDR fallback":   false,
-		"Neutralize Dolby Vision":   false,
 		"Reduce Atmos":              false,
 		"Reduce TrueHD bonus":       false,
 		"Reduce DTS Lossless bonus": false,
@@ -2888,5 +2887,339 @@ func TestCandidateRelativePruneCompatibility(t *testing.T) {
 			len(kept),
 			len(rejected),
 		)
+	}
+}
+
+func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
+	type profileCase struct {
+		name    string
+		rules   []config.RuleConfig
+		samsung bool
+	}
+
+	profiles := []profileCase{
+		{
+			name:    "Samsung",
+			rules:   loadProductionRules(t),
+			samsung: true,
+		},
+		{
+			name:  "Neutral",
+			rules: loadNeutralRules(t),
+		},
+	}
+
+	type scoreResult struct {
+		rank     int
+		rejected bool
+	}
+
+	for _, pc := range profiles {
+		pc := pc
+
+		t.Run(pc.name, func(t *testing.T) {
+			profile, err := ranking.Compile(
+				config.FilterProfileConfig{
+					Name:   "dynamic-range and bit-depth regression",
+					Preset: "4k",
+					Rules:  pc.rules,
+				},
+				loadDefineLibrary(t)...,
+			)
+			if err != nil {
+				t.Fatalf(
+					"compile %s profile: %v",
+					pc.name,
+					err,
+				)
+			}
+
+			score := func(
+				name string,
+				title string,
+				kind string,
+				anime bool,
+			) scoreResult {
+				t.Helper()
+
+				request := ranking.Request{
+					Kind:    kind,
+					IsAnime: anime,
+					Title:   "Example",
+				}
+
+				if kind == ranking.KindAnimeShow {
+					request.Season = 1
+					request.Episode = 1
+				}
+
+				candidate := triage.Candidate{
+					Release: &release.Release{
+						Title: title,
+					},
+				}
+
+				kept, rejected := profile.ApplyWithRejected(
+					request,
+					[]triage.Candidate{candidate},
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 {
+					if len(kept) != 0 {
+						t.Fatalf(
+							"%s: candidate both kept and rejected",
+							name,
+						)
+					}
+
+					return scoreResult{
+						rejected: true,
+					}
+				}
+
+				if len(kept) != 1 {
+					t.Fatalf(
+						"%s: kept=%d rejected=%d; want exactly one kept candidate",
+						name,
+						len(kept),
+						len(rejected),
+					)
+				}
+
+				return scoreResult{
+					rank: kept[0].Torrent.Rank,
+				}
+			}
+
+			assertSameRank := func(
+				name string,
+				base scoreResult,
+				got scoreResult,
+			) {
+				t.Helper()
+
+				if base.rejected {
+					t.Fatalf(
+						"%s: baseline unexpectedly rejected",
+						name,
+					)
+				}
+
+				if got.rejected {
+					t.Fatalf(
+						"%s unexpectedly rejected",
+						name,
+					)
+				}
+
+				if got.rank != base.rank {
+					t.Fatalf(
+						"%s rank=%d, baseline=%d, delta=%+d; want equal effective rank",
+						name,
+						got.rank,
+						base.rank,
+						got.rank-base.rank,
+					)
+				}
+			}
+
+			sdr := score(
+				"SDR",
+				"Example.Movie.2026.1080p.WEB-DL.x264.SDR-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			explicit10 := score(
+				"explicit 10bit",
+				"Example.Movie.2026.1080p.WEB-DL.x264.10bit-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			hi10p := score(
+				"Hi10P",
+				"Example.Movie.2026.1080p.WEB-DL.Hi10P.x264-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			hdr := score(
+				"HDR",
+				"Example.Movie.2026.1080p.WEB-DL.x264.HDR-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			hdr10 := score(
+				"HDR10",
+				"Example.Movie.2026.1080p.WEB-DL.x264.HDR10-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			hdr10Plus := score(
+				"HDR10 Plus",
+				"Example.Movie.2026.1080p.WEB-DL.x264.HDR10Plus-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			dv := score(
+				"Dolby Vision only",
+				"Example.Movie.2026.1080p.WEB-DL.x264.DV-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			dvHDR := score(
+				"Dolby Vision + HDR",
+				"Example.Movie.2026.1080p.WEB-DL.x264.DV.HDR-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			dvHDR10 := score(
+				"Dolby Vision + HDR10",
+				"Example.Movie.2026.1080p.WEB-DL.x264.DV.HDR10-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			dvHDR10Plus := score(
+				"Dolby Vision + HDR10 Plus",
+				"Example.Movie.2026.1080p.WEB-DL.x264.DV.HDR10Plus-GRP",
+				ranking.KindMovie,
+				false,
+			)
+
+			// Portable Core intentionally neutralizes Jhin v0.6's
+			// native ranking authority for display-dependent dynamic
+			// range and parsed 10-bit metadata:
+			//
+			//   Dolby Vision +3000
+			//   HDR10+       +2100
+			//   HDR          +2000
+			//   parsed 10bit  +100
+			//
+			// These remain parsed/presentational facts, but must not
+			// overtake DraCuLa release-group tier authority.
+			assertSameRank("explicit 10bit", sdr, explicit10)
+			assertSameRank("Hi10P", sdr, hi10p)
+			assertSameRank("HDR", sdr, hdr)
+			assertSameRank("HDR10", sdr, hdr10)
+			assertSameRank("HDR10 Plus", sdr, hdr10Plus)
+			assertSameRank("Dolby Vision + HDR", sdr, dvHDR)
+			assertSameRank("Dolby Vision + HDR10", sdr, dvHDR10)
+			assertSameRank(
+				"Dolby Vision + HDR10 Plus",
+				sdr,
+				dvHDR10Plus,
+			)
+
+			if pc.samsung {
+				if !dv.rejected {
+					t.Fatal(
+						"Samsung profile kept Dolby Vision without HDR fallback",
+					)
+				}
+			} else {
+				assertSameRank(
+					"Neutral Dolby Vision only",
+					sdr,
+					dv,
+				)
+			}
+
+			// The original scoring-ceiling audit used a minimum Anime
+			// adjacent-tier gap of 80. Native Jhin 10-bit ranking used
+			// to erase T1>T2 authority and invert T5>T6. The Core
+			// compensation must preserve the intended tier ladder.
+			animeT1 := score(
+				"Anime WEB T1 8-bit",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264-Arg0",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			animeT2Ten := score(
+				"Anime WEB T2 10-bit",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264.10bit-Asakura",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			animeT5 := score(
+				"Anime WEB T5 8-bit",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264-BlueLobster",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			animeT6Ten := score(
+				"Anime WEB T6 10-bit",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264.10bit-9volt",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			for name, result := range map[string]scoreResult{
+				"Anime WEB T1": animeT1,
+				"Anime WEB T2": animeT2Ten,
+				"Anime WEB T5": animeT5,
+				"Anime WEB T6": animeT6Ten,
+			} {
+				if result.rejected {
+					t.Fatalf(
+						"%s unexpectedly rejected",
+						name,
+					)
+				}
+			}
+
+			if gap := animeT1.rank - animeT2Ten.rank; gap != 100 {
+				t.Fatalf(
+					"Anime WEB T1 8-bit - T2 10-bit gap=%d; want 100",
+					gap,
+				)
+			}
+
+			if gap := animeT5.rank - animeT6Ten.rank; gap != 80 {
+				t.Fatalf(
+					"Anime WEB T5 8-bit - T6 10-bit gap=%d; want 80",
+					gap,
+				)
+			}
+
+			// Dynamic-range metadata must also remain subordinate to
+			// the ordinary Movie WEB release-group ladder.
+			movieT1 := score(
+				"Movie WEB T1 SDR",
+				"Example.Movie.2026.1080p.WEB-DL.x264.SDR-FLUX",
+				ranking.KindMovie,
+				false,
+			)
+
+			movieT3HDR10 := score(
+				"Movie WEB T3 HDR10",
+				"Example.Movie.2026.1080p.WEB-DL.x264.HDR10-BLOOM",
+				ranking.KindMovie,
+				false,
+			)
+
+			if movieT1.rejected || movieT3HDR10.rejected {
+				t.Fatal(
+					"Movie WEB tier-authority candidate unexpectedly rejected",
+				)
+			}
+
+			if gap := movieT1.rank - movieT3HDR10.rank; gap != 400 {
+				t.Fatalf(
+					"Movie WEB T1 SDR - T3 HDR10 gap=%d; want 400",
+					gap,
+				)
+			}
+		})
 	}
 }

@@ -3,7 +3,7 @@ DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https
 
 **Current version: V5.0**
 
-V5.0 introduces generated profile variants built from one canonical ordered rule registry. The existing `profile.txt` preserves the Samsung QN90A-oriented behavior, while `profile-neutral.txt` provides a hardware-neutral alternative without the five Samsung/device-specific playback compensation rules. Both profiles share the same Core policy, presentation classifications, Define Library, and formatter architecture.
+V5.0 introduced generated profile variants built from one canonical ordered rule registry. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the four Samsung/device-specific playback rules. Both profiles share the same Core policy, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -26,7 +26,7 @@ The profile is designed around:
 - Tier-safe NZB availability tie-breaking and native StreamNZB library prioritization
 - Same-release failover
 - Grouped resolution + quality result limits
-- Hardware-specific HDR and audio preferences
+- Hardware-neutral dynamic-range / bit-depth scoring with Samsung-specific Dolby Vision compatibility handling and audio preferences
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ The formatter can also remain linked for future updates.
 
 `profile.txt` preserves the existing **Samsung QN90A without an AVR or soundbar** behavior.
 
-`profile-neutral.txt` keeps the shared DraCuLa filtering and scoring policy but removes the five Samsung/device-specific playback compensation rules for Dolby Vision, Atmos, TrueHD and DTS Lossless handling.
+`profile-neutral.txt` keeps the shared DraCuLa filtering and scoring policy but removes the four Samsung/device-specific playback rules: Dolby Vision without HDR fallback rejection, Atmos compensation, TrueHD compensation, and DTS Lossless compensation.
 
 The neutral profile does **not** remove general format classification or hardware-independent filtering. In particular, **Reject 3D is a Core rule and is present in both profiles**.
 
@@ -105,7 +105,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **107** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **110** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -117,15 +117,14 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **102** rules. It is the Samsung profile minus exactly these five device-specific rules:
+The neutral artifact contains **106** rules. It is the Samsung profile minus exactly these four device-specific rules:
 
 - `DV without HDR fallback`
-- `Neutralize Dolby Vision`
 - `Reduce Atmos`
 - `Reduce TrueHD bonus`
 - `Reduce DTS Lossless bonus`
 
-All 102 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 106 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -167,6 +166,16 @@ Matching note: Release-group names are generally matched case-insensitively by t
 
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.
 
+## Dynamic Range and Bit-Depth Scoring
+
+DraCuLa treats display-dependent dynamic-range and bit-depth metadata as classification and compatibility information rather than release-quality authority.
+
+The pinned Jhin v0.6 engine natively adds `+3000` for Dolby Vision, `+2100` for HDR10+, `+2000` for HDR, and `+100` for parsed 10-bit metadata. The shared Portable Core compensates those native ranks with `-3000`, `-2100`, `-2000`, and `-100` respectively. As a result, SDR, HDR, HDR10, HDR10+, Dolby Vision, and parsed 10-bit metadata are score-neutral before any explicit device policy is applied.
+
+This prevents display-format metadata from overriding DraCuLa's release-group hierarchy. Permanent pinned real-engine regressions verify that native 10-bit ranking cannot erase or invert adjacent Anime WEB tiers and that HDR10 cannot allow a lower Movie WEB tier to outrank a higher clean tier.
+
+The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible and rank according to the fallback-neutral shared Core policy. The hardware-neutral profile performs no Dolby Vision compatibility rejection.
+
 ## Anime Scoring
 
 V5.0 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
@@ -197,7 +206,7 @@ The minimum adjacent Anime release-group gap is therefore `80`, leaving at least
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
-Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an additional `Hi10P` release-name fallback for common Anime naming conventions. The rule is informational and scores `0` points, so it does not alter release ranking.
+Anime 10-bit releases are detected using StreamNZB's parsed bit depth, with an additional `Hi10P` release-name fallback for common Anime naming conventions. The presentation rule itself scores `0` points. DraCuLa's shared Core separately compensates Jhin v0.6's native parsed-10-bit `+100` rank, so parsed 10-bit metadata remains informational and cannot erase or invert adjacent Anime release-group tiers.
 
 The formatter displays matching releases as `₁₀ʙɪᴛ`.
 
@@ -525,7 +534,7 @@ The rule does not apply to Anime, Library results, 2160p Remuxes, or other conte
 
 ## Validation
 
-The repository includes automated validation for both generated profile variants, the Define Library, Vidhin synchronization and Anime tier integrity. The Samsung artifact must remain byte-for-byte reproducible from the canonical source registry, while the neutral artifact is validated as the same ordered policy minus exactly five Samsung/device-specific rules.
+The repository includes automated validation for both generated profile variants, the Define Library, Vidhin synchronization and Anime tier integrity. The Samsung artifact must remain byte-for-byte reproducible from the canonical source registry, while the neutral artifact is validated as the same ordered policy minus exactly four Samsung/device-specific rules.
 
 For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
 

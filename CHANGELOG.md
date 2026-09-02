@@ -6,6 +6,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **testing:** add permanent pinned real-StreamNZB/Jhin coverage for Portable Core dynamic-range and bit-depth compensation, Samsung Dolby Vision fallback behavior, neutral-profile Dolby Vision eligibility, Anime WEB tier authority against native 10-bit scoring, and Movie WEB tier authority against HDR10 scoring.
 - **testing:** add permanent pinned real-StreamNZB/Jhin scoring-ceiling coverage for Anime Movie/Show tier authority, effective corrected-release scores, effective Movie edition scores, and native-score compensation behavior.
 - **profile:** add Vidhin-backed Obfuscated release classification for Movies/Anime Movies and Series/Anime Shows with a `-1` soft penalty, keeping matching releases eligible as tie-breaking fallbacks rather than rejecting them.
 - **testing:** add permanent pinned real-StreamNZB coverage for Obfuscated marker matching, Movie/Show classifier separation, Anime Movie/Show behavior, ordinary-release negatives, and the distinct Radarr/Sonarr `Scrambled` boundary semantics.
@@ -16,6 +17,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **scoring:** neutralize Jhin v0.6's native display-dependent ranks in the shared Portable Core: Dolby Vision `+3000`, HDR10+ `+2100`, HDR `+2000`, and parsed 10-bit `+100` are compensated by `-3000`, `-2100`, `-2000`, and `-100`. Dynamic-range and bit-depth metadata therefore remain classification/compatibility facts instead of overriding DraCuLa release-group tier authority.
+- **architecture:** move `Neutralize Dolby Vision` from the Samsung device layer into Portable Core. The Samsung profile now retains four device-only playback rules, including rejection of Dolby Vision without HDR fallback; the neutral profile applies no Dolby Vision compatibility rejection.
+- **profile:** increase the Samsung profile from 107 to 110 rules and the hardware-neutral profile from 102 to 106 rules. Canonical ownership becomes 102 Core, 4 presentation, and 4 Samsung device rules.
 - **scoring:** compensate Jhin v0.6's native `+20` PROPER/REPACK rank in the stored corrected-release rules, preserving final effective preferences of `+5` for PROPER/REPACK, `+6` for REPACK2, and `+7` for REPACK3 without double-counting native parser rank.
 - **scoring:** compensate Jhin v0.6's native `+100` parsed-edition rank for Movie editions: IMAX is stored at `+700` to remain effective `+800`, while the shared Director's Cut / Extended Edition rule is stored at `-75` to remain effective `+25`; Open Matte remains `+25`.
 - **scoring:** re-space both Anime Movie and Anime Show release-group ladders around the full effective metadata ceiling. Anime WEB is now `+500/+400/+300/+200/+100/+20`; Anime BluRay is `+560/+480/+400/+320/+240/+160/+80/+0`. The minimum adjacent gap is `80`, exceeding the proven maximum ordinary Anime stack of `+77`.

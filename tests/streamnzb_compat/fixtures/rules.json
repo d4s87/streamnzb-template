@@ -3793,6 +3793,130 @@
       ]
     },
     {
+      "name": "Movie Obfuscated Soft Penalty",
+      "productionRule": "Movie Obfuscated Soft Penalty",
+      "when": "(kind == \"movie\" or kind == \"anime_movie\") and matched(\"Movies Obfuscated\")",
+      "points": -1,
+      "cases": [
+        {
+          "name": "movie Obfuscated",
+          "release": "Movie.Title.2026.1080p.WEB-DL-Obfuscated",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime movie Obfuscated",
+          "release": "Anime.Movie.2026.1080p.WEB-DL-Obfuscated",
+          "kind": "anime_movie",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Scrambled after year",
+          "release": "Movie.Title.2026.Scrambled.1080p.WEB-DL-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Scrambled before year",
+          "release": "Movie.Title.Scrambled.2026.1080p.WEB-DL-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "ordinary movie",
+          "release": "Movie.Title.2026.1080p.WEB-DL-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie classifier does not score show",
+          "release": "Show.S02E01.1080p.WEB-DL-Obfuscated",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Show Obfuscated Soft Penalty",
+      "productionRule": "Show Obfuscated Soft Penalty",
+      "when": "(kind == \"series\" or kind == \"anime_show\") and matched(\"Shows Obfuscated\")",
+      "points": -1,
+      "cases": [
+        {
+          "name": "series Obfuscated",
+          "release": "Show.S02E01.1080p.WEB-DL-Obfuscated",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime show Obfuscated",
+          "release": "Anime.Show.S02E01.1080p.WEB-DL-Obfuscated",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "series Scrambled after standalone season",
+          "release": "Show.S02.Scrambled.1080p.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "series Scrambled after episode notation",
+          "release": "Show.S02E01.Scrambled.1080p.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "ordinary series",
+          "release": "Show.S02E01.1080p.WEB-DL-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "show classifier does not score movie",
+          "release": "Movie.Title.2026.1080p.WEB-DL-Obfuscated",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
       "name": "Retag Soft Penalty",
       "productionRule": "Retag Soft Penalty",
       "when": "releaseName matches \"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])\"",

@@ -322,6 +322,145 @@ assert removed_changed==1
 assert "**Raw regex removed**" in removed_report
 
 
+
+# Obfuscated must preserve Vidhin's Radarr/Sonarr marker families while
+# translating only the two PCRE lookbehinds that Go regexp cannot compile.
+obfuscated_upstream=[
+    {
+        "name":"Obfuscated (Radarr)",
+        "pattern":(
+            r"/-4P\b|-4Planet\b|-AsRequested\b|-BUYMORE\b|"
+            r"-Chamele0n\b|-GEROV\b|-iNC0GNiTO\b|-NZBGeek\b|"
+            r"-Obfuscated\b|-postbot\b|-Rakuv\b|"
+            r"(?<=\b[12]\d{3}\b).*(Scrambled)\b|"
+            r"-WhiteRev\b|-xpost\b|-WRTEAM\b|-CAPTCHA\b|_nzb\b/i"
+        ),
+        "score":0,
+    },
+    {
+        "name":"Obfuscated (Sonarr)",
+        "pattern":(
+            r"/-4P\b|-4Planet\b|-AsRequested\b|-BUYMORE\b|"
+            r"-Chamele0n\b|-GEROV\b|-iNC0GNiTO\b|-NZBGeek\b|"
+            r"-Obfuscated\b|-postbot\b|-Rakuv\b|"
+            r"(?<=\bS\d+\b).*(Scrambled)\b|"
+            r"-WhiteRev\b|-xpost\b|-WRTEAM\b|-CAPTCHA\b|_nzb\b/i"
+        ),
+        "score":0,
+    },
+]
+
+obfuscated_mapping={
+    "schema_version":3,
+    "upstream_url":"fixture",
+    "targets":{
+        "Movies Obfuscated":{
+            "sources":["Obfuscated (Radarr)"],
+            "scope":None,
+            "field":"releaseName",
+            "mode":"obfuscated",
+        },
+        "Shows Obfuscated":{
+            "sources":["Obfuscated (Sonarr)"],
+            "scope":None,
+            "field":"releaseName",
+            "mode":"obfuscated",
+        },
+    },
+}
+
+obfuscated=m.resolve(
+    obfuscated_mapping,
+    obfuscated_upstream,
+)
+
+assert len(obfuscated)==2
+
+movie_obfuscated=obfuscated["Movies Obfuscated"]
+show_obfuscated=obfuscated["Shows Obfuscated"]
+
+movie_pattern=(
+    movie_obfuscated["records"][0]["obfuscated_regex_pattern"]
+)
+show_pattern=(
+    show_obfuscated["records"][0]["obfuscated_regex_pattern"]
+)
+
+assert movie_pattern.startswith("(?i)")
+assert show_pattern.startswith("(?i)")
+
+assert "(?<=" not in movie_pattern
+assert "(?<=" not in show_pattern
+assert "(?<!" not in movie_pattern
+assert "(?<!" not in show_pattern
+
+assert r"\b[12]\d{3}\b.*Scrambled\b" in movie_pattern
+assert r"\bS\d+\b.*Scrambled\b" in show_pattern
+
+for marker in (
+    "-4P",
+    "-4Planet",
+    "-AsRequested",
+    "-BUYMORE",
+    "-Chamele0n",
+    "-GEROV",
+    "-iNC0GNiTO",
+    "-NZBGeek",
+    "-Obfuscated",
+    "-postbot",
+    "-Rakuv",
+    "-WhiteRev",
+    "-xpost",
+    "-WRTEAM",
+    "-CAPTCHA",
+    "_nzb",
+):
+    assert marker in movie_pattern
+    assert marker in show_pattern
+
+obfuscated_library=m.render(
+    obfuscated,
+    obfuscated_mapping,
+)
+
+assert "Movies Obfuscated: define if releaseName matches " in obfuscated_library
+assert "Shows Obfuscated: define if releaseName matches " in obfuscated_library
+assert "(?<=" not in obfuscated_library
+assert "(?<!" not in obfuscated_library
+
+# Upstream translation must fail closed if the expected lookbehind changes.
+changed_obfuscated_upstream=[
+    {
+        "name":"Obfuscated (Radarr)",
+        "pattern":r"/-Obfuscated\b|Scrambled\b/i",
+        "score":0,
+    }
+]
+
+try:
+    m.resolve(
+        {
+            "schema_version":3,
+            "upstream_url":"fixture",
+            "targets":{
+                "Movies Obfuscated":{
+                    "sources":["Obfuscated (Radarr)"],
+                    "scope":None,
+                    "field":"releaseName",
+                    "mode":"obfuscated",
+                }
+            },
+        },
+        changed_obfuscated_upstream,
+    )
+except ValueError as exc:
+    assert "manual review" in str(exc).lower()
+else:
+    raise AssertionError(
+        "changed Obfuscated upstream regex was not rejected"
+    )
+
+
 # Anime LQ must preserve Vidhin's full release-name regex semantics.
 anime_lq_upstream=[
     {

@@ -6,6 +6,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **profile:** add Vidhin-backed Obfuscated release classification for Movies/Anime Movies and Series/Anime Shows with a `-1` soft penalty, keeping matching releases eligible as tie-breaking fallbacks rather than rejecting them.
+- **testing:** add permanent pinned real-StreamNZB coverage for Obfuscated marker matching, Movie/Show classifier separation, Anime Movie/Show behavior, ordinary-release negatives, and the distinct Radarr/Sonarr `Scrambled` boundary semantics.
 - **testing:** extend the real-StreamNZB Intelligent Unknown Resolution regression to Anime Movies, completing explicit trusted-tier protection coverage for Movies, Series, Anime Shows, and Anime Movies.
 - **automation:** notify Discord when a GitHub Release is published. The workflow triggers only on `release.published`, posts a concise release link and linked-install refresh guidance to the existing DraCuLa Discord thread, disables mentions, and keeps webhook delivery non-fatal.
 - **testing:** add regression coverage for stable releases, prereleases, release-name fallback/bounding, required metadata, draft rejection, and non-published release-event rejection.
@@ -13,6 +15,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **definitions:** expand the published Define Library from 54 to 56 Defines with `Movies Obfuscated` and `Shows Obfuscated`; the synchronized Vidhin-backed semantic baseline grows from 53 to 55 mappings while the local `Trusted Release Groups` helper remains unchanged.
+- **compatibility:** translate only Vidhin's two PCRE positive-lookbehind `Scrambled` branches into boolean-equivalent Go-regexp expressions supported by StreamNZB/Jhin, with fail-closed synchronization guards for upstream regex drift.
+- **profile:** increase the Samsung profile from 105 to 107 rules and the hardware-neutral profile from 100 to 102 rules with the two shared Obfuscated soft-penalty rules.
 - **profile:** simplify Intelligent Unknown Resolution trusted-tier protection by replacing 47 direct `matched()` tier references with one generated `Trusted Release Groups` Define. The helper is derived from the synchronized Movie, Show, Anime Movie, and Anime Show tier Defines, is published only in the StreamNZB Define Library, and does not alter the 53-entry semantic Vidhin baseline.
 - **tooling:** remove the one-time V5 migration guard that prevented intentional post-V5 changes from regenerating `profile.txt`. `scripts/build_profiles.py` continues to validate canonical source structure, ownership, variants, and encode/decode round trips before writing generated artifacts.
 - **compatibility:** advance the pinned StreamNZB runtime to the released 5.16.0 commit `4c3c29df4eb02e9e001fa841d9431a629858c2d7`, enabling candidate-relative prune aggregates through `current.finalScore` / `current.finalRank` while preserving the existing V5 profile and formatter compatibility contract.

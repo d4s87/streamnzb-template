@@ -848,6 +848,22 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Movie Obfuscated Soft Penalty",
+        "points": -1,
+        "when": "(kind == \"movie\" or kind == \"anime_movie\") and matched(\"Movies Obfuscated\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Show Obfuscated Soft Penalty",
+        "points": -1,
+        "when": "(kind == \"series\" or kind == \"anime_show\") and matched(\"Shows Obfuscated\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Retag Soft Penalty",
         "when": "releaseName matches \"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])\"",
         "points": -1

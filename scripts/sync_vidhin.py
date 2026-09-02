@@ -253,6 +253,64 @@ def raw_release_name_pattern(pattern):
     """Backward-compatible wrapper for existing Anime LQ generation."""
     return raw_regex_pattern(pattern)
 
+
+def obfuscated_regex_pattern(pattern, source):
+    """
+    Translate Vidhin/TRaSH Obfuscated regexes to StreamNZB/Jhin's
+    Go-regexp-compatible form.
+
+    Vidhin's Radarr and Sonarr classifiers contain one PCRE
+    positive-lookbehind each. Go regexp / RE2 does not support
+    lookbehind, but these are boolean search predicates, so the
+    equivalent expression can consume the required prefix instead.
+
+    The exact upstream fragment is asserted so upstream changes fail
+    closed and require manual review instead of silently widening or
+    narrowing DraCuLa classification.
+    """
+    body, flags = js_regex_parts(pattern)
+
+    if flags != "i":
+        raise ValueError(
+            "Obfuscated upstream regex must remain exactly "
+            f"case-insensitive (/i): {pattern}"
+        )
+
+    translations = {
+        "Obfuscated (Radarr)": (
+            r"(?<=\b[12]\d{3}\b).*(Scrambled)\b",
+            r"\b[12]\d{3}\b.*Scrambled\b",
+        ),
+        "Obfuscated (Sonarr)": (
+            r"(?<=\bS\d+\b).*(Scrambled)\b",
+            r"\bS\d+\b.*Scrambled\b",
+        ),
+    }
+
+    if source not in translations:
+        raise ValueError(
+            f"Unsupported Obfuscated source: {source!r}"
+        )
+
+    original, replacement = translations[source]
+
+    if body.count(original) != 1:
+        raise ValueError(
+            f"{source} Obfuscated regex changed; expected exactly "
+            "one known lookbehind fragment. Manual review required."
+        )
+
+    body = body.replace(original, replacement)
+
+    if "(?<=" in body or "(?<!" in body:
+        raise ValueError(
+            f"{source} Obfuscated regex still contains unsupported "
+            "lookbehind after translation"
+        )
+
+    return "(?i)" + body
+
+
 def target_cfgs(mapping):
     tg=mapping.get("targets")
     if not isinstance(tg,dict): raise KeyError("mapping.targets missing")
@@ -365,6 +423,16 @@ def resolve(mapping,upstream):
                         "pattern":pat,
                         "tokens":[],
                         "raw_regex_pattern":raw_regex_pattern(pat),
+                    })
+                elif mode=="obfuscated":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":[],
+                        "obfuscated_regex_pattern":obfuscated_regex_pattern(
+                            pat,
+                            src,
+                        ),
                     })
                 else:
                     recs.append({
@@ -700,6 +768,35 @@ def render_raw_regex_condition(entry):
     return " or ".join(conditions)
 
 
+def render_obfuscated_condition(entry):
+    conditions=[]
+
+    if entry.get("field")!="releaseName":
+        raise ValueError(
+            "Obfuscated Define must evaluate releaseName"
+        )
+
+    for rec in entry.get("records",[]):
+        pattern=rec.get("obfuscated_regex_pattern")
+
+        if not pattern:
+            continue
+
+        escaped=pattern.replace('"','\\\"')
+
+        conditions.append(
+            f'releaseName matches "{escaped}"'
+        )
+
+    if not conditions:
+        raise ValueError(
+            "Obfuscated Define contains no translated regex records"
+        )
+
+    return " or ".join(conditions)
+
+
+
 TRUSTED_RELEASE_GROUPS_DEFINE="Trusted Release Groups"
 
 
@@ -746,6 +843,8 @@ def render(current,mapping):
             cond=render_raw_release_name_condition(e)
         elif e.get("mode")=="raw_regex":
             cond=render_raw_regex_condition(e)
+        elif e.get("mode")=="obfuscated":
+            cond=render_obfuscated_condition(e)
         else:
             body="|".join(e["effective_tokens"]).replace('"','\\"')
             field=e["field"]
@@ -947,6 +1046,8 @@ def report(old,new,mapping):
         is_raw_regex=(
             old_mode=="raw_regex"
             or new_mode=="raw_regex"
+            or old_mode=="obfuscated"
+            or new_mode=="obfuscated"
         )
 
         if metadata_changes:

@@ -1,28 +1,18 @@
 # Vidhin sync report
 
-## Movies Bad Dual Groups
+## Movies Obfuscated
 
-**Raw regex changed**
+**Raw regex added**
 
-- Source: `Radarr Bad Dual Groups`
+- Source: `Obfuscated (Radarr)`
 
-## Movies HD BluRay T1 Groups
+## Shows Obfuscated
 
-**Added release-group tokens**
-- `+ ATELiER`
+**Raw regex added**
 
-## Movies HD BluRay T2 Groups
-
-**Removed release-group tokens**
-- `- ATELiER`
-
-## Shows Bad Dual Groups
-
-**Raw regex changed**
-
-- Source: `Sonarr Bad Dual Groups`
+- Source: `Obfuscated (Sonarr)`
 
 ---
-Tracked StreamNZB Defines: **53**
+Tracked StreamNZB Defines: **55**
 
 > `profile.txt` is not modified. Generated Defines require review.

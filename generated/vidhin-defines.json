@@ -2,7 +2,7 @@
   "schema_version": 3,
   "mapping_schema_version": 3,
   "upstream_url": "https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json",
-  "generated_at_utc": "2026-09-01T08:29:20+00:00",
+  "generated_at_utc": "2026-09-02T15:02:41+00:00",
   "defines": {
     "Movies UHD BluRay T1 Groups": {
       "sources": [
@@ -2925,6 +2925,40 @@
       "release_name_fallbacks": [
         "Feranki1980"
       ]
+    },
+    "Movies Obfuscated": {
+      "sources": [
+        "Obfuscated (Radarr)"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "obfuscated",
+      "records": [
+        {
+          "source": "Obfuscated (Radarr)",
+          "pattern": "/-4P\\b|-4Planet\\b|-AsRequested\\b|-BUYMORE\\b|-Chamele0n\\b|-GEROV\\b|-iNC0GNiTO\\b|-NZBGeek\\b|-Obfuscated\\b|-postbot\\b|-Rakuv\\b|(?<=\\b[12]\\d{3}\\b).*(Scrambled)\\b|-WhiteRev\\b|-xpost\\b|-WRTEAM\\b|-CAPTCHA\\b|_nzb\\b/i",
+          "tokens": [],
+          "obfuscated_regex_pattern": "(?i)-4P\\b|-4Planet\\b|-AsRequested\\b|-BUYMORE\\b|-Chamele0n\\b|-GEROV\\b|-iNC0GNiTO\\b|-NZBGeek\\b|-Obfuscated\\b|-postbot\\b|-Rakuv\\b|\\b[12]\\d{3}\\b.*Scrambled\\b|-WhiteRev\\b|-xpost\\b|-WRTEAM\\b|-CAPTCHA\\b|_nzb\\b"
+        }
+      ],
+      "tokens": []
+    },
+    "Shows Obfuscated": {
+      "sources": [
+        "Obfuscated (Sonarr)"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "obfuscated",
+      "records": [
+        {
+          "source": "Obfuscated (Sonarr)",
+          "pattern": "/-4P\\b|-4Planet\\b|-AsRequested\\b|-BUYMORE\\b|-Chamele0n\\b|-GEROV\\b|-iNC0GNiTO\\b|-NZBGeek\\b|-Obfuscated\\b|-postbot\\b|-Rakuv\\b|(?<=\\bS\\d+\\b).*(Scrambled)\\b|-WhiteRev\\b|-xpost\\b|-WRTEAM\\b|-CAPTCHA\\b|_nzb\\b/i",
+          "tokens": [],
+          "obfuscated_regex_pattern": "(?i)-4P\\b|-4Planet\\b|-AsRequested\\b|-BUYMORE\\b|-Chamele0n\\b|-GEROV\\b|-iNC0GNiTO\\b|-NZBGeek\\b|-Obfuscated\\b|-postbot\\b|-Rakuv\\b|\\bS\\d+\\b.*Scrambled\\b|-WhiteRev\\b|-xpost\\b|-WRTEAM\\b|-CAPTCHA\\b|_nzb\\b"
+        }
+      ],
+      "tokens": []
     },
     "Anime Dubs Only": {
       "sources": [

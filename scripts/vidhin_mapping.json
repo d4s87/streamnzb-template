@@ -508,6 +508,22 @@
         "Feranki1980"
       ]
     },
+    "Movies Obfuscated": {
+      "sources": [
+        "Obfuscated (Radarr)"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "obfuscated"
+    },
+    "Shows Obfuscated": {
+      "sources": [
+        "Obfuscated (Sonarr)"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "obfuscated"
+    },
     "Anime Dubs Only": {
       "sources": [
         "Dubs Only"

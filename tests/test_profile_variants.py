@@ -60,7 +60,7 @@ variants_source = json.loads(
 
 assert rules_source["schema_version"] == 1
 assert rules_source["streamnzb_profile"] == 1
-assert len(rules_source["rules"]) == 105
+assert len(rules_source["rules"]) == 107
 
 entries = rules_source["rules"]
 
@@ -70,7 +70,7 @@ for entry in entries:
     owners[entry["owner"]] = owners.get(entry["owner"], 0) + 1
 
 assert owners == {
-    "core": 96,
+    "core": 98,
     "presentation": 4,
     "device:samsung-qn90a": 5,
 }
@@ -119,7 +119,7 @@ assert variants["profile.txt"] == {
         "presentation",
         "device:samsung-qn90a",
     ],
-    "expected_rules": 105,
+    "expected_rules": 107,
 }
 
 assert variants["profile-neutral.txt"] == {
@@ -130,7 +130,7 @@ assert variants["profile-neutral.txt"] == {
         "core",
         "presentation",
     ],
-    "expected_rules": 100,
+    "expected_rules": 102,
 }
 
 samsung_before = SAMSUNG_PATH.read_bytes()
@@ -168,8 +168,8 @@ assert neutral["streamnzb_profile"] == 1
 samsung_rules = samsung["rules"]
 neutral_rules = neutral["rules"]
 
-assert len(samsung_rules) == 105
-assert len(neutral_rules) == 100
+assert len(samsung_rules) == 107
+assert len(neutral_rules) == 102
 
 samsung_names = [
     rule["name"]

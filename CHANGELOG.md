@@ -6,6 +6,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **testing:** add permanent pinned real-StreamNZB/Jhin scoring-ceiling coverage for Anime Movie/Show tier authority, effective corrected-release scores, effective Movie edition scores, and native-score compensation behavior.
 - **profile:** add Vidhin-backed Obfuscated release classification for Movies/Anime Movies and Series/Anime Shows with a `-1` soft penalty, keeping matching releases eligible as tie-breaking fallbacks rather than rejecting them.
 - **testing:** add permanent pinned real-StreamNZB coverage for Obfuscated marker matching, Movie/Show classifier separation, Anime Movie/Show behavior, ordinary-release negatives, and the distinct Radarr/Sonarr `Scrambled` boundary semantics.
 - **testing:** extend the real-StreamNZB Intelligent Unknown Resolution regression to Anime Movies, completing explicit trusted-tier protection coverage for Movies, Series, Anime Shows, and Anime Movies.
@@ -15,6 +16,10 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **scoring:** compensate Jhin v0.6's native `+20` PROPER/REPACK rank in the stored corrected-release rules, preserving final effective preferences of `+5` for PROPER/REPACK, `+6` for REPACK2, and `+7` for REPACK3 without double-counting native parser rank.
+- **scoring:** compensate Jhin v0.6's native `+100` parsed-edition rank for Movie editions: IMAX is stored at `+700` to remain effective `+800`, while the shared Director's Cut / Extended Edition rule is stored at `-75` to remain effective `+25`; Open Matte remains `+25`.
+- **scoring:** re-space both Anime Movie and Anime Show release-group ladders around the full effective metadata ceiling. Anime WEB is now `+500/+400/+300/+200/+100/+20`; Anime BluRay is `+560/+480/+400/+320/+240/+160/+80/+0`. The minimum adjacent gap is `80`, exceeding the proven maximum ordinary Anime stack of `+77`.
+- **scoring:** verify non-Anime tier authority without re-spacing: Movie WEB/Remux retain `200`-point gaps with a proven maximum ordinary stack of `+97` and `103` points of headroom; Show WEB/Remux retain `153` points of headroom against the proven `+47` ordinary stack.
 - **definitions:** expand the published Define Library from 54 to 56 Defines with `Movies Obfuscated` and `Shows Obfuscated`; the synchronized Vidhin-backed semantic baseline grows from 53 to 55 mappings while the local `Trusted Release Groups` helper remains unchanged.
 - **compatibility:** translate only Vidhin's two PCRE positive-lookbehind `Scrambled` branches into boolean-equivalent Go-regexp expressions supported by StreamNZB/Jhin, with fail-closed synchronization guards for upstream regex drift.
 - **profile:** increase the Samsung profile from 105 to 107 rules and the hardware-neutral profile from 100 to 102 rules with the two shared Obfuscated soft-penalty rules.

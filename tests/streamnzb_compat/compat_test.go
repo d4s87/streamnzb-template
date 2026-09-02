@@ -917,297 +917,599 @@ func TestCompatibilityFixtures(t *testing.T) {
 	}
 }
 
-func TestAnimeBluRayTierCeilings(t *testing.T) {
+func TestAnimeTierEffectiveCeilings(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Anime effective tier ceiling regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
 	data, err := os.ReadFile(
 		"../../generated/vidhin-defines.json",
 	)
 	if err != nil {
 		t.Fatalf(
-			"read generated Define baseline: %v",
+			"read generated Vidhin baseline: %v",
 			err,
 		)
 	}
 
-	var baseline struct {
+	var generated struct {
 		Defines map[string]struct {
 			Tokens []string `json:"tokens"`
 		} `json:"defines"`
 	}
 
-	if err := json.Unmarshal(data, &baseline); err != nil {
+	if err := json.Unmarshal(data, &generated); err != nil {
 		t.Fatalf(
-			"decode generated Define baseline: %v",
+			"decode generated Vidhin baseline: %v",
 			err,
 		)
 	}
 
-	tokenForTier := func(tier int) string {
+	defineToken := func(name string) string {
 		t.Helper()
 
-		name := fmt.Sprintf(
-			"Anime Shows BluRay T%d Groups",
-			tier,
-		)
-
-		entry, ok := baseline.Defines[name]
+		entry, ok := generated.Defines[name]
 		if !ok {
-			t.Fatalf(
-				"missing Define baseline entry %q",
-				name,
-			)
+			t.Fatalf("missing Define %q", name)
 		}
 
 		if len(entry.Tokens) == 0 {
-			t.Fatalf(
-				"%s contains no release-group tokens",
-				name,
-			)
+			t.Fatalf("Define %q has no tokens", name)
 		}
 
-		tokens := append(
-			[]string(nil),
-			entry.Tokens...,
-		)
-
+		tokens := append([]string(nil), entry.Tokens...)
 		slices.Sort(tokens)
 
 		return tokens[0]
 	}
 
-	productionRules := loadProductionRules(t)
-	defineLibrary := loadDefineLibrary(t)
-
-	set, err := rules.Compile(
-		productionRules,
-		defineLibrary...,
-	)
-	if err != nil {
-		t.Fatalf(
-			"compile complete production profile: %v",
-			err,
-		)
+	type scoreInput struct {
+		title string
+		kind  string
+		avail triage.AvailState
 	}
 
-	type auditCase struct {
-		name       string
-		tier       int
-		metadata   string
-		seasonPack bool
-	}
+	score := func(in scoreInput) int {
+		t.Helper()
 
-	var cases []auditCase
-
-	for tier := 1; tier <= 8; tier++ {
-		cases = append(
-			cases,
-			auditCase{
-				name: fmt.Sprintf(
-					"T%d clean",
-					tier,
-				),
-				tier: tier,
+		candidate := triage.Candidate{
+			Release: &release.Release{
+				Title: in.title,
 			},
+		}
+
+		candidate.Verdict.Avail = in.avail
+
+		request := ranking.Request{
+			Kind:    in.kind,
+			IsAnime: true,
+			Title:   "Example Anime",
+		}
+
+		if in.kind == ranking.KindAnimeShow {
+			request.Season = 1
+			request.Episode = 1
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			request,
+			[]triage.Candidate{candidate},
+			jhinrank.RankOptions{},
 		)
 
-		if tier >= 2 {
-			cases = append(
-				cases,
-				auditCase{
-					name: fmt.Sprintf(
-						"T%d full positive minor stack",
-						tier,
-					),
-					tier:       tier,
-					metadata:   "Dual.Audio.Uncensored.v4.REPACK3",
-					seasonPack: true,
-				},
+		if len(rejected) != 0 {
+			t.Fatalf(
+				"ceiling candidate unexpectedly rejected: %+v",
+				rejected,
 			)
 		}
-	}
 
-	buildRelease := func(
-		group string,
-		metadata string,
-		seasonPack bool,
-	) string {
-		episodeToken := "S01E01"
-		if seasonPack {
-			episodeToken = "S01.COMPLETE"
+		if len(kept) != 1 {
+			t.Fatalf(
+				"ceiling candidate kept %d releases; want 1",
+				len(kept),
+			)
 		}
 
+		return kept[0].Torrent.Rank
+	}
+
+	buildShow := func(
+		source string,
+		group string,
+		episode string,
+		extras ...string,
+	) string {
 		parts := []string{
 			"Example.Anime",
-			episodeToken,
+			episode,
 			"1080p",
-			"BluRay",
+			source,
 			"x264",
 		}
 
-		if metadata != "" {
-			parts = append(
-				parts,
-				strings.Split(metadata, ".")...,
-			)
-		}
+		parts = append(parts, extras...)
 
 		return strings.Join(parts, ".") + "-" + group
 	}
 
-	envs := make([]rules.Env, len(cases))
+	buildMovie := func(
+		source string,
+		group string,
+		extras ...string,
+	) string {
+		parts := []string{
+			"Example.Anime.Movie",
+			"2025",
+			"1080p",
+			source,
+			"x264",
+		}
 
-	for i, c := range cases {
-		envs[i] = buildEnv(
-			CaseFixture{
-				Release: buildRelease(
-					tokenForTier(c.tier),
-					c.metadata,
-					c.seasonPack,
-				),
-				Kind:  "anime_show",
-				Anime: true,
-			},
-		)
+		parts = append(parts, extras...)
+
+		return strings.Join(parts, ".") + "-" + group
 	}
 
-	state := set.ComputeAggregates(envs, "anime_show")
-	if state == nil {
-		t.Fatal(
-			"ComputeAggregates returned nil state",
-		)
+	fullAvailability := triage.AvailState{
+		Status:       triage.AvailAvailable,
+		OnMyBackbone: true,
+		CheckedAt:    time.Now().Add(-3 * 24 * time.Hour),
 	}
 
-	scores := make(map[string]int)
+	// Effective portable Anime Show maxima:
+	//
+	// BluRay:
+	//   Dual/Multi Audio       +10
+	//   Uncensored             +10
+	//   Anime v4                +4
+	//   REPACK3                 +7
+	//   Complete Season Pack   +10
+	//   Backbone availability  +20
+	//   Recent confirmation    +10
+	//                          ----
+	//                           +71
+	//
+	// WEB additionally includes strongest current service:
+	//   CR                       +6
+	//                          ----
+	//                           +77
+	//
+	// Anime Movies do not receive Complete Season Pack, so their
+	// corresponding maxima are +61 BluRay and +67 WEB.
+	const (
+		maxShowBluRayStack  = 71
+		maxShowWEBStack     = 77
+		maxMovieBluRayStack = 61
+		maxMovieWEBStack    = 67
+		minAnimeTierGap     = 80
+	)
 
-	for i, c := range cases {
-		state.Inject(&envs[i])
-
-		out := set.Evaluate(
-			envs[i],
-			"anime_show",
-		)
-
-		scores[c.name] = out.Points
+	blurayPoints := []int{
+		560,
+		480,
+		400,
+		320,
+		240,
+		160,
+		80,
+		0,
 	}
 
-	expectedClean := map[int]int{
-		1: 500,
-		2: 430,
-		3: 360,
-		4: 290,
-		5: 220,
-		6: 150,
-		7: 80,
-		8: 10,
+	webPoints := []int{
+		500,
+		400,
+		300,
+		200,
+		100,
+		20,
 	}
 
-	for tier, expected := range expectedClean {
-		name := fmt.Sprintf(
-			"T%d clean",
-			tier,
-		)
+	for _, media := range []string{
+		"Anime Movies",
+		"Anime Shows",
+	} {
+		for i, want := range blurayPoints {
+			name := fmt.Sprintf(
+				"%s BluRay T%d",
+				media,
+				i+1,
+			)
 
-		if scores[name] != expected {
-			t.Fatalf(
-				"%s score=%d want=%d",
+			rule := findProductionRule(
+				t,
+				productionRules,
 				name,
-				scores[name],
-				expected,
+			)
+
+			if rule.Points != want {
+				t.Fatalf(
+					"%s points=%d, want %d",
+					name,
+					rule.Points,
+					want,
+				)
+			}
+		}
+
+		for i, want := range webPoints {
+			name := fmt.Sprintf(
+				"%s WEB T%d",
+				media,
+				i+1,
+			)
+
+			rule := findProductionRule(
+				t,
+				productionRules,
+				name,
+			)
+
+			if rule.Points != want {
+				t.Fatalf(
+					"%s points=%d, want %d",
+					name,
+					rule.Points,
+					want,
+				)
+			}
+		}
+	}
+
+	for i := 0; i < len(blurayPoints)-1; i++ {
+		gap := blurayPoints[i] - blurayPoints[i+1]
+
+		if gap < minAnimeTierGap {
+			t.Fatalf(
+				"BluRay T%d->T%d gap=%d, want >= %d",
+				i+1,
+				i+2,
+				gap,
+				minAnimeTierGap,
+			)
+		}
+
+		if gap <= maxShowBluRayStack {
+			t.Fatalf(
+				"BluRay T%d->T%d gap=%d does not dominate "+
+					"maximum Anime stack %d",
+				i+1,
+				i+2,
+				gap,
+				maxShowBluRayStack,
 			)
 		}
 	}
 
-	for lowerTier := 2; lowerTier <= 8; lowerTier++ {
-		higherTier := lowerTier - 1
+	for i := 0; i < len(webPoints)-1; i++ {
+		gap := webPoints[i] - webPoints[i+1]
 
-		higherName := fmt.Sprintf(
-			"T%d clean",
-			higherTier,
+		if gap < minAnimeTierGap {
+			t.Fatalf(
+				"WEB T%d->T%d gap=%d, want >= %d",
+				i+1,
+				i+2,
+				gap,
+				minAnimeTierGap,
+			)
+		}
+
+		if gap <= maxShowWEBStack {
+			t.Fatalf(
+				"WEB T%d->T%d gap=%d does not dominate "+
+					"maximum Anime stack %d",
+				i+1,
+				i+2,
+				gap,
+				maxShowWEBStack,
+			)
+		}
+	}
+
+	type familyCase struct {
+		label       string
+		mediaPrefix string
+		kind        string
+		build       func(
+			source string,
+			group string,
+			extras ...string,
+		) string
+		maxBluRay int
+		maxWEB    int
+	}
+
+	showBuild := func(
+		source string,
+		group string,
+		extras ...string,
+	) string {
+		return buildShow(
+			source,
+			group,
+			"S01.COMPLETE",
+			extras...,
 		)
+	}
 
-		lowerCleanName := fmt.Sprintf(
-			"T%d clean",
-			lowerTier,
+	movieBuild := func(
+		source string,
+		group string,
+		extras ...string,
+	) string {
+		return buildMovie(
+			source,
+			group,
+			extras...,
 		)
+	}
 
-		lowerStackName := fmt.Sprintf(
-			"T%d full positive minor stack",
-			lowerTier,
-		)
+	families := []familyCase{
+		{
+			label:       "Anime Show",
+			mediaPrefix: "Anime Shows",
+			kind:        ranking.KindAnimeShow,
+			build:       showBuild,
+			maxBluRay:   maxShowBluRayStack,
+			maxWEB:      maxShowWEBStack,
+		},
+		{
+			label:       "Anime Movie",
+			mediaPrefix: "Anime Movies",
+			kind:        ranking.KindAnimeMovie,
+			build:       movieBuild,
+			maxBluRay:   maxMovieBluRayStack,
+			maxWEB:      maxMovieWEBStack,
+		},
+	}
 
-		higherClean := scores[higherName]
-		lowerClean := scores[lowerCleanName]
-		lowerStackRaw := scores[lowerStackName]
-
-		if higherClean-lowerClean != 70 {
-			t.Fatalf(
-				"T%d -> T%d clean gap=%d want=70",
-				higherTier,
-				lowerTier,
-				higherClean-lowerClean,
+	for _, family := range families {
+		t.Run(family.label, func(t *testing.T) {
+			blurayGroup := defineToken(
+				fmt.Sprintf(
+					"%s BluRay T2 Groups",
+					family.mediaPrefix,
+				),
 			)
-		}
 
-		// This test intentionally evaluates only the profile-rule
-		// layer. The shared Anime Dual/Multi rule is +1010 because
-		// it compensates for StreamNZB/jhin's native -1000 dubbed
-		// audio score, leaving an effective +10 preference in the
-		// complete ranking pipeline.
-		//
-		// The raw rules-layer metadata stack is therefore:
-		//
-		//   Dual/Multi          +1010
-		//   Uncensored            +10
-		//   Anime v4               +4
-		//   REPACK3                +7
-		//   Complete Season Pack  +10
-		//                         -----
-		//                         +1041
-		//
-		// The test release is an explicit S01.COMPLETE season pack,
-		// so the production Complete Season Pack Preference must
-		// participate in this maximum-stack regression.
-		//
-		// Normalize the +1000 compensation before checking the
-		// effective tier ceiling.
-		const audioNativeCompensation = 1000
+			var blurayBaseTitle string
 
-		if lowerStackRaw-lowerClean != 1041 {
-			t.Fatalf(
-				"T%d raw positive minor stack adds %d points; want 1041",
-				lowerTier,
-				lowerStackRaw-lowerClean,
+			if family.kind == ranking.KindAnimeShow {
+				blurayBaseTitle = buildShow(
+					"BluRay",
+					blurayGroup,
+					"S01E01",
+				)
+			} else {
+				blurayBaseTitle = buildMovie(
+					"BluRay",
+					blurayGroup,
+				)
+			}
+
+			blurayBase := score(scoreInput{
+				title: blurayBaseTitle,
+				kind:  family.kind,
+			})
+
+			blurayFull := score(scoreInput{
+				title: family.build(
+					"BluRay",
+					blurayGroup,
+					"Dual",
+					"Audio",
+					"Uncensored",
+					"v4",
+					"REPACK3",
+				),
+				kind:  family.kind,
+				avail: fullAvailability,
+			})
+
+			if got := blurayFull - blurayBase; got != family.maxBluRay {
+				t.Fatalf(
+					"%s effective BluRay stack=%+d, want %+d",
+					family.label,
+					got,
+					family.maxBluRay,
+				)
+			}
+
+			webGroup := defineToken(
+				fmt.Sprintf(
+					"%s WEB T6 Groups",
+					family.mediaPrefix,
+				),
 			)
-		}
 
-		lowerStackEffective :=
-			lowerStackRaw - audioNativeCompensation
+			var webBaseTitle string
 
-		if lowerStackEffective-lowerClean != 41 {
-			t.Fatalf(
-				"T%d effective positive minor stack adds %d points; want 41",
-				lowerTier,
-				lowerStackEffective-lowerClean,
-			)
-		}
+			if family.kind == ranking.KindAnimeShow {
+				webBaseTitle = buildShow(
+					"WEB-DL",
+					webGroup,
+					"S01E01",
+				)
+			} else {
+				webBaseTitle = buildMovie(
+					"WEB-DL",
+					webGroup,
+				)
+			}
 
-		if lowerStackEffective >= higherClean {
-			t.Fatalf(
-				"Anime BluRay tier ceiling inversion: effective %s=%d >= %s=%d",
-				lowerStackName,
-				lowerStackEffective,
-				higherName,
-				higherClean,
-			)
-		}
+			webBase := score(scoreInput{
+				title: webBaseTitle,
+				kind:  family.kind,
+			})
 
-		if higherClean-lowerStackEffective != 29 {
-			t.Fatalf(
-				"T%d -> T%d effective ceiling headroom=%d want=29",
-				higherTier,
-				lowerTier,
-				higherClean-lowerStackEffective,
-			)
-		}
+			webFull := score(scoreInput{
+				title: family.build(
+					"WEB-DL",
+					webGroup,
+					"CR",
+					"Dual",
+					"Audio",
+					"Uncensored",
+					"v4",
+					"REPACK3",
+				),
+				kind:  family.kind,
+				avail: fullAvailability,
+			})
+
+			if got := webFull - webBase; got != family.maxWEB {
+				t.Fatalf(
+					"%s effective WEB stack=%+d, want %+d",
+					family.label,
+					got,
+					family.maxWEB,
+				)
+			}
+
+			for lowerTier := 2; lowerTier <= 8; lowerTier++ {
+				higherTier := lowerTier - 1
+
+				higherGroup := defineToken(
+					fmt.Sprintf(
+						"%s BluRay T%d Groups",
+						family.mediaPrefix,
+						higherTier,
+					),
+				)
+
+				lowerGroup := defineToken(
+					fmt.Sprintf(
+						"%s BluRay T%d Groups",
+						family.mediaPrefix,
+						lowerTier,
+					),
+				)
+
+				var higherTitle string
+
+				if family.kind == ranking.KindAnimeShow {
+					higherTitle = buildShow(
+						"BluRay",
+						higherGroup,
+						"S01E01",
+					)
+				} else {
+					higherTitle = buildMovie(
+						"BluRay",
+						higherGroup,
+					)
+				}
+
+				higher := score(scoreInput{
+					title: higherTitle,
+					kind:  family.kind,
+				})
+
+				lower := score(scoreInput{
+					title: family.build(
+						"BluRay",
+						lowerGroup,
+						"Dual",
+						"Audio",
+						"Uncensored",
+						"v4",
+						"REPACK3",
+					),
+					kind:  family.kind,
+					avail: fullAvailability,
+				})
+
+				if lower >= higher {
+					t.Fatalf(
+						"%s BluRay T%d full rank=%d must remain "+
+							"below clean T%d rank=%d",
+						family.label,
+						lowerTier,
+						lower,
+						higherTier,
+						higher,
+					)
+				}
+			}
+
+			for lowerTier := 2; lowerTier <= 6; lowerTier++ {
+				higherTier := lowerTier - 1
+
+				higherGroup := defineToken(
+					fmt.Sprintf(
+						"%s WEB T%d Groups",
+						family.mediaPrefix,
+						higherTier,
+					),
+				)
+
+				lowerGroup := defineToken(
+					fmt.Sprintf(
+						"%s WEB T%d Groups",
+						family.mediaPrefix,
+						lowerTier,
+					),
+				)
+
+				var higherTitle string
+
+				if family.kind == ranking.KindAnimeShow {
+					higherTitle = buildShow(
+						"WEB-DL",
+						higherGroup,
+						"S01E01",
+					)
+				} else {
+					higherTitle = buildMovie(
+						"WEB-DL",
+						higherGroup,
+					)
+				}
+
+				higher := score(scoreInput{
+					title: higherTitle,
+					kind:  family.kind,
+				})
+
+				lower := score(scoreInput{
+					title: family.build(
+						"WEB-DL",
+						lowerGroup,
+						"CR",
+						"Dual",
+						"Audio",
+						"Uncensored",
+						"v4",
+						"REPACK3",
+					),
+					kind:  family.kind,
+					avail: fullAvailability,
+				})
+
+				if lower >= higher {
+					t.Fatalf(
+						"%s WEB T%d full rank=%d must remain "+
+							"below clean T%d rank=%d",
+						family.label,
+						lowerTier,
+						lower,
+						higherTier,
+						higher,
+					)
+				}
+			}
+		})
 	}
 }
 
@@ -1226,11 +1528,23 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		"Open matte",
 	)
 
-	if imax.Points != 800 || imax.Scope != "movie" {
+	const nativeEditionPoints = 100
+
+	if imax.Points != 700 || imax.Scope != "movie" {
 		t.Fatalf(
-			"IMAX policy drifted: points=%d scope=%q",
+			"IMAX stored policy drifted: points=%d scope=%q",
 			imax.Points,
 			imax.Scope,
+		)
+	}
+
+	if imax.Points+nativeEditionPoints != 800 {
+		t.Fatalf(
+			"IMAX effective policy drifted: "+
+				"stored=%d native=%d effective=%d",
+			imax.Points,
+			nativeEditionPoints,
+			imax.Points+nativeEditionPoints,
 		)
 	}
 
@@ -1353,7 +1667,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 1100,
+			wantScore: 1000,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1364,7 +1678,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 900,
+			wantScore: 800,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1401,7 +1715,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX.Open.Matte",
 			),
 			kind:      "movie",
-			wantScore: 925,
+			wantScore: 825,
 			wantRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1430,7 +1744,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: 10,
+			wantScore: 0,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1445,7 +1759,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: 50,
+			wantScore: 20,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1833,6 +2147,70 @@ func TestEffectiveAvailabilityLibraryAndAudioPolicy(t *testing.T) {
 	if got := animeMulti - animeBase; got != 10 {
 		t.Fatalf(
 			"effective Anime Multi Audio delta = %+d, want +10",
+			got,
+		)
+	}
+
+	proper := score(
+		"Movie PROPER",
+		"Example.Movie.2025.1080p.WEB-DL.H264.PROPER-GRP",
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := proper - base; got != 5 {
+		t.Fatalf(
+			"effective PROPER delta = %+d, want +5",
+			got,
+		)
+	}
+
+	repack := score(
+		"Movie REPACK",
+		"Example.Movie.2025.1080p.WEB-DL.H264.REPACK-GRP",
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := repack - base; got != 5 {
+		t.Fatalf(
+			"effective REPACK delta = %+d, want +5",
+			got,
+		)
+	}
+
+	repack2 := score(
+		"Movie REPACK2",
+		"Example.Movie.2025.1080p.WEB-DL.H264.REPACK2-GRP",
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := repack2 - base; got != 6 {
+		t.Fatalf(
+			"effective REPACK2 delta = %+d, want +6",
+			got,
+		)
+	}
+
+	repack3 := score(
+		"Movie REPACK3",
+		"Example.Movie.2025.1080p.WEB-DL.H264.REPACK3-GRP",
+		ranking.KindMovie,
+		false,
+		false,
+		triage.AvailState{},
+	)
+
+	if got := repack3 - base; got != 7 {
+		t.Fatalf(
+			"effective REPACK3 delta = %+d, want +7",
 			got,
 		)
 	}

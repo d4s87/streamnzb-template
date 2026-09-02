@@ -2931,7 +2931,7 @@
       "name": "Repack/Proper Preference",
       "productionRule": "Repack/Proper Preference",
       "when": "(proper or repack) and not (releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?(?:2|3)(?:$|[. _\\\\[\\\\]-])\")",
-      "points": 5,
+      "points": -15,
       "cases": [
         {
           "name": "plain PROPER",
@@ -3029,7 +3029,7 @@
       "name": "Repack2 Preference",
       "productionRule": "Repack2 Preference",
       "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?2(?:$|[. _\\\\[\\\\]-])\"",
-      "points": 6,
+      "points": -14,
       "cases": [
         {
           "name": "REPACK2",
@@ -3100,7 +3100,7 @@
       "name": "Repack3 Preference",
       "productionRule": "Repack3 Preference",
       "when": "repack and releaseName matches \"(?i)(?:^|[. _\\\\[\\\\]-])REPACK[. _-]?3(?:$|[. _\\\\[\\\\]-])\"",
-      "points": 7,
+      "points": -13,
       "cases": [
         {
           "name": "REPACK3",
@@ -4317,7 +4317,7 @@
       "productionRule": "IMAX",
       "scope": "movie",
       "when": "releaseName matches \"(?i)\\\\bIMAX\\\\b\"",
-      "points": 800,
+      "points": 700,
       "cases": [
         {
           "name": "movie IMAX",
@@ -4443,7 +4443,7 @@
       "productionRule": "Movie Edition Preference",
       "scope": "movie",
       "when": "edition == \"Directors Cut\" or edition == \"Extended Edition\"",
-      "points": 25,
+      "points": -75,
       "cases": [
         {
           "name": "movie Directors Cut",

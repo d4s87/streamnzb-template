@@ -285,111 +285,142 @@ def validate_anime_bluray_tier_scores(
     rules: list[dict],
 ) -> None:
     """
-    Protect the Anime BluRay release-group hierarchy from cumulative
-    minor metadata preferences.
+    Protect the Anime Movie and Anime Show release-group hierarchy
+    from cumulative portable scoring preferences.
 
-    BluRay uses a uniform 70-point tier gap:
+    Both Anime kinds use the same tier-score contract.
 
+    WEB:
         T1 500
-        T2 430
-        T3 360
-        T4 290
-        T5 220
-        T6 150
+        T2 400
+        T3 300
+        T4 200
+        T5 100
+        T6  20
+
+    BluRay:
+        T1 560
+        T2 480
+        T3 400
+        T4 320
+        T5 240
+        T6 160
         T7  80
-        T8  10
+        T8   0
 
-    The known maximum positive minor Anime Show metadata stack is +41:
-
-        Dual/Multi Audio          +10 effective
-        Uncensored                +10
-        Anime v4                   +4
-        REPACK3                    +7
-        Complete Season Pack      +10
-
-    This leaves 29 points of headroom between adjacent BluRay tiers.
+    The complete pinned StreamNZB/Jhin ranking regression establishes
+    +77 as the largest currently supported effective portable Anime
+    stack (Anime Show WEB). Every adjacent Anime tier must therefore
+    retain at least an 80-point release-group gap.
 
     Tier conditions may contain intentional classification logic such
     as the LazyRemux / UltraRemux exception, so this validation does
     not simplify or replace their expressions.
     """
 
-    expected = {
+    expected_web = {
         1: 500,
-        2: 430,
-        3: 360,
-        4: 290,
-        5: 220,
-        6: 150,
+        2: 400,
+        3: 300,
+        4: 200,
+        5: 100,
+        6: 20,
+    }
+
+    expected_bluray = {
+        1: 560,
+        2: 480,
+        3: 400,
+        4: 320,
+        5: 240,
+        6: 160,
         7: 80,
-        8: 10,
+        8: 0,
+    }
+
+    families = {
+        "WEB": expected_web,
+        "BluRay": expected_bluray,
     }
 
     for media in (
         "Anime Movies",
         "Anime Shows",
     ):
-        for tier, expected_points in expected.items():
-            name = f"{media} BluRay T{tier}"
+        for family, expected in families.items():
+            for tier, expected_points in expected.items():
+                name = f"{media} {family} T{tier}"
 
-            matches = [
-                rule
-                for rule in rules
-                if rule.get("name") == name
-            ]
+                matches = [
+                    rule
+                    for rule in rules
+                    if rule.get("name") == name
+                ]
 
-            if len(matches) != 1:
-                raise AssertionError(
-                    f"Expected exactly one {name!r} rule, "
-                    f"found {len(matches)}"
+                if len(matches) != 1:
+                    raise AssertionError(
+                        f"Expected exactly one {name!r} rule, "
+                        f"found {len(matches)}"
+                    )
+
+                rule = matches[0]
+
+                if rule.get("points") != expected_points:
+                    raise AssertionError(
+                        f"{name} must score "
+                        f"{expected_points:+d}; found "
+                        f"{rule.get('points')!r}"
+                    )
+
+                when = rule.get("when")
+
+                if not isinstance(when, str) or not when.strip():
+                    raise AssertionError(
+                        f"{name} must have a valid condition"
+                    )
+
+                required_match = (
+                    f'matched("{media} {family} '
+                    f'T{tier} Groups")'
                 )
 
-            rule = matches[0]
+                if required_match not in when:
+                    raise AssertionError(
+                        f"{name} must reference "
+                        f"{required_match!r}"
+                    )
 
-            if rule.get("points") != expected_points:
-                raise AssertionError(
-                    f"{name} must score "
-                    f"{expected_points:+d}; found "
-                    f"{rule.get('points')!r}"
-                )
+    min_anime_tier_gap = 80
+    max_effective_anime_stack = 77
 
-            when = rule.get("when")
+    for family, expected in families.items():
+        ordered = [
+            expected[tier]
+            for tier in sorted(expected)
+        ]
 
-            if not isinstance(when, str) or not when.strip():
-                raise AssertionError(
-                    f"{name} must have a valid condition"
-                )
-
-            required_match = (
-                f'matched("{media} BluRay T{tier} Groups")'
+        gaps = [
+            higher - lower
+            for higher, lower in zip(
+                ordered,
+                ordered[1:],
             )
+        ]
 
-            if required_match not in when:
-                raise AssertionError(
-                    f"{name} must reference "
-                    f"{required_match!r}"
-                )
-
-    gaps = [
-        expected[tier] - expected[tier + 1]
-        for tier in range(1, 8)
-    ]
-
-    if gaps != [70] * 7:
-        raise AssertionError(
-            "Anime BluRay tier ladder must retain uniform "
-            f"70-point gaps; found {gaps}"
-        )
-
-    max_positive_minor_stack = 10 + 10 + 4 + 7 + 10
-
-    for gap in gaps:
-        if gap <= max_positive_minor_stack:
+        if min(gaps) < min_anime_tier_gap:
             raise AssertionError(
-                "Anime BluRay tier gap is not safely above "
-                f"the +{max_positive_minor_stack} positive "
-                "minor-metadata ceiling"
+                f"Anime {family} minimum adjacent tier gap "
+                f"must be >= {min_anime_tier_gap}; found {gaps}"
             )
+
+        for gap in gaps:
+            if gap <= max_effective_anime_stack:
+                raise AssertionError(
+                    f"Anime {family} tier gap {gap} does not "
+                    f"dominate the +{max_effective_anime_stack} "
+                    "effective portable scoring ceiling"
+                )
+
 
 def validate_anime_lq(
     rules: list[dict],
@@ -752,7 +783,8 @@ def validate_repack_proper_preferences(rules):
 
     expected = {
         "Repack/Proper Preference": {
-            "points": 5,
+            "points": -15,
+            "effective_points": 5,
             "when": (
                 '(proper or repack) and not '
                 '(releaseName matches '
@@ -761,7 +793,8 @@ def validate_repack_proper_preferences(rules):
             ),
         },
         "Repack2 Preference": {
-            "points": 6,
+            "points": -14,
+            "effective_points": 6,
             "when": (
                 'repack and releaseName matches '
                 '"(?i)(?:^|[. _\\\\[\\\\]-])REPACK'
@@ -769,7 +802,8 @@ def validate_repack_proper_preferences(rules):
             ),
         },
         "Repack3 Preference": {
-            "points": 7,
+            "points": -13,
+            "effective_points": 7,
             "when": (
                 'repack and releaseName matches '
                 '"(?i)(?:^|[. _\\\\[\\\\]-])REPACK'
@@ -795,7 +829,17 @@ def validate_repack_proper_preferences(rules):
 
         if rule.get("points") != spec["points"]:
             raise AssertionError(
-                f"{name} must score exactly +{spec['points']}"
+                f"{name} rule-layer points drifted: "
+                f"{rule.get('points')!r}; expected "
+                f"{spec['points']:+d} to compensate Jhin native +20 "
+                f"and preserve effective {spec['effective_points']:+d}"
+            )
+
+        if spec["points"] + 20 != spec["effective_points"]:
+            raise AssertionError(
+                f"{name} compensation contract is internally invalid: "
+                f"{spec['points']:+d} + native +20 != "
+                f"{spec['effective_points']:+d}"
             )
 
         if rule.get("when") != spec["when"]:
@@ -1168,7 +1212,7 @@ def validate_movie_edition_preferences(
     expected = {
         "IMAX": {
             "scope": "movie",
-            "points": 800,
+            "points": 700,
             "when": 'releaseName matches "(?i)\\\\bIMAX\\\\b"',
         },
         "Open matte": {
@@ -1181,7 +1225,7 @@ def validate_movie_edition_preferences(
         },
         "Movie Edition Preference": {
             "scope": "movie",
-            "points": 25,
+            "points": -75,
             "when": (
                 'edition == "Directors Cut" or '
                 'edition == "Extended Edition"'
@@ -1240,11 +1284,40 @@ def validate_movie_edition_preferences(
                 f"{name} must not depend on a Define"
             )
 
+    native_edition_points = 100
+
+    imax_effective_points = (
+        resolved["IMAX"]["points"] + native_edition_points
+    )
+    if imax_effective_points != 800:
+        raise AssertionError(
+            "IMAX effective score must remain +800 after Jhin "
+            f"native +100 edition ranking; found {imax_effective_points}"
+        )
+
+    movie_edition_effective_points = (
+        resolved["Movie Edition Preference"]["points"]
+        + native_edition_points
+    )
+    if movie_edition_effective_points != 25:
+        raise AssertionError(
+            "Movie Edition Preference effective score must remain +25 "
+            "after Jhin native +100 edition ranking; found "
+            f"{movie_edition_effective_points}"
+        )
+
+    open_matte_effective_points = resolved["Open matte"]["points"]
+    if open_matte_effective_points != 25:
+        raise AssertionError(
+            "Open matte effective score must remain +25; found "
+            f"{open_matte_effective_points}"
+        )
+
     movie_tier_gap = 200
 
     minor_edition_stack = (
-        resolved["Open matte"]["points"]
-        + resolved["Movie Edition Preference"]["points"]
+        open_matte_effective_points
+        + movie_edition_effective_points
     )
 
     if minor_edition_stack >= movie_tier_gap:

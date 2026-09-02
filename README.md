@@ -171,25 +171,29 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 V5.0 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
 
-WEB release groups are scored as follows:
+WEB release groups are scored as follows for both Anime Movies and Anime Shows:
 - T1: +500
 - T2: +400
 - T3: +300
 - T4: +200
 - T5: +100
-- T6: +50
+- T6: +20
 
-BluRay release groups use a wider 70-point tier ladder:
-- T1: +500
-- T2: +430
-- T3: +360
-- T4: +290
-- T5: +220
-- T6: +150
+BluRay release groups use a synchronized 80-point tier ladder for both Anime Movies and Anime Shows:
+- T1: +560
+- T2: +480
+- T3: +400
+- T4: +320
+- T5: +240
+- T6: +160
 - T7: +80
-- T8: +10
+- T8: +0
 
-The wider BluRay gaps protect the release-group hierarchy from cumulative minor metadata preferences. The current maximum known positive Anime metadata stack is `+41` (`Dual/Multi Audio +10`, `Uncensored +10`, `v4 +4`, `REPACK3 +7`, and Complete Season Pack `+10`), leaving `29` points of headroom below every next-higher clean BluRay tier. Anime WEB scores are intentionally unchanged.
+These ladders are intentionally spaced around the **effective** score seen by the complete StreamNZB/Jhin ranking pipeline rather than only the raw DraCuLa rule values.
+
+The largest ordinary positive Anime stack currently proven by the pinned real engine is `+77` for Anime Show WEB results. That ceiling includes effective Dual/Multi Audio, corrected-release, Anime revision, Uncensored, Complete Season Pack, availability, and WEB service preferences where applicable. Anime Movies have a lower maximum because Complete Season Pack does not apply.
+
+The minimum adjacent Anime release-group gap is therefore `80`, leaving at least `3` points of headroom even for the maximum ordinary lower-tier stack. Permanent real-engine regression coverage verifies every adjacent Anime Movie and Anime Show WEB/BluRay tier so a fully decorated lower tier remains below the next-higher clean tier.
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
@@ -238,11 +242,12 @@ The rule is deliberately narrow. The following remain neutral:
 - Movies
 - Anime Movies
 
-The preference is a tie-breaker rather than a quality override. For Anime
-Shows, adding the Complete Season Pack preference raises the maximum known
-effective positive minor-metadata stack from `+31` to `+41`. The 70-point
-Anime BluRay tier gaps therefore still leave `29` points of headroom below
-the next-higher clean tier.
+The preference is a tie-breaker rather than a quality override. It contributes
+`+10` to the effective Anime Show metadata stack and is included in the
+scoring-ceiling audit. With all ordinary positive Anime Show metadata that can
+legitimately combine, the pinned real engine reaches a maximum `+77` stack.
+The synchronized Anime WEB/BluRay ladders use a minimum adjacent gap of `80`,
+so even that maximum lower-tier stack remains below the next-higher clean tier.
 
 Real-engine validation against the pinned StreamNZB/Jhin v0.6 runtime
 confirms the `seasonPack` and `complete` facts, their combined condition,
@@ -261,31 +266,43 @@ additional upstream season-completion or episode-count request metadata.
 Movie-version preferences are explicitly limited to **Movies** so edition
 markers cannot alter Show or Anime ranking.
 
-Current Movie edition scoring:
+Current **effective** Movie edition scoring:
 
 - **IMAX:** `+800`
 - **Open Matte:** `+25`
 - **Director's Cut / Extended Edition:** one shared, non-stacking `+25`
 
+Jhin v0.6 contributes a native `+100` rank when its parser recognizes an
+edition. DraCuLa therefore stores compensated rule values for parser-backed
+Movie editions so the final effective policy remains unchanged:
+
+- **IMAX:** stored `+700` + native `+100` = effective `+800`
+- **Director's Cut / Extended Edition:** stored `-75` + native `+100` = effective `+25`
+- **Open Matte:** stored/effective `+25`; it is release-name matched and does not receive the native parsed-edition rank
+
 IMAX is intentionally a strong Movie-version preference. It may outrank a
 higher release-group tier when the user is choosing between otherwise
 eligible Movie releases; this is deliberate rather than a tier-ceiling bug.
 
-**IMAX Enhanced does not receive a second bonus.** Pinned Jhin v0.6 parses
-`IMAX Enhanced` as edition `IMAX`, and the existing bounded IMAX production
-rule already matches the release-name marker. It therefore receives the
-existing `+800` IMAX preference rather than stacking to `+1600`.
+The bounded IMAX rule also matches `IMAX Enhanced` without adding a second
+DraCuLa IMAX rule-layer bonus. Compatibility fixtures protect that matching
+and non-stacking behavior.
 
 Open Matte and Director's Cut / Extended Edition are deliberately much
-smaller. Director's Cut and Extended Edition use StreamNZB/Jhin's parsed
-`edition` metadata and share one `+25` rule, so alternate spellings such as
-`Directors Cut`, `Director's Cut`, `Extended Edition`, and `Extended Cut`
-cannot stack with each other.
+smaller. Director's Cut and Extended Edition share one parser-backed rule, so
+alternate spellings such as `Directors Cut`, `Director's Cut`,
+`Extended Edition`, and `Extended Cut` cannot stack with each other.
 
-The maximum low-weight Movie edition stack is therefore `+50` when Open
-Matte and the shared Director's Cut / Extended Edition preference both
-apply. This remains safely below the `200`-point Movie release-group tier
-gap.
+The maximum ordinary low-weight Movie edition stack is therefore an effective
+`+50` when Open Matte and the shared Director's Cut / Extended Edition
+preference both apply.
+
+The full scoring-ceiling audit also combines that `+50` edition stack with
+effective Dual/Multi Audio `+10`, corrected release up to `+7`, and positive
+availability up to `+30`. The resulting maximum ordinary Movie stack is
+`+97`, leaving `103` points of headroom inside the `200`-point Movie
+release-group tier gap. Equivalent Show WEB/Remux tests reach only `+47`,
+leaving `153` points of headroom.
 
 Criterion Collection, Final Cut, and generic Special Edition currently
 remain score-neutral. The pinned Jhin v0.6 parser does not classify those
@@ -293,15 +310,16 @@ forms as edition metadata. DraCuLa deliberately avoids broad raw release-name
 fallbacks that could confuse title text or loose markers with canonical
 edition metadata.
 
-Pinned real-engine regression coverage protects:
+Pinned compatibility and real-engine regression coverage protects:
 
-- IMAX and IMAX Enhanced behavior
+- IMAX matching, including IMAX Enhanced fixture behavior
+- effective IMAX `+800` scoring after native-edition compensation
 - Movie-only scope
 - Open Matte matching
-- Director's Cut / Extended Edition parsing and scoring
+- effective Director's Cut / Extended Edition `+25` scoring after native-edition compensation
 - non-stacking alternate-cut behavior
 - neutral Criterion / Final Cut / Special Edition behavior
-- representative Movie release-tier ceiling interactions
+- full non-Anime Movie WEB/Remux ceiling interactions
 
 
 ## Corrected Release Preference
@@ -314,9 +332,17 @@ The profile gives legitimate corrected releases a small global scoring preferenc
 
 These bonuses are deliberately small tie-breakers. They do not replace the profile's source, quality, release-group, SeaDex, or availability priorities.
 
-The rules are non-stacking: REPACK2 and REPACK3 receive only their numbered score rather than also receiving the base PROPER / REPACK bonus.
+The rules are non-stacking: REPACK2 and REPACK3 receive only their numbered effective score rather than also receiving the base PROPER / REPACK preference.
+
+Jhin v0.6 already contributes a native `+20` rank to parsed PROPER/REPACK releases. DraCuLa compensates that native score in the stored profile rules so the complete ranking pipeline preserves the intended small tie-breakers:
+
+- PROPER / REPACK: stored `-15` + native `+20` = effective `+5`
+- REPACK2: stored `-14` + native `+20` = effective `+6`
+- REPACK3: stored `-13` + native `+20` = effective `+7`
 
 Base PROPER and REPACK detection uses StreamNZB's native `proper` and `repack` parser traits. Narrow release-name matching distinguishes REPACK2 and REPACK3 because the native `repack` trait intentionally classifies those numbered forms as repacks as well. `REAL.PROPER` and `REAL.REPACK` remain base corrected releases, while `REAL.REPACK2` and `REAL.REPACK3` retain their numbered preference.
+
+Pinned full-ranking regression coverage verifies the final effective `+5/+6/+7` contract rather than only the compensated stored rule values.
 
 The preference applies globally, including Anime, and does not require additional Vidhin-backed Define rules.
 
@@ -359,7 +385,7 @@ The profile now scores only two positive availability signals:
 - **Alive on our backbone:** `+20`
 - **Recently confirmed:** `+10`
 
-When both apply, the maximum positive availability contribution is therefore `+30`. This remains below the `70`-point minimum gap between adjacent Anime BluRay release-group tiers, so availability alone cannot promote a lower Anime BluRay tier above the next-higher clean tier.
+When both apply, the maximum positive availability contribution is therefore `+30`. The scoring-ceiling audit includes that full availability contribution inside the maximum ordinary metadata stacks: Anime uses a minimum adjacent tier gap of `80`, while non-Anime Movie/Show release-group families retain `200`-point gaps. Availability alone therefore remains far below either hierarchy.
 
 Indexer freshness and grab-count metadata remain visible through the formatter but no longer receive separate profile scoring bonuses. The former `Very fresh NZB`, `Recent NZB`, `Popular NZB`, `Very popular NZB`, and `Highly popular NZB` score rules were removed so informational metadata does not compete with release-group quality.
 

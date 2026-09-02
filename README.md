@@ -105,7 +105,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **111** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **112** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -117,7 +117,7 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **107** rules. It is the Samsung profile minus exactly these four device-specific rules:
+The neutral artifact contains **108** rules. It is the Samsung profile minus exactly these four device-specific rules:
 
 - `DV without HDR fallback`
 - `Reduce Atmos`

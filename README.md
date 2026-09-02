@@ -1,9 +1,9 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V5.0**
+**Current version: V5.1**
 
-V5.0 introduced generated profile variants built from one canonical ordered rule registry. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the four Samsung/device-specific playback rules. Both profiles share the same Core policy, presentation classifications, Define Library, and formatter architecture.
+V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.16.1 / Jhin 0.6.1 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the four Samsung/device-specific playback rules. Both profiles share the same Core policy, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -135,7 +135,7 @@ Both profile variants require the shared Define Library described below. Import 
 
 ## Define Library
 
-V5.0 uses one shared StreamNZB Define Library for both profile variants and their Vidhin-backed release-group classifications.
+V5.1 continues to use one shared StreamNZB Define Library for both profile variants and their Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
@@ -236,7 +236,7 @@ The Samsung QN90A profile retains one device-specific dynamic-range compatibilit
 
 ## Anime Scoring
 
-V5.0 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
+V5.1 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
 
 WEB release groups are scored as follows for both Anime Movies and Anime Shows:
 - T1: +500

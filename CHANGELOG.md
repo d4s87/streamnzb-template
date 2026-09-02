@@ -1,8 +1,12 @@
 # Changelog
 
-## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.0...HEAD)
+## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.1...HEAD)
 
 Changes in this section are under development and are not part of the latest stable release.
+
+## [5.1](https://github.com/d4s87/streamnzb-template/compare/v5.0...v5.1) (2026-09-02)
+
+V5.1 hardens DraCuLa's ranking and formatter behavior around the released StreamNZB 5.16.1 / Jhin 0.6.1 baseline. It adds candidate-relative Adaptive Low-Score Filtering, restores release-group tier authority over native display/edition/corrected-release scoring, adds bounded HDR10+ preference and Vidhin-backed Obfuscated penalties, and improves formatter language/subtitle presentation with permanent real-engine regression coverage.
 
 ### Features
 

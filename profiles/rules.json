@@ -43,6 +43,14 @@
       }
     },
     {
+      "owner": "core",
+      "rule": {
+        "name": "Prefer HDR10 Plus",
+        "points": 25,
+        "when": "not isAnime and any(hdr, # == \"HDR10+\")"
+      }
+    },
+    {
       "owner": "device:samsung-qn90a",
       "rule": {
         "name": "Reduce Atmos",

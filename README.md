@@ -105,7 +105,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **110** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **111** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -117,14 +117,14 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **106** rules. It is the Samsung profile minus exactly these four device-specific rules:
+The neutral artifact contains **107** rules. It is the Samsung profile minus exactly these four device-specific rules:
 
 - `DV without HDR fallback`
 - `Reduce Atmos`
 - `Reduce TrueHD bonus`
 - `Reduce DTS Lossless bonus`
 
-`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 106 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 107 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -170,11 +170,13 @@ After a library update is published, use **Refresh** in StreamNZB to review and 
 
 DraCuLa treats display-dependent dynamic-range and bit-depth metadata as classification and compatibility information rather than release-quality authority.
 
-The pinned Jhin v0.6 engine natively adds `+3000` for Dolby Vision, `+2100` for HDR10+, `+2000` for HDR, and `+100` for parsed 10-bit metadata. The shared Portable Core compensates those native ranks with `-3000`, `-2100`, `-2000`, and `-100` respectively. As a result, SDR, HDR, HDR10, HDR10+, Dolby Vision, and parsed 10-bit metadata are score-neutral before any explicit device policy is applied.
+The pinned Jhin v0.6 engine natively adds `+3000` for Dolby Vision, `+2100` for HDR10+, `+2000` for HDR, and `+100` for parsed 10-bit metadata. The shared Portable Core first compensates those native ranks with `-3000`, `-2100`, `-2000`, and `-100` respectively so Jhin's built-in display-format scoring cannot override DraCuLa release-group tier authority.
 
-This prevents display-format metadata from overriding DraCuLa's release-group hierarchy. Permanent pinned real-engine regressions verify that native 10-bit ranking cannot erase or invert adjacent Anime WEB tiers and that HDR10 cannot allow a lower Movie WEB tier to outrank a higher clean tier.
+After that compensation, DraCuLa applies one explicit bounded format preference: non-Anime HDR10+ receives `+25`. HDR, HDR10, Dolby Vision, parsed 10-bit, and Anime HDR10+ remain score-neutral. The `+25` HDR10+ preference is shared by both the Samsung and hardware-neutral profiles because it is a release-format preference rather than a Samsung-specific compatibility rule.
 
-The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible and rank according to the fallback-neutral shared Core policy. The hardware-neutral profile performs no Dolby Vision compatibility rejection.
+The non-Anime-only scope is intentional. The minimum adjacent Anime release-group gap is `80`, while the largest ordinary lower-tier Anime Show WEB metadata stack proven by the pinned engine is `+77`, leaving only `3` points of guaranteed headroom. A meaningful HDR10+ bonus would therefore erase or invert Anime tier authority. Permanent real-engine regressions keep Anime HDR10+ neutral while verifying that a fully decorated lower Movie WEB tier with HDR10+ `+25` still remains `78` points below the next-higher clean tier.
+
+The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible, and Dolby Vision releases with HDR10+ fallback receive the same non-Anime `+25` HDR10+ preference. The hardware-neutral profile performs no Dolby Vision compatibility rejection; Dolby Vision-only remains eligible and score-neutral.
 
 ## Anime Scoring
 

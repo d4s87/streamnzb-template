@@ -6,6 +6,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **testing:** extend the permanent pinned real-StreamNZB/Jhin dynamic-range regression for the bounded non-Anime HDR10+ preference, Dolby Vision HDR10+ fallback behavior, Anime HDR10+ neutrality, and release-group ceiling preservation.
 - **testing:** add permanent pinned real-StreamNZB/Jhin coverage for Portable Core dynamic-range and bit-depth compensation, Samsung Dolby Vision fallback behavior, neutral-profile Dolby Vision eligibility, Anime WEB tier authority against native 10-bit scoring, and Movie WEB tier authority against HDR10 scoring.
 - **testing:** add permanent pinned real-StreamNZB/Jhin scoring-ceiling coverage for Anime Movie/Show tier authority, effective corrected-release scores, effective Movie edition scores, and native-score compensation behavior.
 - **profile:** add Vidhin-backed Obfuscated release classification for Movies/Anime Movies and Series/Anime Shows with a `-1` soft penalty, keeping matching releases eligible as tie-breaking fallbacks rather than rejecting them.
@@ -17,6 +18,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **scoring:** add a bounded Portable Core `+25` preference for non-Anime HDR10+ releases after compensating Jhin v0.6's native `+2100` HDR10+ rank. HDR/HDR10 remain neutral, while the smaller bonus acts as a format tie-breaker without overriding Movie/Series release-group tier authority.
+- **anime:** keep HDR10+ score-neutral for Anime. The proven maximum ordinary Anime Show WEB metadata stack remains `+77` against the minimum adjacent tier gap of `80`, so adding a meaningful HDR10+ bonus would consume the remaining `3` points of guaranteed tier headroom.
+- **profile:** increase the Samsung profile from 110 to 111 rules and the hardware-neutral profile from 106 to 107 rules. Canonical ownership becomes 103 Core, 4 presentation, and 4 Samsung device rules.
 - **scoring:** neutralize Jhin v0.6's native display-dependent ranks in the shared Portable Core: Dolby Vision `+3000`, HDR10+ `+2100`, HDR `+2000`, and parsed 10-bit `+100` are compensated by `-3000`, `-2100`, `-2000`, and `-100`. Dynamic-range and bit-depth metadata therefore remain classification/compatibility facts instead of overriding DraCuLa release-group tier authority.
 - **architecture:** move `Neutralize Dolby Vision` from the Samsung device layer into Portable Core. The Samsung profile now retains four device-only playback rules, including rejection of Dolby Vision without HDR fallback; the neutral profile applies no Dolby Vision compatibility rejection.
 - **profile:** increase the Samsung profile from 107 to 110 rules and the hardware-neutral profile from 102 to 106 rules. Canonical ownership becomes 102 Core, 4 presentation, and 4 Samsung device rules.

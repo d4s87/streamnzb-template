@@ -199,9 +199,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 106 {
+	if len(neutralRules) != 107 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 106",
+			"neutral profile contains %d rules; want 107",
 			len(neutralRules),
 		)
 	}
@@ -2890,6 +2890,217 @@ func TestCandidateRelativePruneCompatibility(t *testing.T) {
 	}
 }
 
+// TestHDR10PlusTierCeilings protects the bounded +25 non-Anime
+// HDR10+ preference against DraCuLa's ordinary Movie and Series
+// release-group tier authority.
+//
+// The tested maximum lower-tier stacks are:
+//
+//	Movie: HDR10+ +25, DUBBED +10, REPACK3 +7,
+//	       Open Matte +25, Director's Cut +25,
+//	       availability +30 = +122.
+//
+//	Series: HDR10+ +25, DUBBED +10, REPACK3 +7,
+//	        availability +30 = +72.
+//
+// Against the existing 200-point adjacent tier gaps, these must
+// preserve +78 Movie and +128 Series headroom.
+func TestHDR10PlusTierCeilings(t *testing.T) {
+	data, err := os.ReadFile(
+		"../../generated/vidhin-defines.json",
+	)
+	if err != nil {
+		t.Fatalf("read generated Vidhin data: %v", err)
+	}
+
+	var generated struct {
+		Defines map[string]struct {
+			Tokens []string `json:"tokens"`
+		} `json:"defines"`
+	}
+
+	if err := json.Unmarshal(data, &generated); err != nil {
+		t.Fatalf("decode generated Vidhin data: %v", err)
+	}
+
+	defineToken := func(name string) string {
+		t.Helper()
+
+		entry, ok := generated.Defines[name]
+		if !ok {
+			t.Fatalf("missing generated Define %q", name)
+		}
+
+		if len(entry.Tokens) == 0 {
+			t.Fatalf("generated Define %q has no tokens", name)
+		}
+
+		tokens := append([]string(nil), entry.Tokens...)
+		slices.Sort(tokens)
+
+		return tokens[0]
+	}
+
+	movieT1 := defineToken("Movies WEB T1 Groups")
+	movieT2 := defineToken("Movies WEB T2 Groups")
+	showT1 := defineToken("Shows WEB T1 Groups")
+	showT2 := defineToken("Shows WEB T2 Groups")
+
+	fullAvailability := triage.AvailState{
+		Status:       triage.AvailAvailable,
+		OnMyBackbone: true,
+		CheckedAt:    time.Now().Add(-3 * 24 * time.Hour),
+	}
+
+	type profileCase struct {
+		name  string
+		rules []config.RuleConfig
+	}
+
+	profiles := []profileCase{
+		{
+			name:  "Samsung",
+			rules: loadProductionRules(t),
+		},
+		{
+			name:  "Neutral",
+			rules: loadNeutralRules(t),
+		},
+	}
+
+	for _, pc := range profiles {
+		pc := pc
+
+		t.Run(pc.name, func(t *testing.T) {
+			profile, err := ranking.Compile(
+				config.FilterProfileConfig{
+					Name:   "HDR10+ tier-ceiling regression",
+					Preset: "4k",
+					Rules:  pc.rules,
+				},
+				loadDefineLibrary(t)...,
+			)
+			if err != nil {
+				t.Fatalf(
+					"compile %s profile: %v",
+					pc.name,
+					err,
+				)
+			}
+
+			score := func(
+				name string,
+				title string,
+				kind string,
+				avail triage.AvailState,
+			) int {
+				t.Helper()
+
+				request := ranking.Request{
+					Kind:  kind,
+					Title: "Example",
+				}
+
+				if kind == ranking.KindSeries {
+					request.Season = 1
+					request.Episode = 1
+				}
+
+				candidate := triage.Candidate{
+					Release: &release.Release{
+						Title: title,
+					},
+				}
+
+				candidate.Verdict.Avail = avail
+
+				kept, rejected := profile.ApplyWithRejected(
+					request,
+					[]triage.Candidate{candidate},
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 {
+					t.Fatalf(
+						"%s unexpectedly rejected: %+v",
+						name,
+						rejected,
+					)
+				}
+
+				if len(kept) != 1 {
+					t.Fatalf(
+						"%s kept=%d; want 1",
+						name,
+						len(kept),
+					)
+				}
+
+				return kept[0].Torrent.Rank
+			}
+
+			movieHigher := score(
+				"Movie WEB T1 clean HDR10",
+				fmt.Sprintf(
+					"Example.Movie.2026.1080p.WEB-DL."+
+						"x264.HDR10-%s",
+					movieT1,
+				),
+				ranking.KindMovie,
+				triage.AvailState{},
+			)
+
+			movieLower := score(
+				"Movie WEB T2 fully decorated HDR10+",
+				fmt.Sprintf(
+					"Example.Movie.2026.1080p.WEB-DL.x264."+
+						"HDR10Plus.DUBBED.REPACK3."+
+						"Open.Matte.Directors.Cut-%s",
+					movieT2,
+				),
+				ranking.KindMovie,
+				fullAvailability,
+			)
+
+			if headroom := movieHigher - movieLower; headroom != 78 {
+				t.Fatalf(
+					"Movie T1/T2 HDR10+ headroom=%d; want 78",
+					headroom,
+				)
+			}
+
+			showHigher := score(
+				"Show WEB T1 clean HDR10",
+				fmt.Sprintf(
+					"Example.Show.S01E01.1080p.WEB-DL."+
+						"x264.HDR10-%s",
+					showT1,
+				),
+				ranking.KindSeries,
+				triage.AvailState{},
+			)
+
+			showLower := score(
+				"Show WEB T2 fully decorated HDR10+",
+				fmt.Sprintf(
+					"Example.Show.S01E01.1080p.WEB-DL.x264."+
+						"HDR10Plus.DUBBED.REPACK3-%s",
+					showT2,
+				),
+				ranking.KindSeries,
+				fullAvailability,
+			)
+
+			if headroom := showHigher - showLower; headroom != 128 {
+				t.Fatalf(
+					"Show T1/T2 HDR10+ headroom=%d; want 128",
+					headroom,
+				)
+			}
+		})
+	}
+}
+
 func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 	type profileCase struct {
 		name    string
@@ -3094,7 +3305,7 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 				false,
 			)
 
-			// Portable Core intentionally neutralizes Jhin v0.6's
+			// Portable Core intentionally compensates Jhin v0.6's
 			// native ranking authority for display-dependent dynamic
 			// range and parsed 10-bit metadata:
 			//
@@ -3103,20 +3314,39 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 			//   HDR          +2000
 			//   parsed 10bit  +100
 			//
-			// These remain parsed/presentational facts, but must not
-			// overtake DraCuLa release-group tier authority.
+			// After compensation, non-Anime HDR10+ receives DraCuLa's
+			// explicit bounded +25 preference. Anime HDR10+ remains
+			// score-neutral so the 80-point Anime tier floor continues
+			// to dominate the proven +77 ordinary metadata ceiling.
 			assertSameRank("explicit 10bit", sdr, explicit10)
 			assertSameRank("Hi10P", sdr, hi10p)
 			assertSameRank("HDR", sdr, hdr)
 			assertSameRank("HDR10", sdr, hdr10)
-			assertSameRank("HDR10 Plus", sdr, hdr10Plus)
+
+			if hdr10Plus.rejected {
+				t.Fatal("HDR10 Plus unexpectedly rejected")
+			}
+
+			if gap := hdr10Plus.rank - sdr.rank; gap != 25 {
+				t.Fatalf(
+					"HDR10 Plus delta=%+d; want +25",
+					gap,
+				)
+			}
+
 			assertSameRank("Dolby Vision + HDR", sdr, dvHDR)
 			assertSameRank("Dolby Vision + HDR10", sdr, dvHDR10)
-			assertSameRank(
-				"Dolby Vision + HDR10 Plus",
-				sdr,
-				dvHDR10Plus,
-			)
+
+			if dvHDR10Plus.rejected {
+				t.Fatal("Dolby Vision + HDR10 Plus unexpectedly rejected")
+			}
+
+			if gap := dvHDR10Plus.rank - sdr.rank; gap != 25 {
+				t.Fatalf(
+					"Dolby Vision + HDR10 Plus delta=%+d; want +25",
+					gap,
+				)
+			}
 
 			if pc.samsung {
 				if !dv.rejected {
@@ -3220,6 +3450,26 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 					gap,
 				)
 			}
+
+			animeHDR10 := score(
+				"Anime HDR10",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264.HDR10-GRP",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			animeHDR10Plus := score(
+				"Anime HDR10 Plus",
+				"Example.Anime.S01E01.1080p.WEB-DL.x264.HDR10Plus-GRP",
+				ranking.KindAnimeShow,
+				true,
+			)
+
+			assertSameRank(
+				"Anime HDR10 Plus",
+				animeHDR10,
+				animeHDR10Plus,
+			)
 		})
 	}
 }

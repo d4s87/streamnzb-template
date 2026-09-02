@@ -3766,3 +3766,84 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 		})
 	}
 }
+
+// TestLanguageSubtitleParserRegression pins the Jhin v0.6.1 language/subtitle
+// surface consumed by the DraCuLa formatter. Languages and subtitle presence
+// are intentionally separate: Jhin exports parsed language metadata through
+// Languages and only a boolean Subbed flag, not subtitle-language identities.
+func TestLanguageSubtitleParserRegression(t *testing.T) {
+	cases := []struct {
+		name          string
+		release       string
+		wantLanguages []string
+		wantSubbed    bool
+		wantDubbed    bool
+		wantHardcoded bool
+	}{
+		{
+			name:          "languages only",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.Japanese.English.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en", "ja"},
+		},
+		{
+			name:          "subbed",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.Japanese.English.SUBBED.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en", "ja"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "dubbed and subbed",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.Japanese.English.DUBBED.SUBBED.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en", "ja"},
+			wantSubbed:    true,
+			wantDubbed:    true,
+		},
+		{
+			name:          "hardcoded subtitles",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.Japanese.English.HARDCODED.SUBS.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en", "ja"},
+			wantSubbed:    true,
+			wantHardcoded: true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			got := jhin.Parse(tc.release)
+
+			if !slices.Equal(got.Languages, tc.wantLanguages) {
+				t.Errorf(
+					"Languages = %v, want %v",
+					got.Languages,
+					tc.wantLanguages,
+				)
+			}
+
+			if got.Subbed != tc.wantSubbed {
+				t.Errorf(
+					"Subbed = %v, want %v",
+					got.Subbed,
+					tc.wantSubbed,
+				)
+			}
+
+			if got.Dubbed != tc.wantDubbed {
+				t.Errorf(
+					"Dubbed = %v, want %v",
+					got.Dubbed,
+					tc.wantDubbed,
+				)
+			}
+
+			if got.Hardcoded != tc.wantHardcoded {
+				t.Errorf(
+					"Hardcoded = %v, want %v",
+					got.Hardcoded,
+					tc.wantHardcoded,
+				)
+			}
+		})
+	}
+}

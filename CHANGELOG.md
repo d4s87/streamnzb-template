@@ -6,6 +6,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **formatter:** display parsed language metadata together with Jhin's subtitle-presence flag, while rendering subtitle-only results cleanly as `⛿ sᴜʙ` instead of a leading ` · sᴜʙ` separator.
+- **testing:** add permanent Jhin 0.6.1 language/subtitle parser regressions plus pinned real-StreamNZB formatter coverage for languages without subtitles, languages with subtitles, and subtitle-only results.
 - **profile:** add Adaptive Low-Score Filtering as a candidate-relative post-scoring prune for Movie/Show LQ and Bad Dual releases. A non-Library candidate is removed only when at least six alternatives finish at least 5000 points above that candidate's own final score, preserving the same class of release as a fallback in sparse result sets.
 - **testing:** add permanent pinned real-StreamNZB 5.16.1 regression coverage for Adaptive Low-Score Filtering, including dense-tail pruning and sparse-result fallback behavior through `finalScore` / `current.finalScore`.
 - **testing:** add permanent StreamNZB 5.16.1 / Jhin 0.6.1 parser regression coverage for issue #251: canonical `IMAX.Enhanced` and `IMAX-Enhanced` remain parsed as IMAX editions without being classified as upscaled, bare `Enhanced` remains neutral, and genuine `AI.Enhanced` / `Upscaled` markers remain classified as upscaled.
@@ -21,6 +23,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **formatter:** keep subtitle-language identity deliberately unresolved because StreamNZB 5.16.1 / Jhin 0.6.1 exposes parsed `Languages` plus `Subbed`, but no separate subtitle-language list. DraCuLa therefore reports subtitle presence without guessing forms such as `SUB (EN · DE)`.
 - **compatibility:** advance the pinned StreamNZB runtime from 5.16.0 to released **5.16.1** commit `0429d50b347000325fa40ecf8aeb670335d23260` and align the compatibility harness with **Jhin 0.6.1**. The released baseline passes the full DraCuLa profile, formatter, ranking, tier, availability, dynamic-range, and candidate-relative prune regressions.
 - **compatibility:** mark the prior IMAX Enhanced parser limitation as resolved upstream by StreamNZB issue `#251` / commit `1c1db3ff81f897ab7adb8664f42c8b524d272a80`. Canonical IMAX Enhanced releases are no longer misclassified as upscaled, while genuine AI-enhanced/upscaled releases remain rejected by the existing production policy; no DraCuLa scoring workaround is required.
 - **profile:** increase the Samsung profile from 111 to **112** rules and the hardware-neutral profile from 107 to **108** rules with the shared Adaptive Low-Score Filtering rule. Canonical ownership becomes **104 Core**, 4 presentation, and 4 Samsung device rules.

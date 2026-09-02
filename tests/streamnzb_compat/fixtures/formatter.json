@@ -740,6 +740,58 @@
       "excludes": [
         "· 💚 ɴᴢʙ"
       ]
+    },
+    {
+      "name": "Languages without subtitles",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": false
+      },
+      "contains": [
+        "⛿ EN · JA"
+      ],
+      "excludes": [
+        "sᴜʙ"
+      ],
+      "counts": {
+        "⛿": 1
+      }
+    },
+    {
+      "name": "Languages with subtitles",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ"
+      ],
+      "counts": {
+        "⛿": 1,
+        "sᴜʙ": 1
+      }
+    },
+    {
+      "name": "Subtitles without languages",
+      "context": {
+        "Subbed": true
+      },
+      "contains": [
+        "⛿ sᴜʙ"
+      ],
+      "excludes": [
+        " · sᴜʙ"
+      ],
+      "counts": {
+        "⛿": 1,
+        "sᴜʙ": 1
+      }
     }
   ]
 }

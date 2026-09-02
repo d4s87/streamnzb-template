@@ -27,6 +27,7 @@ The profile is designed around:
 - Same-release failover
 - Grouped resolution + quality result limits
 - Hardware-neutral dynamic-range / bit-depth scoring with Samsung-specific Dolby Vision compatibility handling and audio preferences
+- Formatter display of parsed language metadata and subtitle presence, including clean subtitle-only rendering
 
 ## Quick Start
 
@@ -165,6 +166,34 @@ The repository can also publish Discord notifications for important updates. Sem
 Matching note: Release-group names are generally matched case-insensitively by the generated StreamNZB Define Library. Upstream case-specific distinctions may be normalized when they do not cause cross-tier ambiguity.
 
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.
+
+## Formatter Language and Subtitle Metadata
+
+The DraCuLa formatter displays StreamNZB/Jhin's parsed language metadata on a
+dedicated `⛿` line. When Jhin also identifies explicit subtitle metadata,
+the formatter appends `sᴜʙ` to that line:
+
+- parsed languages only: `⛿ EN · JA`
+- parsed languages with subtitles: `⛿ EN · JA · sᴜʙ`
+- subtitles without parsed languages: `⛿ sᴜʙ`
+
+The subtitle-only form is handled explicitly so it does not render a leading
+separator such as ` · sᴜʙ`.
+
+This presentation follows the data currently exported by
+**StreamNZB 5.16.1 / Jhin 0.6.1**. Jhin exposes parsed `Languages` metadata
+separately from the boolean `Subbed` flag. It does **not** currently expose a
+separate list of subtitle-language identities to StreamNZB's formatter
+context. DraCuLa therefore does not infer or fabricate forms such as
+`SUB (EN · DE)` from the release name.
+
+The `Languages` field should be understood as Jhin's parsed language metadata
+surface rather than a guaranteed inventory of media-file audio tracks.
+Permanent compatibility regressions pin ordinary language parsing, explicit
+subtitle markers, combined Dubbed/Subbed metadata, and hardcoded-subtitle
+behavior against Jhin 0.6.1. Separate real-StreamNZB formatter regressions pin
+all three display forms above for both the canonical formatter source and the
+published `formatter.txt` artifact.
 
 ## Adaptive Low-Score Filtering
 

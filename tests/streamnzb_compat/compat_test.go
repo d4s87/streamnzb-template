@@ -199,9 +199,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 107 {
+	if len(neutralRules) != 108 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 107",
+			"neutral profile contains %d rules; want 108",
 			len(neutralRules),
 		)
 	}
@@ -240,8 +240,36 @@ func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 
 	defineLibrary := loadDefineLibrary(t)
 
+	// rules.Compile performs a static compatibility compile without the
+	// score-relative runtime attributes supplied by StreamNZB's ranking
+	// pipeline. Adaptive Low-Score Filtering intentionally uses finalScore
+	// and is covered separately by the released-engine production-policy
+	// regression below.
+	staticRules := make(
+		[]config.RuleConfig,
+		0,
+		len(neutralRules),
+	)
+	scoreAwareRules := 0
+
+	for _, rule := range neutralRules {
+		if rule.Name == "Adaptive Low-Score Filtering" {
+			scoreAwareRules++
+			continue
+		}
+
+		staticRules = append(staticRules, rule)
+	}
+
+	if scoreAwareRules != 1 {
+		t.Fatalf(
+			"neutral profile contains %d score-aware Adaptive Low-Score rules; want 1",
+			scoreAwareRules,
+		)
+	}
+
 	set, err := rules.Compile(
-		neutralRules,
+		staticRules,
 		defineLibrary...,
 	)
 	if err != nil {
@@ -1556,8 +1584,31 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		)
 	}
 
+	// Candidate-relative prune rules use finalScore/current and are
+	// evaluated by StreamNZB's ranking layer after individual release
+	// scoring. This ceiling test intentionally exercises the lower-level
+	// rules engine for single-release edition score math, so exclude the
+	// Adaptive Low-Score prune rule here. Its released-engine behavior is
+	// covered separately by TestAdaptiveLowScoreProductionPolicy.
+	editionScoringRules := make(
+		[]config.RuleConfig,
+		0,
+		len(productionRules),
+	)
+
+	for _, rule := range productionRules {
+		if rule.Name == "Adaptive Low-Score Filtering" {
+			continue
+		}
+
+		editionScoringRules = append(
+			editionScoringRules,
+			rule,
+		)
+	}
+
 	set, err := rules.Compile(
-		productionRules,
+		editionScoringRules,
 		defineLibrary...,
 	)
 	if err != nil {
@@ -1897,6 +1948,82 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		t.Fatal(
 			"Open Matte contribution beside IMAX must remain +25",
 		)
+	}
+}
+
+func TestIMAXEnhancedParserRegression(t *testing.T) {
+	cases := []struct {
+		name         string
+		release      string
+		wantEdition  string
+		wantUpscaled bool
+	}{
+		{
+			name:    "plain",
+			release: "Movie.2026.2160p.WEB-DL.x265-GRP",
+		},
+		{
+			name:        "IMAX",
+			release:     "Movie.2026.2160p.IMAX.WEB-DL.x265-GRP",
+			wantEdition: "IMAX",
+		},
+		{
+			name:    "bare Enhanced",
+			release: "Movie.2026.2160p.Enhanced.WEB-DL.x265-GRP",
+		},
+		{
+			name:        "IMAX dotted Enhanced",
+			release:     "Movie.2026.2160p.IMAX.Enhanced.WEB-DL.x265-GRP",
+			wantEdition: "IMAX",
+		},
+		{
+			name:        "IMAX hyphen Enhanced",
+			release:     "Movie.2026.2160p.IMAX-Enhanced.WEB-DL.x265-GRP",
+			wantEdition: "IMAX",
+		},
+		{
+			name:    "compact IMAXEnhanced",
+			release: "Movie.2026.2160p.IMAXEnhanced.WEB-DL.x265-GRP",
+		},
+		{
+			name:         "AI Enhanced",
+			release:      "Movie.2026.2160p.AI.Enhanced.WEB-DL.x265-GRP",
+			wantUpscaled: true,
+		},
+		{
+			name:         "Upscaled",
+			release:      "Movie.2026.2160p.Upscaled.WEB-DL.x265-GRP",
+			wantUpscaled: true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			env := buildEnv(
+				CaseFixture{
+					Release: c.release,
+					Kind:    "movie",
+				},
+			)
+
+			if env.Edition != c.wantEdition {
+				t.Fatalf(
+					"edition=%q want=%q release=%q",
+					env.Edition,
+					c.wantEdition,
+					c.release,
+				)
+			}
+
+			if env.Upscaled != c.wantUpscaled {
+				t.Fatalf(
+					"upscaled=%v want=%v release=%q",
+					env.Upscaled,
+					c.wantUpscaled,
+					c.release,
+				)
+			}
+		})
 	}
 }
 
@@ -2888,6 +3015,172 @@ func TestCandidateRelativePruneCompatibility(t *testing.T) {
 			len(rejected),
 		)
 	}
+}
+
+// TestAdaptiveLowScoreProductionPolicy protects DraCuLa's
+// candidate-relative low-score filtering against the released
+// StreamNZB/Jhin engine.
+//
+// Known Movie/Show LQ or Bad-Dual releases are pruned only when at
+// least six alternatives have final scores >= 5000 points higher.
+// Sparse result pools therefore retain weak releases as fallbacks.
+func TestAdaptiveLowScoreProductionPolicy(t *testing.T) {
+	const ruleName = "Adaptive Low-Score Filtering"
+
+	rules := loadProductionRules(t)
+
+	var adaptive *config.RuleConfig
+
+	for i := range rules {
+		if rules[i].Name == ruleName {
+			adaptive = &rules[i]
+			break
+		}
+	}
+
+	if adaptive == nil {
+		t.Fatalf("production rule %q is missing", ruleName)
+	}
+
+	if adaptive.Action != config.RuleActionPrune {
+		t.Fatalf(
+			"%s action=%q; want %q",
+			ruleName,
+			adaptive.Action,
+			config.RuleActionPrune,
+		)
+	}
+
+	const expectedWhen = `not library
+and (
+  matched("Movies LQ Groups")
+  or matched("Movies Bad Dual Groups")
+  or matched("Shows LQ Groups")
+  or matched("Shows Bad Dual Groups")
+)
+and count(finalScore >= current.finalScore + 5000) >= 6`
+
+	if adaptive.When != expectedWhen {
+		t.Fatalf(
+			"%s predicate mismatch:\ngot:\n%s\n\nwant:\n%s",
+			ruleName,
+			adaptive.When,
+			expectedWhen,
+		)
+	}
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Adaptive Low-Score production regression",
+			Preset: "4k",
+			Rules:  rules,
+		},
+		loadDefineLibrary(t)...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile production Adaptive Low-Score profile: %v",
+			err,
+		)
+	}
+
+	makeCandidate := func(title string) triage.Candidate {
+		return triage.Candidate{
+			Release: &release.Release{
+				Title: title,
+			},
+		}
+	}
+
+	t.Run("dense Movie LQ tail is pruned", func(t *testing.T) {
+		candidates := []triage.Candidate{
+			makeCandidate(
+				"Example.Movie.2026.2160p.WEB-DL.H265-FLUX",
+			),
+			makeCandidate(
+				"Example.Movie.2026.2160p.WEB-DL.H265-NTb",
+			),
+			makeCandidate(
+				"Example.Movie.2026.1080p.BluRay.REMUX.AVC-HiFi",
+			),
+			makeCandidate(
+				"Example.Movie.2026.1080p.WEB-DL.H264-FLUX",
+			),
+			makeCandidate(
+				"Example.Movie.2026.1080p.WEB-DL.H264-NTb",
+			),
+			makeCandidate(
+				"Example.Movie.2026.720p.WEB-DL.H264-FLUX",
+			),
+			makeCandidate(
+				"Example.Movie.2026.720p.WEB-DL.H264-YIFY",
+			),
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{
+				Kind:  ranking.KindMovie,
+				Title: "Example Movie",
+			},
+			candidates,
+			jhinrank.RankOptions{},
+		)
+
+		if len(kept) != 6 || len(rejected) != 1 {
+			t.Fatalf(
+				"dense Movie LQ: kept=%d rejected=%d; "+
+					"want kept=6 rejected=1",
+				len(kept),
+				len(rejected),
+			)
+		}
+
+		if rejected[0].Candidate.Release == nil {
+			t.Fatal(
+				"dense Movie LQ rejected candidate has nil release",
+			)
+		}
+
+		got := rejected[0].Candidate.Release.Title
+		want := candidates[len(candidates)-1].Release.Title
+
+		if got != want {
+			t.Fatalf(
+				"dense Movie LQ rejected=%q; want %q",
+				got,
+				want,
+			)
+		}
+	})
+
+	t.Run("sparse Movie LQ fallback survives", func(t *testing.T) {
+		candidates := []triage.Candidate{
+			makeCandidate(
+				"Example.Movie.2026.2160p.WEB-DL.H265-FLUX",
+			),
+			makeCandidate(
+				"Example.Movie.2026.720p.WEB-DL.H264-YIFY",
+			),
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{
+				Kind:  ranking.KindMovie,
+				Title: "Example Movie",
+			},
+			candidates,
+			jhinrank.RankOptions{},
+		)
+
+		if len(kept) != 2 || len(rejected) != 0 {
+			t.Fatalf(
+				"sparse Movie LQ: kept=%d rejected=%d; "+
+					"want kept=2 rejected=0",
+				len(kept),
+				len(rejected),
+			)
+		}
+	})
 }
 
 // TestHDR10PlusTierCeilings protects the bounded +25 non-Anime

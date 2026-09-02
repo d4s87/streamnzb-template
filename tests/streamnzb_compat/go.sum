@@ -1,5 +1,5 @@
-github.com/dreulavelle/jhin v0.6.0 h1:AW/exIrltCem23YKG0fHhDas/SPeQMBoMIMK5m8qZ+A=
-github.com/dreulavelle/jhin v0.6.0/go.mod h1:U7NJzSdKNDyRqf5JI8Z65IVSrjiItU7YcGrkqkABhe0=
+github.com/dreulavelle/jhin v0.6.1 h1:DkkEQ8fCj2AcwKSmnl38kPdTE6ANCb0Oht0OdB8ATaE=
+github.com/dreulavelle/jhin v0.6.1/go.mod h1:U7NJzSdKNDyRqf5JI8Z65IVSrjiItU7YcGrkqkABhe0=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=

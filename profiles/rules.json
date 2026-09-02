@@ -948,6 +948,14 @@
         "when": "(kind == \"series\" or kind == \"anime_show\") and seasonPack and complete",
         "points": 10
       }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Adaptive Low-Score Filtering",
+        "action": "prune",
+        "when": "not library\nand (\n  matched(\"Movies LQ Groups\")\n  or matched(\"Movies Bad Dual Groups\")\n  or matched(\"Shows LQ Groups\")\n  or matched(\"Shows Bad Dual Groups\")\n)\nand count(finalScore >= current.finalScore + 5000) >= 6"
+      }
     }
   ]
 }

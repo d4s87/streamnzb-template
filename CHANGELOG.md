@@ -6,6 +6,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **profile:** add Adaptive Low-Score Filtering as a candidate-relative post-scoring prune for Movie/Show LQ and Bad Dual releases. A non-Library candidate is removed only when at least six alternatives finish at least 5000 points above that candidate's own final score, preserving the same class of release as a fallback in sparse result sets.
+- **testing:** add permanent pinned real-StreamNZB 5.16.1 regression coverage for Adaptive Low-Score Filtering, including dense-tail pruning and sparse-result fallback behavior through `finalScore` / `current.finalScore`.
+- **testing:** add permanent StreamNZB 5.16.1 / Jhin 0.6.1 parser regression coverage for issue #251: canonical `IMAX.Enhanced` and `IMAX-Enhanced` remain parsed as IMAX editions without being classified as upscaled, bare `Enhanced` remains neutral, and genuine `AI.Enhanced` / `Upscaled` markers remain classified as upscaled.
 - **testing:** extend the permanent pinned real-StreamNZB/Jhin dynamic-range regression for the bounded non-Anime HDR10+ preference, Dolby Vision HDR10+ fallback behavior, Anime HDR10+ neutrality, and release-group ceiling preservation.
 - **testing:** add permanent pinned real-StreamNZB/Jhin coverage for Portable Core dynamic-range and bit-depth compensation, Samsung Dolby Vision fallback behavior, neutral-profile Dolby Vision eligibility, Anime WEB tier authority against native 10-bit scoring, and Movie WEB tier authority against HDR10 scoring.
 - **testing:** add permanent pinned real-StreamNZB/Jhin scoring-ceiling coverage for Anime Movie/Show tier authority, effective corrected-release scores, effective Movie edition scores, and native-score compensation behavior.
@@ -18,6 +21,9 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **compatibility:** advance the pinned StreamNZB runtime from 5.16.0 to released **5.16.1** commit `0429d50b347000325fa40ecf8aeb670335d23260` and align the compatibility harness with **Jhin 0.6.1**. The released baseline passes the full DraCuLa profile, formatter, ranking, tier, availability, dynamic-range, and candidate-relative prune regressions.
+- **compatibility:** mark the prior IMAX Enhanced parser limitation as resolved upstream by StreamNZB issue `#251` / commit `1c1db3ff81f897ab7adb8664f42c8b524d272a80`. Canonical IMAX Enhanced releases are no longer misclassified as upscaled, while genuine AI-enhanced/upscaled releases remain rejected by the existing production policy; no DraCuLa scoring workaround is required.
+- **profile:** increase the Samsung profile from 111 to **112** rules and the hardware-neutral profile from 107 to **108** rules with the shared Adaptive Low-Score Filtering rule. Canonical ownership becomes **104 Core**, 4 presentation, and 4 Samsung device rules.
 - **scoring:** add a bounded Portable Core `+25` preference for non-Anime HDR10+ releases after compensating Jhin v0.6's native `+2100` HDR10+ rank. HDR/HDR10 remain neutral, while the smaller bonus acts as a format tie-breaker without overriding Movie/Series release-group tier authority.
 - **anime:** keep HDR10+ score-neutral for Anime. The proven maximum ordinary Anime Show WEB metadata stack remains `+77` against the minimum adjacent tier gap of `80`, so adding a meaningful HDR10+ bonus would consume the remaining `3` points of guaranteed tier headroom.
 - **profile:** increase the Samsung profile from 110 to 111 rules and the hardware-neutral profile from 106 to 107 rules. Canonical ownership becomes 103 Core, 4 presentation, and 4 Samsung device rules.

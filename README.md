@@ -124,7 +124,7 @@ The neutral artifact contains **107** rules. It is the Samsung profile minus exa
 - `Reduce TrueHD bonus`
 - `Reduce DTS Lossless bonus`
 
-`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 107 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 108 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -165,6 +165,33 @@ The repository can also publish Discord notifications for important updates. Sem
 Matching note: Release-group names are generally matched case-insensitively by the generated StreamNZB Define Library. Upstream case-specific distinctions may be normalized when they do not cause cross-tier ambiguity.
 
 After a library update is published, use **Refresh** in StreamNZB to review and apply the changes.
+
+## Adaptive Low-Score Filtering
+
+DraCuLa applies a candidate-relative **Adaptive Low-Score Filtering** prune
+after normal scoring. It targets releases already classified by the
+Vidhin-backed Movie/Show **LQ** or **Bad Dual** Defines, but only when the
+result set contains enough substantially better alternatives.
+
+A matching candidate is pruned only when all of the following are true:
+
+- it is not already in the local Library;
+- it matches `Movies LQ Groups`, `Movies Bad Dual Groups`,
+  `Shows LQ Groups`, or `Shows Bad Dual Groups`; and
+- at least **6** other candidates finish at least **5000 points above the
+  candidate's own final score**.
+
+The comparison is deliberately relative to each candidate through
+`finalScore` and `current.finalScore`. This is not a fixed global score floor:
+the same low-quality release remains available when fewer than six
+substantially better alternatives exist. Sparse searches therefore preserve a
+fallback instead of being emptied by an absolute threshold.
+
+This policy depends on StreamNZB's candidate-relative prune aggregates. The
+required result-set behavior is pinned to **StreamNZB 5.16.1**, which includes
+the upstream fix for issue `#249`. Permanent real-engine regressions verify
+both sides of the threshold: a dense weak Movie LQ tail is pruned, while the
+same class of candidate survives when the result set is sparse.
 
 ## Dynamic Range and Bit-Depth Scoring
 
@@ -296,8 +323,28 @@ higher release-group tier when the user is choosing between otherwise
 eligible Movie releases; this is deliberate rather than a tier-ceiling bug.
 
 The bounded IMAX rule also matches `IMAX Enhanced` without adding a second
-DraCuLa IMAX rule-layer bonus. Compatibility fixtures protect that matching
-and non-stacking behavior.
+DraCuLa IMAX rule-layer bonus.
+
+The previous upstream **StreamNZB/Jhin limitation** affecting IMAX Enhanced is
+resolved in **StreamNZB 5.16.1 / Jhin 0.6.1**. The fix originated from
+StreamNZB issue `#251`: Jhin no longer interprets the trailing `Enhanced` in
+canonical IMAX Enhanced names as an upscale marker.
+
+Pinned parser and real-engine validation now confirms:
+
+- `IMAX` parses as edition `IMAX` and is not upscaled;
+- `IMAX.Enhanced` and `IMAX-Enhanced` parse as edition `IMAX` and are not
+  upscaled;
+- bare `Enhanced` is not treated as an upscale marker;
+- compact non-canonical `IMAXEnhanced` remains non-upscaled but is not parsed
+  as an IMAX edition;
+- `AI.Enhanced` and explicit `Upscaled` releases are still correctly
+  classified as upscaled and rejected by the production `Reject Upscaled`
+  policy.
+
+Canonical IMAX Enhanced releases therefore receive the same single effective
+`+800` IMAX preference as ordinary IMAX releases and remain eligible through
+the production profile.
 
 Open Matte and Director's Cut / Extended Edition are deliberately much
 smaller. Director's Cut and Extended Edition share one parser-backed rule, so
@@ -324,6 +371,8 @@ edition metadata.
 Pinned compatibility and real-engine regression coverage protects:
 
 - IMAX matching, including IMAX Enhanced fixture behavior
+- StreamNZB 5.16.1 / Jhin 0.6.1 IMAX Enhanced parser behavior, including
+  continued detection of genuine AI-enhanced/upscaled releases
 - effective IMAX `+800` scoring after native-edition compensation
 - Movie-only scope
 - Open Matte matching

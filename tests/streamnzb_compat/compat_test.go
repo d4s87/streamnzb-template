@@ -3771,6 +3771,11 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 // surface consumed by the DraCuLa formatter. Languages and subtitle presence
 // are intentionally separate: Jhin exports parsed language metadata through
 // Languages and only a boolean Subbed flag, not subtitle-language identities.
+//
+// The compact JA alias case intentionally records the current upstream
+// limitation tracked in dreulavelle/jhin#39: JA.EN parses as English only.
+// This is a compatibility sentinel, not desired DraCuLa policy; when Jhin fixes
+// the alias, this expectation should change alongside the compatibility review.
 func TestLanguageSubtitleParserRegression(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -3784,6 +3789,11 @@ func TestLanguageSubtitleParserRegression(t *testing.T) {
 			name:          "languages only",
 			release:       "Anime.Show.S01E01.1080p.WEB-DL.Japanese.English.DDP5.1.H.264-GRP",
 			wantLanguages: []string{"en", "ja"},
+		},
+		{
+			name:          "compact JA alias remains unrecognized",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.JA.EN.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en"},
 		},
 		{
 			name:          "subbed",

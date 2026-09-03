@@ -199,9 +199,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 108 {
+	if len(neutralRules) != 109 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 108",
+			"neutral profile contains %d rules; want 109",
 			len(neutralRules),
 		)
 	}

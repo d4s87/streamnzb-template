@@ -316,6 +316,25 @@ legitimately combine, the pinned real engine reaches a maximum `+77` stack.
 The synchronized Anime WEB/BluRay ladders use a minimum adjacent gap of `80`,
 so even that maximum lower-tier stack remains below the next-higher clean tier.
 
+The final resolution/quality ceiling is also season-pack aware. Ordinary
+episode/non-pack releases and episodic season packs no longer compete for the
+same three slots:
+
+- up to **3** non-pack releases are retained per `resolution + quality`
+- up to **1** Series/Anime Show `seasonPack` is retained independently per
+  `resolution + quality`
+
+This preserves one strong season-pack alternative without globally increasing
+the normal `Best 3 per R/Q` ceiling. All earlier filtering still applies, so a
+pack can still be rejected for language, Dolby Vision fallback, HD x265,
+low-score, unknown-resolution, or other production policy before it reaches
+the final cap.
+
+Within the one-pack bucket, normal ranking still decides the winner. The
+existing `Complete Season Pack Preference` therefore gives an otherwise equal
+explicitly complete pack the expected `+10` advantage over an ordinary season
+pack; packs do not receive a blanket quality override.
+
 Real-engine validation against the pinned StreamNZB/Jhin v0.6 runtime
 confirms the `seasonPack` and `complete` facts, their combined condition,
 and the expected parser behavior for ordinary packs, complete packs,

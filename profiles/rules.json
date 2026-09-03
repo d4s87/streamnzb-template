@@ -611,7 +611,17 @@
         "count": 3,
         "group_by": "resolution + \" \" + quality",
         "name": "Best 3 per R/Q",
-        "when": "true"
+        "when": "not ((kind == \"series\" or kind == \"anime_show\") and seasonPack)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "limit",
+        "count": 1,
+        "group_by": "resolution + \" \" + quality",
+        "name": "Best 1 Season Pack per R/Q",
+        "when": "(kind == \"series\" or kind == \"anime_show\") and seasonPack"
       }
     },
     {

@@ -778,6 +778,101 @@ def validate_1080p_remux_preference(rules):
         )
 
 
+
+def validate_season_pack_limits(rules):
+    """Validate the independent episode/non-pack and season-pack R/Q ceilings."""
+
+    general_name = "Best 3 per R/Q"
+    pack_name = "Best 1 Season Pack per R/Q"
+
+    expected_group = 'resolution + " " + quality'
+    pack_when = (
+        '(kind == "series" or kind == "anime_show") '
+        'and seasonPack'
+    )
+    general_when = f"not ({pack_when})"
+
+    expected = {
+        general_name: {
+            "action": "limit",
+            "count": 3,
+            "group_by": expected_group,
+            "when": general_when,
+        },
+        pack_name: {
+            "action": "limit",
+            "count": 1,
+            "group_by": expected_group,
+            "when": pack_when,
+        },
+    }
+
+    resolved = {}
+
+    for name, spec in expected.items():
+        matches = [
+            rule
+            for rule in rules
+            if rule.get("name") == name
+        ]
+
+        if len(matches) != 1:
+            raise AssertionError(
+                f"Expected exactly one {name!r} rule, "
+                f"found {len(matches)}"
+            )
+
+        rule = matches[0]
+        resolved[name] = rule
+
+        for field, wanted in spec.items():
+            actual = rule.get(field)
+
+            if actual != wanted:
+                raise AssertionError(
+                    f"{name} {field} drifted: "
+                    f"{actual!r}; expected {wanted!r}"
+                )
+
+        if "points" in rule:
+            raise AssertionError(
+                f"{name} must remain a limit rule "
+                "without score points"
+            )
+
+        if "scope" in rule:
+            raise AssertionError(
+                f"{name} must use its explicit kind/seasonPack "
+                "condition rather than profile scope"
+            )
+
+    if (
+        resolved[general_name]["group_by"]
+        != resolved[pack_name]["group_by"]
+    ):
+        raise AssertionError(
+            "Episode/non-pack and season-pack ceilings must "
+            "use the same resolution + quality grouping"
+        )
+
+    if resolved[general_name]["count"] <= resolved[pack_name]["count"]:
+        raise AssertionError(
+            "General R/Q ceiling must remain larger than "
+            "the season-pack ceiling"
+        )
+
+    if "seasonPack" not in resolved[pack_name]["when"]:
+        raise AssertionError(
+            "Season-pack ceiling must explicitly require seasonPack"
+        )
+
+    if not resolved[general_name]["when"].startswith("not ("):
+        raise AssertionError(
+            "General R/Q ceiling must explicitly exclude "
+            "the episodic season-pack partition"
+        )
+
+
 def validate_repack_proper_preferences(rules):
     """Validate the corrected-release tie-breaker policy."""
 
@@ -1710,9 +1805,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 112:
+if len(rules) != 113:
     raise AssertionError(
-        f"Expected 112 profile rules, found {len(rules)}"
+        f"Expected 113 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)
@@ -1797,6 +1892,7 @@ validate_anime_lq(rules, defines)
 validate_bad_dual(rules, defines)
 validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
+validate_season_pack_limits(rules)
 validate_repack_proper_preferences(rules)
 validate_retag_soft_penalty(rules)
 validate_audio_preferences(rules)

@@ -6,6 +6,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **ci:** notify Discord after successful `main` validation when the published `formatter.txt` and/or `formatter-debug.txt` artifacts change, allowing linked formatter users to refresh without waiting for a template release.
 - **formatter:** expose same-release failover compactly with `⧉N` only when multiple interchangeable NZBs exist for the same release; single-copy results remain uncluttered.
 - **formatter:** expose corrected-release status as `ᴘʀᴏᴘᴇʀ`, `ʀᴇᴘᴀᴄᴋ`, `ʀᴇᴘᴀᴄᴋ₂`, or `ʀᴇᴘᴀᴄᴋ₃` using existing parsed facts and exact matched production-rule identities.
 - **formatter:** distinguish ordinary reported NZB availability (`💚 ɴᴢʙ`) from releases also confirmed healthy on a configured provider backbone (`💚 ɴᴢʙ+`) through StreamNZB's native `Availability.OnMyBackbone` field.

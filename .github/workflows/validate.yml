@@ -47,8 +47,69 @@ jobs:
       - name: Test release Discord notifications
         run: python tests/test_release_discord.py
 
+      - name: Test formatter Discord notifications
+        run: python tests/test_formatter_discord.py
+
       - name: Validate Anime tier integrity
         run: python tests/test_tier_integrity.py
 
       - name: Test against StreamNZB engine
         run: ./scripts/test_streamnzb_compat.sh
+
+  notify_formatter:
+    name: Notify published formatter updates
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect published formatter changes
+        id: diff
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          python3 scripts/formatter_discord.py detect \
+            --before "$BEFORE_SHA" \
+            --after "$AFTER_SHA" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Build Discord payload
+        if: steps.diff.outputs.notify == 'true'
+        env:
+          FORMATTER_FILES: ${{ steps.diff.outputs.files }}
+          COMMIT_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          python3 scripts/formatter_discord.py payload \
+            --files "$FORMATTER_FILES" \
+            --repository "$REPOSITORY" \
+            --server-url "$SERVER_URL" \
+            --commit-sha "$COMMIT_SHA" \
+            --output discord-formatter-payload.json
+
+      - name: Send Discord notification
+        if: steps.diff.outputs.notify == 'true'
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_VIDHIN_WEBHOOK }}
+          DISCORD_THREAD_ID: "1542856068135125002"
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "::warning::DISCORD_VIDHIN_WEBHOOK is not configured."
+            exit 0
+          fi
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            -H "Content-Type: application/json" \
+            --data-binary @discord-formatter-payload.json \
+            "${DISCORD_WEBHOOK}?thread_id=${DISCORD_THREAD_ID}&wait=true"

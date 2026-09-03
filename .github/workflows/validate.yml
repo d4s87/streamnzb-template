@@ -83,7 +83,8 @@ jobs:
         if: steps.diff.outputs.notify == 'true'
         env:
           FORMATTER_FILES: ${{ steps.diff.outputs.files }}
-          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_SHA: ${{ steps.diff.outputs.commit_sha }}
+          COMMIT_SUBJECT: ${{ steps.diff.outputs.commit_subject }}
           REPOSITORY: ${{ github.repository }}
           SERVER_URL: ${{ github.server_url }}
         run: |
@@ -92,6 +93,7 @@ jobs:
             --repository "$REPOSITORY" \
             --server-url "$SERVER_URL" \
             --commit-sha "$COMMIT_SHA" \
+            --commit-subject "$COMMIT_SUBJECT" \
             --output discord-formatter-payload.json
 
       - name: Send Discord notification

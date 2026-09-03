@@ -43,6 +43,7 @@ payload = module.build_payload(
     "d4s87/streamnzb-template",
     "https://github.com",
     "e4141f9ec3195d04c69e71efbeb3c2d67bad75cd",
+    "feat: improve formatter reliability metadata",
 )
 
 assert payload["allowed_mentions"] == {
@@ -55,6 +56,10 @@ assert "DraCuLa formatter updated" in message
 assert "**DraCuLa**" in message
 assert "DraCuLa Debug" not in message
 assert "linked formatter import" in message
+assert (
+    "Change: feat: improve formatter reliability metadata"
+    in message
+)
 assert "e4141f9" in message
 assert (
     "https://github.com/d4s87/streamnzb-template/"
@@ -73,6 +78,7 @@ payload = module.build_payload(
     "d4s87/streamnzb-template",
     "https://github.com/",
     "1234567890abcdef",
+    "feat: update both published formatters",
 )
 
 message = payload["content"]
@@ -86,6 +92,7 @@ try:
         "d4s87/streamnzb-template",
         "https://github.com",
         "1234567",
+        "test: unsupported formatter",
     )
 except ValueError as exc:
     assert "unsupported" in str(exc)
@@ -101,6 +108,7 @@ try:
         "d4s87/streamnzb-template",
         "https://github.com",
         "1234567",
+        "test: empty formatter update",
     )
 except ValueError as exc:
     assert "at least one" in str(exc)
@@ -108,6 +116,77 @@ else:
     raise AssertionError(
         "empty formatter update unexpectedly accepted"
     )
+
+
+assert module.normalize_commit_subject(
+    "  feat:   normalize   formatter subject  "
+) == "feat: normalize formatter subject"
+
+long_subject = "x" * (
+    module.MAX_COMMIT_SUBJECT_LENGTH + 20
+)
+normalized_subject = module.normalize_commit_subject(
+    long_subject
+)
+
+assert len(normalized_subject) == module.MAX_COMMIT_SUBJECT_LENGTH
+assert normalized_subject.endswith("…")
+
+try:
+    module.normalize_commit_subject("   ")
+except ValueError as exc:
+    assert "non-empty" in str(exc)
+else:
+    raise AssertionError(
+        "blank formatter commit subject unexpectedly accepted"
+    )
+
+
+with tempfile.TemporaryDirectory() as temp:
+    output = Path(temp) / "payload.json"
+
+    result = subprocess.run(
+        [
+            "python3",
+            str(ROOT / "scripts/formatter_discord.py"),
+            "payload",
+            "--files",
+            '["formatter.txt"]',
+            "--repository",
+            "d4s87/streamnzb-template",
+            "--server-url",
+            "https://github.com",
+            "--commit-sha",
+            "1234567890abcdef",
+            "--commit-subject",
+            "feat: formatter CLI subject",
+            "--output",
+            str(output),
+        ],
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        raise AssertionError(
+            "formatter Discord CLI payload command failed:\n"
+            + result.stderr
+        )
+
+    cli_payload = __import__("json").loads(
+        output.read_text(encoding="utf-8")
+    )
+
+    assert (
+        "Change: feat: formatter CLI subject"
+        in cli_payload["content"]
+    )
+    assert cli_payload["allowed_mentions"] == {
+        "parse": [],
+    }
 
 
 with tempfile.TemporaryDirectory() as temp:
@@ -151,6 +230,51 @@ with tempfile.TemporaryDirectory() as temp:
         cwd=repo,
     ) == []
 
+    github_output = repo / "github-output-source-only.txt"
+
+    result = subprocess.run(
+        [
+            "python3",
+            str(ROOT / "scripts/formatter_discord.py"),
+            "detect",
+            "--before",
+            base,
+            "--after",
+            source_only,
+            "--github-output",
+            str(github_output),
+        ],
+        cwd=repo,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        raise AssertionError(
+            "formatter Discord source-only detect failed:\n"
+            + result.stderr
+        )
+
+    output_lines = {}
+
+    for line in github_output.read_text(
+        encoding="utf-8"
+    ).splitlines():
+        key, value = line.split("=", 1)
+        output_lines[key] = value
+
+    assert output_lines == {
+        "notify": "false",
+        "files": "[]",
+    }
+
+    assert (
+        "No published formatter changes detected."
+        in result.stdout
+    )
+
     (repo / "formatter.txt").write_text(
         "normal-v2\n",
         encoding="utf-8",
@@ -167,6 +291,104 @@ with tempfile.TemporaryDirectory() as temp:
     ) == [
         "formatter.txt",
     ]
+
+    change_commit = module.formatter_change_commit(
+        source_only,
+        normal,
+        cwd=repo,
+    )
+
+    assert change_commit == {
+        "commit_sha": normal,
+        "commit_subject": "normal formatter",
+    }
+
+    (repo / "README.md").write_text(
+        "docs-only\n",
+        encoding="utf-8",
+    )
+
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "docs after formatter")
+    docs_after_formatter = run_git(repo, "rev-parse", "HEAD")
+
+    (repo / "test-note.txt").write_text(
+        "test-only\n",
+        encoding="utf-8",
+    )
+
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "tests after formatter")
+    tests_after_formatter = run_git(repo, "rev-parse", "HEAD")
+
+    assert module.changed_formatters(
+        source_only,
+        tests_after_formatter,
+        cwd=repo,
+    ) == [
+        "formatter.txt",
+    ]
+
+    change_commit = module.formatter_change_commit(
+        source_only,
+        tests_after_formatter,
+        cwd=repo,
+    )
+
+    assert change_commit == {
+        "commit_sha": normal,
+        "commit_subject": "normal formatter",
+    }
+
+    assert change_commit["commit_sha"] != docs_after_formatter
+    assert change_commit["commit_sha"] != tests_after_formatter
+
+    github_output = repo / "github-output.txt"
+
+    result = subprocess.run(
+        [
+            "python3",
+            str(ROOT / "scripts/formatter_discord.py"),
+            "detect",
+            "--before",
+            source_only,
+            "--after",
+            tests_after_formatter,
+            "--github-output",
+            str(github_output),
+        ],
+        cwd=repo,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+
+    if result.returncode != 0:
+        raise AssertionError(
+            "formatter Discord detect CLI command failed:\n"
+            + result.stderr
+        )
+
+    output_lines = {}
+
+    for line in github_output.read_text(
+        encoding="utf-8"
+    ).splitlines():
+        key, value = line.split("=", 1)
+        output_lines[key] = value
+
+    assert output_lines["notify"] == "true"
+    assert output_lines["files"] == '["formatter.txt"]'
+    assert output_lines["commit_sha"] == normal
+    assert (
+        output_lines["commit_subject"]
+        == "normal formatter"
+    )
+
+    assert "Formatter-changing commit:" in result.stdout
+    assert normal in result.stdout
+    assert "normal formatter" in result.stdout
 
     (repo / "formatter-debug.txt").write_text(
         "debug-v2\n",

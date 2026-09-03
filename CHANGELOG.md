@@ -8,7 +8,7 @@ Changes in this section are under development and are not part of the latest sta
 
 - **profile:** make the final resolution/quality ceiling season-pack aware: ordinary episode/non-pack results retain the existing best 3 per R/Q, while Series and Anime Show season packs receive an independent best 1 per R/Q slot, preserving one strong pack alternative without globally widening result sets.
 - **testing:** add permanent pinned real-StreamNZB regression coverage for the season-pack-aware 3+1 ceiling, proving three episode releases and one pack survive independently and that the existing `Complete Season Pack Preference +10` makes an otherwise equal COMPLETE pack win the single pack slot.
-- **ci:** notify Discord after successful `main` validation when the published `formatter.txt` and/or `formatter-debug.txt` artifacts change, allowing linked formatter users to refresh without waiting for a template release.
+- **ci:** notify Discord after successful `main` validation when the published `formatter.txt` and/or `formatter-debug.txt` artifacts change, including the triggering commit subject so linked formatter users can see what changed before refreshing without waiting for a template release.
 - **formatter:** expose same-release failover compactly with `⧉N` only when multiple interchangeable NZBs exist for the same release; single-copy results remain uncluttered.
 - **formatter:** expose corrected-release status as `ᴘʀᴏᴘᴇʀ`, `ʀᴇᴘᴀᴄᴋ`, `ʀᴇᴘᴀᴄᴋ₂`, or `ʀᴇᴘᴀᴄᴋ₃` using existing parsed facts and exact matched production-rule identities.
 - **formatter:** distinguish ordinary reported NZB availability (`💚 ɴᴢʙ`) from releases also confirmed healthy on a configured provider backbone (`💚 ɴᴢʙ+`) through StreamNZB's native `Availability.OnMyBackbone` field.

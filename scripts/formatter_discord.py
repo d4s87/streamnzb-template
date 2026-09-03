@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 MAX_MESSAGE_LENGTH = 2000
+MAX_COMMIT_SUBJECT_LENGTH = 240
 
 PUBLISHED_FORMATTERS = (
     "formatter.txt",
@@ -50,6 +51,48 @@ def validate_revision(value, label):
         )
 
     return value
+
+
+def formatter_change_commit(before, after, cwd=None):
+    before = validate_revision(before, "before")
+    after = validate_revision(after, "after")
+
+    output = git_output(
+        [
+            "log",
+            "-1",
+            "--format=%H%x00%s",
+            f"{before}..{after}",
+            "--",
+            *PUBLISHED_FORMATTERS,
+        ],
+        cwd=cwd,
+    ).rstrip("\n")
+
+    if not output:
+        return None
+
+    try:
+        commit_sha, subject = output.split("\x00", 1)
+    except ValueError as exc:
+        raise ValueError(
+            "unexpected formatter git log output"
+        ) from exc
+
+    commit_sha = validate_revision(
+        commit_sha,
+        "formatter change commit",
+    )
+
+    if not subject.strip():
+        raise ValueError(
+            "formatter change commit subject must be non-empty"
+        )
+
+    return {
+        "commit_sha": commit_sha,
+        "commit_subject": subject.strip(),
+    }
 
 
 def changed_formatters(before, after, cwd=None):
@@ -114,7 +157,30 @@ def normalize_files(value):
     ]
 
 
-def build_message(files, repository, server_url, commit_sha):
+def normalize_commit_subject(value):
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(
+            "commit subject must be non-empty"
+        )
+
+    value = " ".join(value.split())
+
+    if len(value) > MAX_COMMIT_SUBJECT_LENGTH:
+        value = (
+            value[:MAX_COMMIT_SUBJECT_LENGTH - 1].rstrip()
+            + "…"
+        )
+
+    return value
+
+
+def build_message(
+    files,
+    repository,
+    server_url,
+    commit_sha,
+    commit_subject,
+):
     files = normalize_files(files)
 
     if not files:
@@ -135,6 +201,9 @@ def build_message(files, repository, server_url, commit_sha):
     commit_sha = validate_revision(
         commit_sha,
         "commit",
+    )
+    commit_subject = normalize_commit_subject(
+        commit_subject
     )
 
     names = [
@@ -158,6 +227,8 @@ def build_message(files, repository, server_url, commit_sha):
         "",
         f"Published formatter updated: {updated}.",
         "",
+        f"Change: {commit_subject}",
+        "",
         (
             "Users with a linked formatter import can refresh it "
             "to receive the latest presentation changes."
@@ -176,13 +247,20 @@ def build_message(files, repository, server_url, commit_sha):
     return message
 
 
-def build_payload(files, repository, server_url, commit_sha):
+def build_payload(
+    files,
+    repository,
+    server_url,
+    commit_sha,
+    commit_subject,
+):
     return {
         "content": build_message(
             files,
             repository,
             server_url,
             commit_sha,
+            commit_subject,
         ),
         "allowed_mentions": {
             "parse": [],
@@ -213,18 +291,51 @@ def command_detect(args):
         separators=(",", ":"),
     )
 
+    change_commit = (
+        formatter_change_commit(
+            args.before,
+            args.after,
+        )
+        if files
+        else None
+    )
+
+    if files and change_commit is None:
+        raise ValueError(
+            "formatter files changed but no formatter-changing "
+            "commit could be resolved"
+        )
+
+    outputs = {
+        "notify": "true" if files else "false",
+        "files": analysis,
+    }
+
+    if change_commit is not None:
+        outputs.update(
+            {
+                "commit_sha": change_commit["commit_sha"],
+                "commit_subject": (
+                    change_commit["commit_subject"]
+                ),
+            }
+        )
+
     write_github_output(
         args.github_output,
-        {
-            "notify": "true" if files else "false",
-            "files": analysis,
-        },
+        outputs,
     )
 
     if files:
         print(
             "Published formatter changes detected: "
             + ", ".join(files)
+        )
+        print(
+            "Formatter-changing commit: "
+            + change_commit["commit_sha"]
+            + " "
+            + change_commit["commit_subject"]
         )
     else:
         print(
@@ -245,6 +356,7 @@ def command_payload(args):
         args.repository,
         args.server_url,
         args.commit_sha,
+        args.commit_subject,
     )
 
     Path(args.output).write_text(
@@ -280,6 +392,10 @@ def build_parser():
     payload.add_argument("--repository", required=True)
     payload.add_argument("--server-url", required=True)
     payload.add_argument("--commit-sha", required=True)
+    payload.add_argument(
+        "--commit-subject",
+        required=True,
+    )
     payload.add_argument(
         "--output",
         default="discord-formatter-payload.json",

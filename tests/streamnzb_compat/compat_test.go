@@ -199,9 +199,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 109 {
+	if len(neutralRules) != 110 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 109",
+			"neutral profile contains %d rules; want 110",
 			len(neutralRules),
 		)
 	}
@@ -629,6 +629,151 @@ func runAggregateCases(
 						reports,
 					)
 				}
+			}
+		})
+	}
+}
+
+func TestSAOSeasonOneExclusionCompatibility(t *testing.T) {
+	const ruleName = "Reject SAO II from SAO Season 1"
+
+	productionRules := loadProductionRules(t)
+	cfg := findProductionRule(t, productionRules, ruleName)
+
+	if cfg.EffectiveAction() != config.RuleActionReject {
+		t.Fatalf(
+			"production rule %q action = %q, want reject",
+			ruleName,
+			cfg.EffectiveAction(),
+		)
+	}
+
+	neutralRules := loadNeutralRules(t)
+	neutralMatches := 0
+	for _, rule := range neutralRules {
+		if rule.Name == ruleName {
+			neutralMatches++
+		}
+	}
+	if neutralMatches != 1 {
+		t.Fatalf(
+			"neutral profile contains %d copies of %q; want 1",
+			neutralMatches,
+			ruleName,
+		)
+	}
+
+	set, err := rules.Compile([]config.RuleConfig{cfg})
+	if err != nil {
+		t.Fatalf("compile production rule %q: %v", ruleName, err)
+	}
+
+	tests := []struct {
+		name         string
+		requestTitle string
+		season       int
+		isAnime      bool
+		kind         string
+		release      string
+		wantReject   bool
+	}{
+		{
+			name:         "reject SAO II reset numbering from base SAO season 1",
+			requestTitle: "Sword Art Online",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.II.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   true,
+		},
+		{
+			name:         "keep genuine base SAO season 1",
+			requestTitle: "Sword Art Online",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.II.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect base SAO season 2",
+			requestTitle: "Sword Art Online",
+			season:       2,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.II.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect non anime request",
+			requestTitle: "Sword Art Online",
+			season:       1,
+			isAnime:      false,
+			kind:         "series",
+			release:      "Sword.Art.Online.II.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not catch unrelated II token later in filename",
+			requestTitle: "Sword Art Online",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.S01E01.II.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			cand := triage.Candidate{
+				Release: &release.Release{
+					Title: tt.release,
+				},
+			}
+
+			env := rules.BuildEnv(
+				cand,
+				jhin.Parse(tt.release),
+				rules.Context{
+					Kind:    tt.kind,
+					IsAnime: tt.isAnime,
+					Season:  tt.season,
+					Episode: 1,
+					Title:   tt.requestTitle,
+				},
+			)
+
+			out := set.Evaluate(env, tt.kind)
+			gotReject := ruleRejected(out, ruleName)
+
+			if gotReject != tt.wantReject {
+				t.Fatalf(
+					"production SAO exclusion rejected = %v, want %v\n"+
+						"request title: %s\n"+
+						"season: %d\n"+
+						"release: %s\n"+
+						"condition: %s\n"+
+						"rejections: %+v",
+					gotReject,
+					tt.wantReject,
+					tt.requestTitle,
+					tt.season,
+					tt.release,
+					cfg.When,
+					out.Rejections,
+				)
 			}
 		})
 	}

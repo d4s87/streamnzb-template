@@ -6,6 +6,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **profile:** reject `Sword Art Online II` releases that reset their own `S01` numbering when the resolved request is specifically the base `Sword Art Online` Season 1 Anime Show, closing a real pinned-StreamNZB short-suffix title-matching collision without weakening normal title matching.
+- **testing:** add permanent pinned real-StreamNZB/Jhin regression coverage for the SAO Season 1 / `SAO II` collision, including genuine base-SAO results, explicit SAO II requests, other seasons, non-Anime requests, and unrelated later `II` tokens as negative controls.
 - **profile:** make the final resolution/quality ceiling season-pack aware: ordinary episode/non-pack results retain the existing best 3 per R/Q, while Series and Anime Show season packs receive an independent best 1 per R/Q slot, preserving one strong pack alternative without globally widening result sets.
 - **testing:** add permanent pinned real-StreamNZB regression coverage for the season-pack-aware 3+1 ceiling, proving three episode releases and one pack survive independently and that the existing `Complete Season Pack Preference +10` makes an otherwise equal COMPLETE pack win the single pack slot.
 - **ci:** notify Discord after successful `main` validation when the published `formatter.txt` and/or `formatter-debug.txt` artifacts change, including the triggering commit subject so linked formatter users can see what changed before refreshing without waiting for a template release.
@@ -17,6 +19,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **profile:** increase the Samsung profile from 113 to **114** rules and the hardware-neutral profile from 109 to **110** rules with the shared SAO Season 1 title-collision safeguard. Canonical ownership becomes **106 Core**, 4 presentation, and 4 Samsung device rules.
 - **profile:** increase the Samsung profile from 112 to **113** rules and the hardware-neutral profile from 108 to **109** rules with the shared season-pack R/Q limiter. Canonical ownership becomes **105 Core**, 4 presentation, and 4 Samsung device rules.
 - **formatter:** stop independently versioning formatter display names. The normal and diagnostic artifacts now use the stable names **DraCuLa** and **DraCuLa Debug** and inherit the DraCuLa template/repository release lifecycle.
 - **formatter:** keep the new reliability and corrected-release metadata presentation-only; no scoring, filtering, tier, Library, availability-bonus, or same-release fallback policy changes are introduced.

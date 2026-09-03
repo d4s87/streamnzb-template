@@ -35,15 +35,4 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_VIDHIN_WEBHOOK }}
           DISCORD_THREAD_ID: "1542856068135125002"
         run: |
-          if [ -z "$DISCORD_WEBHOOK" ]; then
-            echo "::warning::DISCORD_VIDHIN_WEBHOOK is not configured."
-            exit 0
-          fi
-
-          curl \
-            --fail-with-body \
-            --silent \
-            --show-error \
-            -H "Content-Type: application/json" \
-            --data-binary @discord-release-payload.json \
-            "${DISCORD_WEBHOOK}?thread_id=${DISCORD_THREAD_ID}&wait=true"
+          scripts/send_discord_webhook.sh discord-release-payload.json

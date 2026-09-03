@@ -4,6 +4,18 @@
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Features
+
+- **formatter:** expose same-release failover compactly with `⧉N` only when multiple interchangeable NZBs exist for the same release; single-copy results remain uncluttered.
+- **formatter:** expose corrected-release status as `ᴘʀᴏᴘᴇʀ`, `ʀᴇᴘᴀᴄᴋ`, `ʀᴇᴘᴀᴄᴋ₂`, or `ʀᴇᴘᴀᴄᴋ₃` using existing parsed facts and exact matched production-rule identities.
+- **formatter:** distinguish ordinary reported NZB availability (`💚 ɴᴢʙ`) from releases also confirmed healthy on a configured provider backbone (`💚 ɴᴢʙ+`) through StreamNZB's native `Availability.OnMyBackbone` field.
+- **testing:** add permanent pinned real-StreamNZB 5.16.1 candidate and published-formatter regressions for same-release variant visibility/suppression, all four corrected-release labels, and ordinary versus backbone-confirmed availability.
+
+### Changes
+
+- **formatter:** stop independently versioning formatter display names. The normal and diagnostic artifacts now use the stable names **DraCuLa** and **DraCuLa Debug** and inherit the DraCuLa template/repository release lifecycle.
+- **formatter:** keep the new reliability and corrected-release metadata presentation-only; no scoring, filtering, tier, Library, availability-bonus, or same-release fallback policy changes are introduced.
+
 ## [5.1](https://github.com/d4s87/streamnzb-template/compare/v5.0...v5.1) (2026-09-02)
 
 V5.1 hardens DraCuLa's ranking and formatter behavior around the released StreamNZB 5.16.1 / Jhin 0.6.1 baseline. It adds candidate-relative Adaptive Low-Score Filtering, restores release-group tier authority over native display/edition/corrected-release scoring, adds bounded HDR10+ preference and Vidhin-backed Obfuscated penalties, and improves formatter language/subtitle presentation with permanent real-engine regression coverage.

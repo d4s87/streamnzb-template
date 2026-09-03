@@ -488,10 +488,48 @@ Pinned full-ranking-pipeline regression coverage verifies the effective `+500` L
 
 ## Formatter
 
-The latest formatter is available here:
+The normal formatter is published here:
 
 **[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**
 
+For the recommended linked import, use:
+
+**[Raw formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt)**
+
+The formatter can remain linked and be manually refreshed when the DraCuLa
+template is updated.
+
+The normal formatter uses the stable user-facing name **DraCuLa**.
+Individual formatter artifacts are not independently versioned; they evolve
+with the DraCuLa template/repository release instead of carrying a second
+version number alongside template versions such as V5.1.
+
+### Reliability and corrected-release metadata
+
+The normal formatter keeps several StreamNZB runtime facts compact and
+presentation-only:
+
+- when StreamNZB has more than one interchangeable NZB for the same release,
+  the indexer/group line appends `⧉N`, where `N` is the total same-release
+  variant count; single-copy releases do not show the indicator;
+- corrected releases display one compact status label:
+  `ᴘʀᴏᴘᴇʀ`, `ʀᴇᴘᴀᴄᴋ`, `ʀᴇᴘᴀᴄᴋ₂`, or `ʀᴇᴘᴀᴄᴋ₃`;
+- ordinary reported NZB availability remains `💚 ɴᴢʙ`;
+- when StreamNZB also confirms the release healthy on one of the configured
+  provider backbones through `Availability.OnMyBackbone`, the badge becomes
+  `💚 ɴᴢʙ+`.
+
+These additions expose facts already available from StreamNZB/Jhin and the
+matched production rules. They do not change scoring, filtering,
+release-group tiers, Library priority, availability bonuses, or same-release
+fallback behavior.
+
+Permanent pinned real-StreamNZB 5.16.1 regressions cover both the readable
+formatter source and the published `formatter.txt` artifact for:
+
+- same-release variant visibility and single-variant suppression;
+- all four corrected-release status labels;
+- ordinary versus backbone-confirmed availability.
 
 ### Optional Debug Formatter
 
@@ -502,6 +540,9 @@ For troubleshooting, DraCuLa also provides an optional diagnostic formatter:
 For a linked StreamNZB import, use:
 
 **[Raw debug formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter-debug.txt)**
+
+The diagnostic formatter uses the stable user-facing name **DraCuLa Debug**.
+Like the normal formatter, it does not carry an independent formatter version.
 
 The debug formatter is intentionally verbose and is not intended to replace
 the normal formatter for everyday use. For each result that survives
@@ -529,13 +570,11 @@ and exercised through the pinned real StreamNZB formatter engine. Their
 published `SNZBF1:` artifacts are checked for semantic synchronization in
 the compatibility suite.
 
-The formatter is my attempt to reproduce and adapt the look and presentation of **[Tamtaro's SEL Template](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)** formatter for AIOStreams within StreamNZB's formatter capabilities. It is not a direct port and has been adapted to work with StreamNZB's available data and formatting system.
-
-For the recommended linked import, use:
-
-**[Raw formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt)**
-
-The formatter can also remain linked and be manually refreshed when a new version is published.
+The formatter is my attempt to reproduce and adapt the look and presentation
+of **[Tamtaro's SEL Template](https://github.com/Tam-Taro/SEL-Filtering-and-Sorting)**
+formatter for AIOStreams within StreamNZB's formatter capabilities. It is not
+a direct port and has been adapted to work with StreamNZB's available data
+and formatting system.
 
 ## Important: Hardware-Specific Rules
 

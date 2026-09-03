@@ -792,6 +792,163 @@
         "⛿": 1,
         "sᴜʙ": 1
       }
+    },
+    {
+      "name": "Same-release failover indicator",
+      "context": {
+        "Indexer": "DrunkenSlug",
+        "Group": "FraMeSToR",
+        "Variants": 3
+      },
+      "contains": [
+        "⛉ DrunkenSlug · FraMeSToR · ⧉3"
+      ],
+      "counts": {
+        "⧉3": 1
+      }
+    },
+    {
+      "name": "Single variant suppresses failover indicator",
+      "context": {
+        "Indexer": "DrunkenSlug",
+        "Group": "FraMeSToR",
+        "Variants": 1
+      },
+      "contains": [
+        "⛉ DrunkenSlug · FraMeSToR"
+      ],
+      "excludes": [
+        "⧉"
+      ]
+    },
+    {
+      "name": "PROPER presentation",
+      "context": {
+        "Proper": true,
+        "Repack": false,
+        "MatchedRules": [
+          {
+            "Name": "Repack/Proper Preference",
+            "Score": -15
+          }
+        ]
+      },
+      "contains": [
+        "ᴘʀᴏᴘᴇʀ"
+      ],
+      "excludes": [
+        "ʀᴇᴘᴀᴄᴋ"
+      ],
+      "counts": {
+        "ᴘʀᴏᴘᴇʀ": 1
+      }
+    },
+    {
+      "name": "REPACK presentation",
+      "context": {
+        "Proper": false,
+        "Repack": true,
+        "MatchedRules": [
+          {
+            "Name": "Repack/Proper Preference",
+            "Score": -15
+          }
+        ]
+      },
+      "contains": [
+        "ʀᴇᴘᴀᴄᴋ"
+      ],
+      "excludes": [
+        "ʀᴇᴘᴀᴄᴋ₂",
+        "ʀᴇᴘᴀᴄᴋ₃"
+      ],
+      "counts": {
+        "ʀᴇᴘᴀᴄᴋ": 1
+      }
+    },
+    {
+      "name": "REPACK2 presentation",
+      "context": {
+        "Proper": false,
+        "Repack": true,
+        "MatchedRules": [
+          {
+            "Name": "Repack2 Preference",
+            "Score": -14
+          }
+        ]
+      },
+      "contains": [
+        "ʀᴇᴘᴀᴄᴋ₂"
+      ],
+      "excludes": [
+        "ʀᴇᴘᴀᴄᴋ₃"
+      ],
+      "counts": {
+        "ʀᴇᴘᴀᴄᴋ₂": 1
+      }
+    },
+    {
+      "name": "REPACK3 presentation",
+      "context": {
+        "Proper": false,
+        "Repack": true,
+        "MatchedRules": [
+          {
+            "Name": "Repack3 Preference",
+            "Score": -13
+          }
+        ]
+      },
+      "contains": [
+        "ʀᴇᴘᴀᴄᴋ₃"
+      ],
+      "counts": {
+        "ʀᴇᴘᴀᴄᴋ₃": 1
+      }
+    },
+    {
+      "name": "Backbone availability presentation",
+      "context": {
+        "Score": 100,
+        "Avail": true,
+        "Availability": {
+          "Status": "available",
+          "Known": true,
+          "OnMyBackbone": true,
+          "CheckedDaysAgo": 0,
+          "Compression": ""
+        }
+      },
+      "contains": [
+        "💚 ɴᴢʙ+"
+      ],
+      "counts": {
+        "💚 ɴᴢʙ+": 1
+      }
+    },
+    {
+      "name": "Ordinary availability presentation",
+      "context": {
+        "Score": 100,
+        "Avail": true,
+        "Availability": {
+          "Status": "available",
+          "Known": true,
+          "OnMyBackbone": false,
+          "CheckedDaysAgo": 0,
+          "Compression": ""
+        }
+      },
+      "contains": [
+        "💚 ɴᴢʙ"
+      ],
+      "excludes": [
+        "💚 ɴᴢʙ+"
+      ],
+      "counts": {
+        "💚 ɴᴢʙ": 1
+      }
     }
   ]
 }

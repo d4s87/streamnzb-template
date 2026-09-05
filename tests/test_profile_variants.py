@@ -18,9 +18,6 @@ PREFIX = "SNZBP1:"
 
 DEVICE_RULES = [
     "DV without HDR fallback",
-    "Reduce Atmos",
-    "Reduce TrueHD bonus",
-    "Reduce DTS Lossless bonus",
 ]
 
 PRESENTATION_RULES = {
@@ -59,7 +56,7 @@ variants_source = json.loads(
 
 assert rules_source["schema_version"] == 1
 assert rules_source["streamnzb_profile"] == 1
-assert len(rules_source["rules"]) == 114
+assert len(rules_source["rules"]) == 115
 
 entries = rules_source["rules"]
 
@@ -69,9 +66,9 @@ for entry in entries:
     owners[entry["owner"]] = owners.get(entry["owner"], 0) + 1
 
 assert owners == {
-    "core": 106,
+    "core": 110,
     "presentation": 4,
-    "device:samsung-qn90a": 4,
+    "device:samsung-qn90a": 1,
 }
 
 device_names = [
@@ -118,7 +115,7 @@ assert variants["profile.txt"] == {
         "presentation",
         "device:samsung-qn90a",
     ],
-    "expected_rules": 114,
+    "expected_rules": 115,
 }
 
 assert variants["profile-neutral.txt"] == {
@@ -129,7 +126,7 @@ assert variants["profile-neutral.txt"] == {
         "core",
         "presentation",
     ],
-    "expected_rules": 110,
+    "expected_rules": 114,
 }
 
 samsung_before = SAMSUNG_PATH.read_bytes()
@@ -167,8 +164,8 @@ assert neutral["streamnzb_profile"] == 1
 samsung_rules = samsung["rules"]
 neutral_rules = neutral["rules"]
 
-assert len(samsung_rules) == 114
-assert len(neutral_rules) == 110
+assert len(samsung_rules) == 115
+assert len(neutral_rules) == 114
 
 samsung_names = [
     rule["name"]

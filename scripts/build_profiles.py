@@ -27,9 +27,6 @@ EXPECTED_OWNERS = {
 
 EXPECTED_DEVICE_RULES = [
     "DV without HDR fallback",
-    "Reduce Atmos",
-    "Reduce TrueHD bonus",
-    "Reduce DTS Lossless bonus",
 ]
 
 EXPECTED_PRESENTATION_RULES = {
@@ -153,9 +150,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 114:
+    if len(entries) != 115:
         raise ValueError(
-            f"expected 114 source rules, found {len(entries)}"
+            f"expected 115 source rules, found {len(entries)}"
         )
 
     names = []
@@ -199,10 +196,10 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-        "core": 106,
-        "presentation": 4,
-        "device:samsung-qn90a": 4,
-    }
+    "core": 110,
+    "presentation": 4,
+    "device:samsung-qn90a": 1,
+}
 
     if owner_counts != expected_counts:
         raise ValueError(
@@ -277,7 +274,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 114,
+            "expected_rules": 115,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -286,7 +283,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 110,
+            "expected_rules": 114,
         },
     }
 

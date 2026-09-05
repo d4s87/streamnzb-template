@@ -59,11 +59,19 @@
       }
     },
     {
-      "owner": "device:samsung-qn90a",
+      "owner": "core",
       "rule": {
-        "name": "Reduce Atmos",
-        "points": -800,
+        "name": "Normalize Atmos",
+        "points": -950,
         "when": "\"atmos\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Normalize Dolby Digital Plus",
+        "points": -125,
+        "when": "\"dolby_digital_plus\" in traits"
       }
     },
     {
@@ -796,18 +804,18 @@
       }
     },
     {
-      "owner": "device:samsung-qn90a",
+      "owner": "core",
       "rule": {
-        "name": "Reduce TrueHD bonus",
-        "points": -1000,
+        "name": "Normalize TrueHD",
+        "points": -1900,
         "when": "\"truehd\" in traits"
       }
     },
     {
-      "owner": "device:samsung-qn90a",
+      "owner": "core",
       "rule": {
-        "name": "Reduce DTS Lossless bonus",
-        "points": -1000,
+        "name": "Normalize DTS Lossless",
+        "points": -1900,
         "when": "\"dts_lossless\" in traits"
       }
     },

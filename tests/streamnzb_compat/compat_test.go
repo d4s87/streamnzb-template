@@ -199,18 +199,15 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 110 {
+	if len(neutralRules) != 114 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 110",
+			"neutral profile contains %d rules; want 114",
 			len(neutralRules),
 		)
 	}
 
 	deviceRules := map[string]bool{
-		"DV without HDR fallback":   false,
-		"Reduce Atmos":              false,
-		"Reduce TrueHD bonus":       false,
-		"Reduce DTS Lossless bonus": false,
+		"DV without HDR fallback": false,
 	}
 
 	reject3D := false
@@ -4000,5 +3997,199 @@ func TestLanguageSubtitleParserRegression(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestMovieAudioNormalizationHierarchy(t *testing.T) {
+	data, err := os.ReadFile("../../generated/vidhin-defines.json")
+	if err != nil {
+		t.Fatalf("read generated Vidhin baseline: %v", err)
+	}
+
+	var generated struct {
+		Defines map[string]struct {
+			Tokens []string `json:"tokens"`
+		} `json:"defines"`
+	}
+	if err := json.Unmarshal(data, &generated); err != nil {
+		t.Fatalf("decode generated Vidhin baseline: %v", err)
+	}
+
+	defineToken := func(name string) string {
+		t.Helper()
+
+		entry, ok := generated.Defines[name]
+		if !ok || len(entry.Tokens) == 0 {
+			t.Fatalf("missing/empty Define %q", name)
+		}
+
+		tokens := append([]string(nil), entry.Tokens...)
+		slices.Sort(tokens)
+		return tokens[0]
+	}
+
+	remuxT1 := defineToken("Movies Remux T1 Groups")
+	webT1 := defineToken("Movies WEB T1 Groups")
+	blurayT1 := defineToken("Movies UHD BluRay T1 Groups")
+
+	cases := []struct {
+		name  string
+		title string
+	}{
+		{
+			"REMUX clean",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC-%s",
+				remuxT1,
+			),
+		},
+		{
+			"REMUX TrueHD Atmos",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.TrueHD.Atmos.7.1-%s",
+				remuxT1,
+			),
+		},
+		{
+			"WEB clean",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.WEB-DL.HEVC-%s",
+				webT1,
+			),
+		},
+		{
+			"WEB DDPlus",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.WEB-DL.HEVC.DDP5.1-%s",
+				webT1,
+			),
+		},
+		{
+			"WEB DDPlus Atmos IMAX",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.WEB-DL.HEVC.DDP5.1.Atmos.IMAX-%s",
+				webT1,
+			),
+		},
+		{
+			"BLURAY clean",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.HEVC-%s",
+				blurayT1,
+			),
+		},
+		{
+			"BLURAY DTS-HD MA",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.HEVC.DTS-HD.MA.5.1-%s",
+				blurayT1,
+			),
+		},
+		{
+			"BLURAY DTS-HD MA IMAX",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.HEVC.DTS-HD.MA.5.1.IMAX-%s",
+				blurayT1,
+			),
+		},
+	}
+
+	scoreProfile := func(
+		name string,
+		rules []config.RuleConfig,
+	) map[string]int {
+		t.Helper()
+
+		profile, err := ranking.Compile(
+			config.FilterProfileConfig{
+				Name:   name,
+				Preset: "4k",
+				Rules:  rules,
+			},
+			loadDefineLibrary(t)...,
+		)
+		if err != nil {
+			t.Fatalf("compile %s profile: %v", name, err)
+		}
+
+		scores := make(map[string]int, len(cases))
+
+		for _, tc := range cases {
+			kept, rejected := profile.ApplyWithRejected(
+				ranking.Request{
+					Kind:  ranking.KindMovie,
+					Title: "Example Movie",
+				},
+				[]triage.Candidate{{
+					Release: &release.Release{Title: tc.title},
+				}},
+				jhinrank.RankOptions{},
+			)
+
+			if len(rejected) != 0 || len(kept) != 1 {
+				t.Fatalf(
+					"%s/%s: kept=%d rejected=%+v",
+					name,
+					tc.name,
+					len(kept),
+					rejected,
+				)
+			}
+
+			scores[tc.name] = kept[0].Torrent.Rank
+		}
+
+		return scores
+	}
+
+	neutral := scoreProfile("Neutral", loadNeutralRules(t))
+	samsung := scoreProfile("Samsung", loadProductionRules(t))
+
+	for name, neutralScore := range neutral {
+		if samsung[name] != neutralScore {
+			t.Fatalf(
+				"%s differs between profiles: neutral=%d samsung=%d",
+				name,
+				neutralScore,
+				samsung[name],
+			)
+		}
+	}
+
+	deltas := []struct {
+		name string
+		with string
+		base string
+		want int
+	}{
+		{"TrueHD+Atmos", "REMUX TrueHD Atmos", "REMUX clean", 150},
+		{"DDPlus", "WEB DDPlus", "WEB clean", 25},
+		{"DTS Lossless", "BLURAY DTS-HD MA", "BLURAY clean", 100},
+	}
+
+	for _, delta := range deltas {
+		if got := neutral[delta.with] - neutral[delta.base]; got != delta.want {
+			t.Fatalf(
+				"%s effective preference=%d; want %d",
+				delta.name,
+				got,
+				delta.want,
+			)
+		}
+	}
+
+	remux := neutral["REMUX clean"]
+	for _, name := range []string{
+		"WEB DDPlus Atmos IMAX",
+		"BLURAY DTS-HD MA IMAX",
+	} {
+		if neutral[name] >= remux {
+			t.Fatalf(
+				"%s score=%d outranked/equaled clean REMUX T1=%d",
+				name,
+				neutral[name],
+				remux,
+			)
+		}
 	}
 }

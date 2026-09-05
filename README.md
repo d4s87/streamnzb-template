@@ -3,7 +3,7 @@ DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https
 
 **Current version: V5.1**
 
-V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.16.1 / Jhin 0.6.1 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the four Samsung/device-specific playback rules. Both profiles share the same Core policy, presentation classifications, Define Library, and formatter architecture.
+V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.16.1 / Jhin 0.6.1 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -26,7 +26,7 @@ The profile is designed around:
 - Tier-safe NZB availability tie-breaking and native StreamNZB library prioritization
 - Same-release failover
 - Grouped resolution + quality result limits
-- Hardware-neutral dynamic-range / bit-depth scoring with Samsung-specific Dolby Vision compatibility handling and audio preferences
+- Hardware-neutral dynamic-range / bit-depth and high-impact audio normalization with Samsung-specific Dolby Vision compatibility handling
 - Formatter display of parsed language metadata and subtitle presence, including clean subtitle-only rendering
 
 ## Quick Start
@@ -72,7 +72,7 @@ The formatter can also remain linked for future updates.
 
 `profile.txt` preserves the existing **Samsung QN90A without an AVR or soundbar** behavior.
 
-`profile-neutral.txt` keeps the shared DraCuLa filtering and scoring policy but removes the four Samsung/device-specific playback rules: Dolby Vision without HDR fallback rejection, Atmos compensation, TrueHD compensation, and DTS Lossless compensation.
+`profile-neutral.txt` keeps the shared DraCuLa filtering and scoring policy but removes the single Samsung/device-specific playback rule: rejection of Dolby Vision releases without an HDR fallback. Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless normalization are now shared Core policy and therefore apply identically in both profiles.
 
 The neutral profile does **not** remove general format classification or hardware-independent filtering. In particular, **Reject 3D is a Core rule and is present in both profiles**.
 
@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **114** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **115** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,14 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **110** rules. It is the Samsung profile minus exactly these four device-specific rules:
+The neutral artifact contains **114** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
-- `Reduce Atmos`
-- `Reduce TrueHD bonus`
-- `Reduce DTS Lossless bonus`
 
-`Neutralize Dolby Vision` is now part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. All 110 shared rules are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks so audio metadata remains a bounded preference rather than overriding release-group/source authority. All **114 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -233,6 +230,21 @@ After that compensation, DraCuLa applies one explicit bounded format preference:
 The non-Anime-only scope is intentional. The minimum adjacent Anime release-group gap is `80`, while the largest ordinary lower-tier Anime Show WEB metadata stack proven by the pinned engine is `+77`, leaving only `3` points of guaranteed headroom. A meaningful HDR10+ bonus would therefore erase or invert Anime tier authority. Permanent real-engine regressions keep Anime HDR10+ neutral while verifying that a fully decorated lower Movie WEB tier with HDR10+ `+25` still remains `78` points below the next-higher clean tier.
 
 The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible, and Dolby Vision releases with HDR10+ fallback receive the same non-Anime `+25` HDR10+ preference. The hardware-neutral profile performs no Dolby Vision compatibility rejection; Dolby Vision-only remains eligible and score-neutral.
+
+## High-Impact Audio Normalization
+
+Jhin v0.6 also contributes comparatively large native audio ranks: `+2000` for TrueHD, `+2000` for DTS Lossless, `+1000` for Atmos, and `+150` for Dolby Digital Plus. Those values are large enough to consume the effective headroom between clean Remux and lower-source Movie results, allowing otherwise secondary audio metadata to overturn DraCuLa's intended source/release-group authority.
+
+The shared Portable Core therefore normalizes only these high-impact native bonuses:
+
+- TrueHD: `+2000` native, compensated by `-1900`, leaving an effective `+100`
+- DTS Lossless: `+2000` native, compensated by `-1900`, leaving an effective `+100`
+- Atmos: `+1000` native, compensated by `-950`, leaving an additional effective `+50`
+- Dolby Digital Plus: `+150` native, compensated by `-125`, leaving an effective `+25`
+
+This is intentionally selective normalization rather than a complete audio-codec hierarchy. Smaller native Jhin audio scores such as DTS lossy, AAC, and Dolby Digital remain untouched. The goal is to bound the bonuses that materially threaten source/tier ordering while preserving useful audio metadata as a secondary preference.
+
+The normalization is identical in `profile.txt` and `profile-neutral.txt`. Permanent pinned real-StreamNZB/Jhin regression coverage verifies the shared effective audio deltas and proves that a clean Movie T1 Remux remains above both a T1 WEB-DL with DD+ / Atmos / IMAX metadata and a T1 UHD BluRay with DTS-HD MA / IMAX metadata.
 
 ## Anime Scoring
 
@@ -599,9 +611,9 @@ and formatting system.
 
 This profile is tuned for a **Samsung QN90A without an AVR or soundbar**.
 
-The Samsung QN90A does not support Dolby Vision, so the profile contains custom DV/HDR handling. Audio scoring has also been adjusted for a TV-speaker setup.
+The Samsung QN90A does not support Dolby Vision, so the Samsung profile retains a device-specific Dolby Vision compatibility rule that rejects DV releases without HDR fallback. High-impact audio normalization is shared by both profiles rather than being tied to the Samsung speaker setup.
 
-If you use a different TV, Dolby Vision display, AVR, soundbar or other audio setup, review these rules and scores before importing the profile.
+If you use a different TV, Dolby Vision display, AVR, soundbar or other audio setup, review the compatibility rule and shared scoring policy before importing the profile.
 
 ## Personalizing the Profile Without Losing Updates
 
@@ -672,7 +684,7 @@ The rule does not apply to Anime, Library results, 2160p Remuxes, or other conte
 
 ## Validation
 
-The repository includes automated validation for both generated profile variants, the Define Library, Vidhin synchronization and Anime tier integrity. The Samsung artifact must remain byte-for-byte reproducible from the canonical source registry, while the neutral artifact is validated as the same ordered policy minus exactly four Samsung/device-specific rules.
+The repository includes automated validation for both generated profile variants, the Define Library, Vidhin synchronization and Anime tier integrity. The Samsung artifact must remain byte-for-byte reproducible from the canonical source registry, while the neutral artifact is validated as the same ordered policy minus exactly one Samsung/device-specific rule.
 
 For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
 

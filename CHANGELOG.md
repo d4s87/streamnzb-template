@@ -6,6 +6,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **profile:** normalize Jhin v0.6's high-impact native audio ranks in shared Core policy: TrueHD and DTS Lossless are bounded to effective `+100`, Atmos to an additional `+50`, and Dolby Digital Plus to `+25`, preventing audio metadata from overturning intended Movie source/release-group authority.
+- **testing:** add permanent pinned real-StreamNZB/Jhin regression coverage for shared Neutral/Samsung audio normalization, including effective audio deltas and clean T1 Remux headroom over decorated T1 WEB-DL and UHD BluRay results.
 - **profile:** reject `Sword Art Online II` releases that reset their own `S01` numbering when the resolved request is specifically the base `Sword Art Online` Season 1 Anime Show, closing a real pinned-StreamNZB short-suffix title-matching collision without weakening normal title matching.
 - **testing:** add permanent pinned real-StreamNZB/Jhin regression coverage for the SAO Season 1 / `SAO II` collision, including genuine base-SAO results, explicit SAO II requests, other seasons, non-Anime requests, and unrelated later `II` tokens as negative controls.
 - **profile:** make the final resolution/quality ceiling season-pack aware: ordinary episode/non-pack results retain the existing best 3 per R/Q, while Series and Anime Show season packs receive an independent best 1 per R/Q slot, preserving one strong pack alternative without globally widening result sets.
@@ -19,6 +21,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **profile:** increase the Samsung profile from 114 to **115** rules and the hardware-neutral profile from 110 to **114** rules as high-impact audio normalization moves into shared Core policy and Dolby Digital Plus normalization is added. Canonical ownership becomes **110 Core**, 4 presentation, and **1 Samsung device rule**.
+- **architecture:** move Atmos, TrueHD, and DTS Lossless compensation out of the Samsung device layer and into shared Portable Core, add shared Dolby Digital Plus normalization, and leave `DV without HDR fallback` as the only Samsung-specific device rule.
 - **profile:** increase the Samsung profile from 113 to **114** rules and the hardware-neutral profile from 109 to **110** rules with the shared SAO Season 1 title-collision safeguard. Canonical ownership becomes **106 Core**, 4 presentation, and 4 Samsung device rules.
 - **profile:** increase the Samsung profile from 112 to **113** rules and the hardware-neutral profile from 108 to **109** rules with the shared season-pack R/Q limiter. Canonical ownership becomes **105 Core**, 4 presentation, and 4 Samsung device rules.
 - **formatter:** stop independently versioning formatter display names. The normal and diagnostic artifacts now use the stable names **DraCuLa** and **DraCuLa Debug** and inherit the DraCuLa template/repository release lifecycle.

@@ -10,7 +10,7 @@
         "presentation",
         "device:samsung-qn90a"
       ],
-      "expected_rules": 114
+      "expected_rules": 115
     },
     {
       "artifact": "profile-neutral.txt",
@@ -20,7 +20,7 @@
         "core",
         "presentation"
       ],
-      "expected_rules": 110
+      "expected_rules": 114
     }
   ]
 }

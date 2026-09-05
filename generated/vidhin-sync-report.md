@@ -1,11 +1,9 @@
 # Vidhin sync report
 
-## Anime LQ Groups
+## Movies WEB T2 Groups
 
-**Raw release-name regex changed**
-
-**Upstream source(s)**
-- `Anime LQ Groups`
+**Removed release-group tokens**
+- `- TOMMY`
 
 ---
 Tracked StreamNZB Defines: **55**

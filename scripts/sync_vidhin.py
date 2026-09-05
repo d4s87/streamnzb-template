@@ -530,6 +530,86 @@ def validate_anime_tier_collisions(current):
             + "\n\nAutomatic synchronization stopped."
         )
 
+
+MOVIE_SHOW_TIER_FAMILIES = (
+    ("Movies UHD BluRay", 3),
+    ("Movies HD BluRay", 3),
+    ("Movies Remux", 3),
+    ("Movies WEB", 3),
+    ("Shows BluRay", 2),
+    ("Shows Remux", 2),
+    ("Shows WEB", 3),
+)
+
+
+def validate_movie_show_tier_collisions(current):
+    """
+    Detect release-group tokens appearing in multiple tiers of the same
+    live Movie/Show release-group family.
+
+    Unlike Anime, non-Anime Movie and Show targets do not mirror the same
+    upstream sources (only "Movies WEB T1"/"Shows WEB T1" intentionally
+    share Vidhin's generic "Web T1" source), so each family below is
+    validated independently. Overlap between different families (for
+    example the same group in Movies WEB T1 and Movies Remux T1) is
+    allowed; a collision inside one family's own tiers is not.
+    """
+    problems = []
+    family_with_problem = None
+
+    for family, max_tier in MOVIE_SHOW_TIER_FAMILIES:
+        seen = {}
+
+        for tier in range(1, max_tier + 1):
+            target = f"{family} T{tier} Groups"
+
+            if target not in current:
+                raise RuntimeError(
+                    f"Expected resolved Movie/Show target missing: {target}"
+                )
+
+            tokens = current[target].get("tokens", [])
+
+            if not tokens:
+                raise RuntimeError(
+                    f"Resolved Movie/Show target contains no tokens: {target}"
+                )
+
+            local_seen = set()
+
+            for token in tokens:
+                key = token.casefold()
+
+                if key in local_seen:
+                    raise RuntimeError(
+                        f"Duplicate token {token!r} inside {target}"
+                    )
+
+                local_seen.add(key)
+
+                if key in seen:
+                    previous_tier, previous_token = seen[key]
+
+                    problems.append(
+                        f"{token!r}: "
+                        f"T{previous_tier} ({previous_token!r}) "
+                        f"and T{tier}"
+                    )
+                else:
+                    seen[key] = (tier, token)
+
+        if problems:
+            family_with_problem = family
+            break
+
+    if problems:
+        raise RuntimeError(
+            f"Vidhin upstream {family_with_problem} tier collision "
+            "detected:\n\n  - "
+            + "\n  - ".join(problems)
+            + "\n\nAutomatic synchronization stopped."
+        )
+
 def read_old(path):
     path=Path(path)
     if not path.exists(): return {}
@@ -1202,6 +1282,7 @@ def main():
     validate_anime_upstream_structure(upstream)
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
+    validate_movie_show_tier_collisions(cur)
     old=read_old(a.baseline)
     text,changed=report(old,cur,mapping)
     a.library.parent.mkdir(parents=True,exist_ok=True)

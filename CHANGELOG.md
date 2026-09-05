@@ -32,6 +32,12 @@ Changes in this section are under development and are not part of the latest sta
 - **formatter:** stop independently versioning formatter display names. The normal and diagnostic artifacts now use the stable names **DraCuLa** and **DraCuLa Debug** and inherit the DraCuLa template/repository release lifecycle.
 - **formatter:** keep the new reliability and corrected-release metadata presentation-only; no scoring, filtering, tier, Library, availability-bonus, or same-release fallback policy changes are introduced.
 
+### Bug Fixes
+
+- **sync:** extend the fail-closed Vidhin tier-collision/empty-tier guard from Anime-only to the 7 non-Anime Movie/Show tier families (`Movies UHD BluRay`, `Movies HD BluRay`, `Movies Remux`, `Movies WEB`, `Shows BluRay`, `Shows Remux`, `Shows WEB`), closing a gap where a duplicate release-group token across tiers, or a tier resolving to zero tokens, could previously reach production unreviewed.
+- **defines:** the new guard surfaced a live Vidhin upstream inconsistency: release group `TOMMY` is listed in both `Movies WEB T1` and `T2` upstream. Existing tier precedence already resolved this in DraCuLa's favor of T1 at render time, so the published `generated/streamnzb-defines.txt` is unchanged byte-for-byte; the mapping now encodes that resolution explicitly with `remove_tokens` instead of leaving it as an unreviewed side effect of precedence.
+- **testing:** add synthetic regression coverage proving the new Movie/Show tier-collision/empty-tier check fires on same-family cross-tier token collisions, duplicate tokens within one tier, and an emptied tier, while confirming legitimate cross-family overlap (e.g. the same group in `Movies WEB T1` and `Movies Remux T1`) is not flagged.
+
 ## [5.1](https://github.com/d4s87/streamnzb-template/compare/v5.0...v5.1) (2026-09-02)
 
 V5.1 hardens DraCuLa's ranking and formatter behavior around the released StreamNZB 5.16.1 / Jhin 0.6.1 baseline. It adds candidate-relative Adaptive Low-Score Filtering, restores release-group tier authority over native display/edition/corrected-release scoring, adds bounded HDR10+ preference and Vidhin-backed Obfuscated penalties, and improves formatter language/subtitle presentation with permanent real-engine regression coverage.

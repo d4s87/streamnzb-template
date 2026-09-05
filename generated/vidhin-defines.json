@@ -2,7 +2,7 @@
   "schema_version": 3,
   "mapping_schema_version": 3,
   "upstream_url": "https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json",
-  "generated_at_utc": "2026-09-05T15:49:50+00:00",
+  "generated_at_utc": "2026-09-05T20:00:11+00:00",
   "defines": {
     "Movies UHD BluRay T1 Groups": {
       "sources": [
@@ -471,7 +471,6 @@
         "playWEB",
         "SbR",
         "SMURF",
-        "TOMMY",
         "XEBEC"
       ],
       "tier_family": "Movies WEB",

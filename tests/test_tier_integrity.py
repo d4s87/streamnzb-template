@@ -314,6 +314,80 @@ validate_no_cross_tier_collisions("BluRay", 8)
 
 
 # ---------------------------------------------------------------------------
+# 4b. Movie/Show (non-Anime) tier structure: no cross-tier collisions, no
+# empty tiers.
+#
+# Unlike Anime, Movies and Shows do not mirror the same upstream sources
+# (only "Movies WEB T1"/"Shows WEB T1" intentionally share Vidhin's generic
+# "Web T1" source), so each family below is validated independently.
+# Overlap between different families is allowed; a collision inside one
+# family's own tiers is not.
+# ---------------------------------------------------------------------------
+
+MOVIE_SHOW_TIER_FAMILIES = (
+    ("Movies UHD BluRay", 3),
+    ("Movies HD BluRay", 3),
+    ("Movies Remux", 3),
+    ("Movies WEB", 3),
+    ("Shows BluRay", 2),
+    ("Shows Remux", 2),
+    ("Shows WEB", 3),
+)
+
+
+def validate_no_movie_show_cross_tier_collisions(family, max_tier):
+    seen = {}
+
+    for tier in range(1, max_tier + 1):
+        target = f"{family} T{tier} Groups"
+
+        assert target in defines, (
+            f"Expected Movie/Show tier target missing: {target}"
+        )
+
+        tokens = defines[target].get("tokens")
+
+        assert isinstance(tokens, list), (
+            f"{target}: baseline tokens must be a list"
+        )
+
+        assert tokens, (
+            f"{target}: resolved token list is empty"
+        )
+
+        local_seen = set()
+
+        for token in tokens:
+            assert isinstance(token, str) and token, (
+                f"{target}: invalid token {token!r}"
+            )
+
+            key = token.casefold()
+
+            assert key not in local_seen, (
+                f"{target}: duplicate token {token!r} "
+                "inside the same tier"
+            )
+
+            local_seen.add(key)
+
+            if key in seen:
+                previous_tier, previous_token = seen[key]
+
+                raise AssertionError(
+                    f"{family} cross-tier collision: "
+                    f"{token!r} appears in T{previous_tier} "
+                    f"({previous_token!r}) and T{tier}"
+                )
+
+            seen[key] = (tier, token)
+
+
+for _family, _max_tier in MOVIE_SHOW_TIER_FAMILIES:
+    validate_no_movie_show_cross_tier_collisions(_family, _max_tier)
+
+
+# ---------------------------------------------------------------------------
 # 5. Source structure recorded in the accepted baseline
 #
 # Vidhin may have multiple regex records with the same source name

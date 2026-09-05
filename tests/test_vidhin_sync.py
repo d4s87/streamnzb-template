@@ -1084,3 +1084,80 @@ while True:
     pos = name_end + 2
 
 assert sorted(set(trusted_refs)) == expected_trusted
+
+# ---------------------------------------------------------------------------
+# validate_movie_show_tier_collisions
+#
+# Mirrors validate_anime_tier_collisions but for the 7 non-Anime Movie/Show
+# tier families. Synthetic fixtures below prove the check actually fires
+# rather than only ever running against already-clean real data.
+# ---------------------------------------------------------------------------
+
+def make_movie_show_current(overrides=None):
+    overrides = overrides or {}
+
+    current = {}
+
+    for family, max_tier in m.MOVIE_SHOW_TIER_FAMILIES:
+        for tier in range(1, max_tier + 1):
+            target = f"{family} T{tier} Groups"
+            current[target] = {
+                "tokens": overrides.get(target, [f"{family}-T{tier}-Group"])
+            }
+
+    return current
+
+
+# Clean synthetic fixture must pass.
+m.validate_movie_show_tier_collisions(make_movie_show_current())
+
+# Cross-family overlap (different families, same tier number) is allowed.
+cross_family = make_movie_show_current({
+    "Movies WEB T1 Groups": ["SHARED"],
+    "Movies Remux T1 Groups": ["SHARED"],
+})
+m.validate_movie_show_tier_collisions(cross_family)
+
+# Same-family cross-tier collision must fail closed.
+colliding = make_movie_show_current({
+    "Movies WEB T1 Groups": ["TOMMY"],
+    "Movies WEB T2 Groups": ["TOMMY"],
+})
+
+try:
+    m.validate_movie_show_tier_collisions(colliding)
+except RuntimeError as exc:
+    assert "TOMMY" in str(exc)
+    assert "Movies WEB" in str(exc)
+else:
+    raise AssertionError(
+        "Movies WEB T1/T2 token collision was not detected"
+    )
+
+# Duplicate token within the same tier must also fail closed.
+dup_in_tier = make_movie_show_current({
+    "Shows Remux T1 Groups": ["DUPGROUP", "DUPGROUP"],
+})
+
+try:
+    m.validate_movie_show_tier_collisions(dup_in_tier)
+except RuntimeError as exc:
+    assert "Duplicate token" in str(exc)
+else:
+    raise AssertionError(
+        "Duplicate token inside a single tier was not detected"
+    )
+
+# An empty resolved tier must fail closed.
+empty_tier = make_movie_show_current({
+    "Shows WEB T3 Groups": [],
+})
+
+try:
+    m.validate_movie_show_tier_collisions(empty_tier)
+except RuntimeError as exc:
+    assert "Shows WEB T3 Groups" in str(exc)
+else:
+    raise AssertionError(
+        "Empty resolved Movie/Show tier was not detected"
+    )

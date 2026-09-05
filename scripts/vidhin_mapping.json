@@ -82,7 +82,10 @@
       "scope": "movie",
       "field": "group",
       "tier_family": "Movies WEB",
-      "tier": 2
+      "tier": 2,
+      "remove_tokens": [
+        "TOMMY"
+      ]
     },
     "Movies WEB T3 Groups": {
       "sources": [

@@ -3,7 +3,16 @@
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from discord_common import (  # noqa: E402
+    MAX_MESSAGE_LENGTH,
+    wrap_discord_content,
+    write_discord_payload,
+)
 
 
 BASELINE_PATH = Path("generated/vidhin-defines.json")
@@ -144,9 +153,9 @@ def build_message(
             + "\n\nSee the commit above for the complete change set."
         )
 
-    if len(message) > 2000:
+    if len(message) > MAX_MESSAGE_LENGTH:
         raise ValueError(
-            "Discord message exceeds 2000 characters"
+            f"Discord message exceeds {MAX_MESSAGE_LENGTH} characters"
         )
 
     return message
@@ -276,22 +285,11 @@ def command_payload(args):
         commit_sha=args.commit_sha,
     )
 
-    payload = {
-        "content": message,
-        "allowed_mentions": {
-            "parse": [],
-        },
-    }
+    payload = wrap_discord_content(message)
 
-    Path(args.output).write_text(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+    content = write_discord_payload(args.output, payload)
 
-    print(message)
+    print(content)
 
 
 def build_parser():

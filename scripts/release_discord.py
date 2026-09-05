@@ -2,10 +2,18 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-MAX_MESSAGE_LENGTH = 2000
+from discord_common import (  # noqa: E402
+    truncate_with_ellipsis,
+    wrap_discord_content,
+    write_discord_payload,
+)
+
+
 MAX_RELEASE_NAME_LENGTH = 240
 
 
@@ -57,13 +65,9 @@ def release_from_event(event):
     if not isinstance(name, str) or not name.strip():
         name = tag_name
 
-    name = name.strip()
-
-    if len(name) > MAX_RELEASE_NAME_LENGTH:
-        name = (
-            name[:MAX_RELEASE_NAME_LENGTH - 1].rstrip()
-            + "…"
-        )
+    name = truncate_with_ellipsis(
+        name.strip(), MAX_RELEASE_NAME_LENGTH
+    )
 
     prerelease = release.get("prerelease", False)
 
@@ -104,40 +108,22 @@ def build_message(release):
         f"Release: {release['html_url']}",
     ]
 
-    message = "\n".join(lines)
-
-    if len(message) > MAX_MESSAGE_LENGTH:
-        raise ValueError(
-            "Discord release message exceeds 2000 characters"
-        )
-
-    return message
+    return "\n".join(lines)
 
 
 def build_payload(event):
     release = release_from_event(event)
 
-    return {
-        "content": build_message(release),
-        "allowed_mentions": {
-            "parse": [],
-        },
-    }
+    return wrap_discord_content(build_message(release))
 
 
 def command_payload(args):
     event = load_event(args.event)
     payload = build_payload(event)
 
-    Path(args.output).write_text(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+    content = write_discord_payload(args.output, payload)
 
-    print(payload["content"])
+    print(content)
 
 
 def build_parser():

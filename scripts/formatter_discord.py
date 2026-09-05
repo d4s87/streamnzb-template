@@ -3,10 +3,18 @@
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-MAX_MESSAGE_LENGTH = 2000
+from discord_common import (  # noqa: E402
+    truncate_with_ellipsis,
+    wrap_discord_content,
+    write_discord_payload,
+)
+
+
 MAX_COMMIT_SUBJECT_LENGTH = 240
 
 PUBLISHED_FORMATTERS = (
@@ -165,13 +173,7 @@ def normalize_commit_subject(value):
 
     value = " ".join(value.split())
 
-    if len(value) > MAX_COMMIT_SUBJECT_LENGTH:
-        value = (
-            value[:MAX_COMMIT_SUBJECT_LENGTH - 1].rstrip()
-            + "…"
-        )
-
-    return value
+    return truncate_with_ellipsis(value, MAX_COMMIT_SUBJECT_LENGTH)
 
 
 def build_message(
@@ -237,14 +239,7 @@ def build_message(
         f"Commit: [`{short_sha}`]({commit_url})",
     ]
 
-    message = "\n".join(lines)
-
-    if len(message) > MAX_MESSAGE_LENGTH:
-        raise ValueError(
-            "Discord formatter message exceeds 2000 characters"
-        )
-
-    return message
+    return "\n".join(lines)
 
 
 def build_payload(
@@ -254,18 +249,15 @@ def build_payload(
     commit_sha,
     commit_subject,
 ):
-    return {
-        "content": build_message(
+    return wrap_discord_content(
+        build_message(
             files,
             repository,
             server_url,
             commit_sha,
             commit_subject,
-        ),
-        "allowed_mentions": {
-            "parse": [],
-        },
-    }
+        )
+    )
 
 
 def write_github_output(path, values):
@@ -359,15 +351,9 @@ def command_payload(args):
         args.commit_subject,
     )
 
-    Path(args.output).write_text(
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
+    content = write_discord_payload(args.output, payload)
 
-    print(payload["content"])
+    print(content)
 
 
 def build_parser():

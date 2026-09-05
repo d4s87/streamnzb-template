@@ -37,6 +37,11 @@ Changes in this section are under development and are not part of the latest sta
 - **sync:** extend the fail-closed Vidhin tier-collision/empty-tier guard from Anime-only to the 7 non-Anime Movie/Show tier families (`Movies UHD BluRay`, `Movies HD BluRay`, `Movies Remux`, `Movies WEB`, `Shows BluRay`, `Shows Remux`, `Shows WEB`), closing a gap where a duplicate release-group token across tiers, or a tier resolving to zero tokens, could previously reach production unreviewed.
 - **defines:** the new guard surfaced a live Vidhin upstream inconsistency: release group `TOMMY` is listed in both `Movies WEB T1` and `T2` upstream. Existing tier precedence already resolved this in DraCuLa's favor of T1 at render time, so the published `generated/streamnzb-defines.txt` is unchanged byte-for-byte; the mapping now encodes that resolution explicitly with `remove_tokens` instead of leaving it as an unreviewed side effect of precedence.
 - **testing:** add synthetic regression coverage proving the new Movie/Show tier-collision/empty-tier check fires on same-family cross-tier token collisions, duplicate tokens within one tier, and an emptied tier, while confirming legitimate cross-family overlap (e.g. the same group in `Movies WEB T1` and `Movies Remux T1`) is not flagged.
+- **tooling:** `build_formatter.py` now rejects a `formatter.txt`/`formatter-debug.txt` artifact containing embedded newlines or an empty payload before attempting to decode it, matching the structural guard `build_profiles.py` already applies to `profile.txt`/`profile-neutral.txt`.
+
+### Maintenance
+
+- **ci:** extract the Discord payload envelope (`content` + `allowed_mentions`), the 2000-character message limit, and the ellipsis-truncation helper used by commit-subject/release-name trimming into a shared `scripts/discord_common.py`, used by `formatter_discord.py`, `release_discord.py`, and `vidhin_discord.py`. Each script's own message-building logic is unchanged; only the previously triplicated envelope/limit/truncation code is unified. Add `tests/test_discord_common.py` and wire it into CI.
 
 ## [5.1](https://github.com/d4s87/streamnzb-template/compare/v5.0...v5.1) (2026-09-02)
 

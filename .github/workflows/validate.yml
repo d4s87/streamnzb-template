@@ -41,6 +41,9 @@ jobs:
       - name: Run Vidhin sync tests
         run: python tests/test_vidhin_sync.py
 
+      - name: Test shared Discord payload helpers
+        run: python tests/test_discord_common.py
+
       - name: Test Vidhin Discord notifications
         run: python tests/test_vidhin_discord.py
 

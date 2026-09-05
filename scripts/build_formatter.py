@@ -26,12 +26,21 @@ def decode_share_code(path: Path):
         encoding="utf-8",
     ).strip()
 
+    if "\n" in code or "\r" in code:
+        raise ValueError(
+            f"{path} must contain exactly one share code"
+        )
+
     if not code.startswith(PREFIX):
         raise ValueError(
             f"{path} does not start with {PREFIX!r}"
         )
 
     encoded = code[len(PREFIX):]
+
+    if not encoded:
+        raise ValueError(f"{path} share code has no payload")
+
     encoded += "=" * (-len(encoded) % 4)
 
     compressed = base64.urlsafe_b64decode(

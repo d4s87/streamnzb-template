@@ -78,7 +78,7 @@ EXPECTED_SCORING = {
 }
 
 assert rules_source["scoring"] == EXPECTED_SCORING
-assert len(rules_source["rules"]) == 115
+assert len(rules_source["rules"]) == 122
 
 entries = rules_source["rules"]
 
@@ -88,7 +88,7 @@ for entry in entries:
     owners[entry["owner"]] = owners.get(entry["owner"], 0) + 1
 
 assert owners == {
-    "core": 110,
+    "core": 117,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -137,7 +137,7 @@ assert variants["profile.txt"] == {
         "presentation",
         "device:samsung-qn90a",
     ],
-    "expected_rules": 115,
+    "expected_rules": 122,
 }
 
 assert variants["profile-neutral.txt"] == {
@@ -148,7 +148,7 @@ assert variants["profile-neutral.txt"] == {
         "core",
         "presentation",
     ],
-    "expected_rules": 114,
+    "expected_rules": 121,
 }
 
 samsung_before = SAMSUNG_PATH.read_bytes()
@@ -190,8 +190,8 @@ assert neutral["streamnzb_profile"] == 1
 samsung_rules = samsung["rules"]
 neutral_rules = neutral["rules"]
 
-assert len(samsung_rules) == 115
-assert len(neutral_rules) == 114
+assert len(samsung_rules) == 122
+assert len(neutral_rules) == 121
 
 samsung_names = [
     rule["name"]
@@ -236,5 +236,128 @@ neutral_by_name = {
 
 for name in neutral_names:
     assert neutral_by_name[name] == samsung_by_name[name]
+
+# ---------------------------------------------------------------------------
+# Audio neutralization scoping (post scoring-ceiling audit)
+#
+# Prove build_profiles.py's validate_audio_neutralization_scoping() actually
+# fires on drift, not just that the current committed source happens to
+# pass. Universal "Neutralize X" rules must never gain an isAnime
+# condition; non-Anime "Prefer X" residual bonuses must never lose their
+# "not isAnime" scoping; Anime-only neutralizers for previously-untouched
+# codecs (AAC/DTS Lossy/Dolby Digital) must stay isAnime-scoped.
+# ---------------------------------------------------------------------------
+
+import importlib.util as _importlib_util
+
+_spec = _importlib_util.spec_from_file_location(
+    "build_profiles", ROOT / "scripts" / "build_profiles.py"
+)
+build_profiles = _importlib_util.module_from_spec(_spec)
+_spec.loader.exec_module(build_profiles)
+
+_good_entries = (
+    [
+        {"owner": "core", "rule": {"name": name, "when": '"truehd" in traits'}}
+        for name in build_profiles.EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS
+    ]
+    + [
+        {
+            "owner": "core",
+            "rule": {"name": name, "when": 'not isAnime and "truehd" in traits'},
+        }
+        for name in build_profiles.EXPECTED_NON_ANIME_AUDIO_PREFERENCES
+    ]
+    + [
+        {
+            "owner": "core",
+            "rule": {"name": name, "when": 'isAnime and "aac" in traits'},
+        }
+        for name in build_profiles.EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS
+    ]
+)
+
+# Valid scoping must pass.
+build_profiles.validate_audio_neutralization_scoping(_good_entries)
+
+
+def _with_when(entries, name, when):
+    out = []
+    for entry in entries:
+        if entry["rule"]["name"] == name:
+            entry = {
+                "owner": entry["owner"],
+                "rule": {**entry["rule"], "when": when},
+            }
+        out.append(entry)
+    return out
+
+
+# A universal neutralizer accidentally gaining an isAnime condition
+# (either direction) must fail closed.
+_drifted = _with_when(
+    _good_entries, "Neutralize TrueHD", 'not isAnime and "truehd" in traits'
+)
+try:
+    build_profiles.validate_audio_neutralization_scoping(_drifted)
+except ValueError as exc:
+    assert "Neutralize TrueHD" in str(exc)
+    assert "universal" in str(exc)
+else:
+    raise AssertionError(
+        "universal neutralizer gaining isAnime was not detected"
+    )
+
+# A non-Anime residual preference losing "not isAnime" must fail closed.
+_drifted = _with_when(_good_entries, "Prefer Atmos", '"atmos" in traits')
+try:
+    build_profiles.validate_audio_neutralization_scoping(_drifted)
+except ValueError as exc:
+    assert "Prefer Atmos" in str(exc)
+    assert "non-Anime" in str(exc)
+else:
+    raise AssertionError(
+        "residual preference losing not-isAnime scoping was not detected"
+    )
+
+# An Anime-only neutralizer losing its isAnime scoping must fail closed.
+_drifted = _with_when(_good_entries, "Neutralize Anime AAC", '"aac" in traits')
+try:
+    build_profiles.validate_audio_neutralization_scoping(_drifted)
+except ValueError as exc:
+    assert "Neutralize Anime AAC" in str(exc)
+    assert "Anime only" in str(exc)
+else:
+    raise AssertionError(
+        "Anime-only neutralizer losing isAnime scoping was not detected"
+    )
+
+# An Anime-only neutralizer accidentally becoming universal (isAnime
+# replaced by "not isAnime", i.e. inverted rather than dropped) must
+# also fail closed.
+_drifted = _with_when(
+    _good_entries, "Neutralize Anime AAC", 'not isAnime and "aac" in traits'
+)
+try:
+    build_profiles.validate_audio_neutralization_scoping(_drifted)
+except ValueError as exc:
+    assert "Neutralize Anime AAC" in str(exc)
+else:
+    raise AssertionError(
+        "Anime-only neutralizer inverted to non-Anime was not detected"
+    )
+
+# A missing expected rule must fail closed rather than silently validating.
+_incomplete = [
+    e for e in _good_entries if e["rule"]["name"] != "Prefer Dolby Digital Plus"
+]
+try:
+    build_profiles.validate_audio_neutralization_scoping(_incomplete)
+except ValueError as exc:
+    assert "Prefer Dolby Digital Plus" in str(exc)
+else:
+    raise AssertionError(
+        "missing audio neutralization rule was not detected"
+    )
 
 print("PASS: profile variant generation tests")

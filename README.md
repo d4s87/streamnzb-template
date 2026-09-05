@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **115** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **122** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **114** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **121** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks so audio metadata remains a bounded preference rather than overriding release-group/source authority. All **114 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks so audio metadata remains a bounded preference rather than overriding release-group/source authority. All **121 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -227,24 +227,37 @@ The pinned Jhin v0.6 engine natively adds `+3000` for Dolby Vision, `+2100` for 
 
 After that compensation, DraCuLa applies one explicit bounded format preference: non-Anime HDR10+ receives `+25`. HDR, HDR10, Dolby Vision, parsed 10-bit, and Anime HDR10+ remain score-neutral. The `+25` HDR10+ preference is shared by both the Samsung and hardware-neutral profiles because it is a release-format preference rather than a Samsung-specific compatibility rule.
 
-The non-Anime-only scope is intentional. The minimum adjacent Anime release-group gap is `80`, while the largest ordinary lower-tier Anime Show WEB metadata stack proven by the pinned engine is `+77`, leaving only `3` points of guaranteed headroom. A meaningful HDR10+ bonus would therefore erase or invert Anime tier authority. Permanent real-engine regressions keep Anime HDR10+ neutral while verifying that a fully decorated lower Movie WEB tier with HDR10+ `+25` still remains `78` points below the next-higher clean tier.
+The non-Anime-only scope is intentional. Anime's minimum adjacent release-group tier gap is only `80` points, far tighter than the `200`-point Movie/Show gap, leaving very little room for an additional positive dynamic-range bonus once every other ordinary Anime preference is considered. A meaningful HDR10+ bonus for Anime would risk eroding or inverting tier authority, so Anime HDR10+ remains fully score-neutral.
+
+Rather than citing a single hand-picked "maximum stack" figure as proof, the permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see [Validation](#validation)) is the authoritative guard for this contract: for every production tier family it decorates the lowest tier with every currently-reachable ordinary bonus and asserts the engine's own score stays below a clean candidate one tier higher. A prior audit found that relying on a hardcoded maximum instead of the engine's actual output is exactly what let a real tier-authority regression reach production undetected (see [High-Impact Audio Normalization](#high-impact-audio-normalization)).
 
 The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible, and Dolby Vision releases with HDR10+ fallback receive the same non-Anime `+25` HDR10+ preference. The hardware-neutral profile performs no Dolby Vision compatibility rejection; Dolby Vision-only remains eligible and score-neutral.
 
 ## High-Impact Audio Normalization
 
-Jhin v0.6 also contributes comparatively large native audio ranks: `+2000` for TrueHD, `+2000` for DTS Lossless, `+1000` for Atmos, and `+150` for Dolby Digital Plus. Those values are large enough to consume the effective headroom between clean Remux and lower-source Movie results, allowing otherwise secondary audio metadata to overturn DraCuLa's intended source/release-group authority.
+Jhin v0.6 also contributes comparatively large native audio ranks: `+2000` for TrueHD, `+2000` for DTS Lossless, `+1000` for Atmos, `+150` for Dolby Digital Plus, and `+100` / `+100` / `+50` for DTS lossy, AAC, and Dolby Digital respectively. Those values are large enough to threaten release-group tier authority when combined with other ordinary preferences.
 
-The shared Portable Core therefore normalizes only these high-impact native bonuses:
+A post-release scoring-ceiling audit found this had already happened in production: a real-engine adjacent-tier matrix showed a bottom-tier Anime BluRay release decorated with TrueHD/Atmos and other ordinary bonuses outscoring a clean release one tier higher by over 100 points, a Movie Remux/UHD BluRay/HD BluRay release doing the same to its immediate neighbor, and even a plain, undecorated AAC track alone being enough to cross Anime's minimum tier gap. The high-impact audio policy below is the fix for that regression.
 
-- TrueHD: `+2000` native, compensated by `-1900`, leaving an effective `+100`
-- DTS Lossless: `+2000` native, compensated by `-1900`, leaving an effective `+100`
-- Atmos: `+1000` native, compensated by `-950`, leaving an additional effective `+50`
-- Dolby Digital Plus: `+150` native, compensated by `-125`, leaving an effective `+25`
+The shared Portable Core compensates each high-impact codec in two layers, mirroring the existing HDR10+ `Neutralize`/`Prefer` split:
 
-This is intentionally selective normalization rather than a complete audio-codec hierarchy. Smaller native Jhin audio scores such as DTS lossy, AAC, and Dolby Digital remain untouched. The goal is to bound the bonuses that materially threaten source/tier ordering while preserving useful audio metadata as a secondary preference.
+- a universal `Neutralize` rule fully compensates the native score to `0` for **every** content kind, including Anime;
+- a `Prefer` rule then adds a small, deliberate residual bonus, but only when the request is **not** Anime.
 
-The normalization is identical in `profile.txt` and `profile-neutral.txt`. Permanent pinned real-StreamNZB/Jhin regression coverage verifies the shared effective audio deltas and proves that a clean Movie T1 Remux remains above both a T1 WEB-DL with DD+ / Atmos / IMAX metadata and a T1 UHD BluRay with DTS-HD MA / IMAX metadata.
+Effective results for Movies and Shows:
+
+- TrueHD: `+2000` native, neutralized to `0`, non-Anime preference restores an effective `+50`
+- DTS Lossless: `+2000` native, neutralized to `0`, non-Anime preference restores an effective `+50`
+- Atmos: `+1000` native, neutralized to `0`, non-Anime preference restores an effective `+25`
+- Dolby Digital Plus: `+150` native, neutralized to `0`, non-Anime preference restores an effective `+25`
+
+**Anime results are always exactly `0`** for all four codecs above — Anime's `80`-point minimum adjacent tier gap has no room to safely absorb a positive audio preference of any size.
+
+DTS lossy, AAC, and Dolby Digital remain fully untouched (native `+100` / `+100` / `+50`) for Movies and Shows, whose `200`-point tier gaps comfortably absorb them. For Anime, these three are separately neutralized to `0` as well, because the audit found that even a single untouched codec at its native value was enough on its own to threaten Anime's tier gap.
+
+This is intentionally selective, codec-by-codec normalization rather than a complete audio hierarchy or a blanket Anime exemption from audio scoring generally — Anime Dual/Multi Audio (a language preference, not a codec preference) is unaffected and keeps its own effective `+10`. The goal is to bound every codec that can materially threaten source/tier ordering while preserving a small, real preference for non-Anime content where the tier gap can safely absorb it.
+
+The normalization is identical in `profile.txt` and `profile-neutral.txt`. The permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see [Validation](#validation)) is the authoritative guard for this contract across every production tier family — Movie Remux/UHD BluRay/HD BluRay/WEB, Show Remux/BluRay/WEB, and Anime Show/Movie BluRay/WEB — rather than a hardcoded per-family maximum. A structural check separately fails closed if a `Neutralize` rule ever gains an Anime-conditional clause, or a `Prefer` rule ever loses its non-Anime scoping.
 
 ## Anime Scoring
 
@@ -270,9 +283,7 @@ BluRay release groups use a synchronized 80-point tier ladder for both Anime Mov
 
 These ladders are intentionally spaced around the **effective** score seen by the complete StreamNZB/Jhin ranking pipeline rather than only the raw DraCuLa rule values.
 
-The largest ordinary positive Anime stack currently proven by the pinned real engine is `+77` for Anime Show WEB results. That ceiling includes effective Dual/Multi Audio, corrected-release, Anime revision, Uncensored, Complete Season Pack, availability, and WEB service preferences where applicable. Anime Movies have a lower maximum because Complete Season Pack does not apply.
-
-The minimum adjacent Anime release-group gap is therefore `80`, leaving at least `3` points of headroom even for the maximum ordinary lower-tier stack. Permanent real-engine regression coverage verifies every adjacent Anime Movie and Anime Show WEB/BluRay tier so a fully decorated lower tier remains below the next-higher clean tier.
+The minimum adjacent Anime release-group tier gap is `80` points. Rather than relying on a single hand-picked "maximum ordinary stack" figure as proof that ordinary Anime metadata (Dual/Multi Audio, corrected-release, Anime revision, Uncensored, Complete Season Pack, availability, WEB service preferences, and — critically — audio codec metadata) can never cross that gap, the permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see [Validation](#validation)) directly verifies every adjacent Anime Movie and Anime Show WEB/BluRay tier: a fully decorated lower tier must score below a clean candidate one tier higher, as measured by the engine itself. A prior hardcoded-maximum approach let a real regression (see [High-Impact Audio Normalization](#high-impact-audio-normalization)) reach production undetected, which is why this contract is now engine-verified rather than documentation-verified.
 
 Anime releases matching Vidhin's Anime LQ classification receive a `-10,000` penalty. SeaDex Best and Alternative recommendations are exempt from this penalty.
 
@@ -322,11 +333,12 @@ The rule is deliberately narrow. The following remain neutral:
 - Anime Movies
 
 The preference is a tie-breaker rather than a quality override. It contributes
-`+10` to the effective Anime Show metadata stack and is included in the
-scoring-ceiling audit. With all ordinary positive Anime Show metadata that can
-legitimately combine, the pinned real engine reaches a maximum `+77` stack.
-The synchronized Anime WEB/BluRay ladders use a minimum adjacent gap of `80`,
-so even that maximum lower-tier stack remains below the next-higher clean tier.
+`+10` to the effective Anime Show metadata stack and is one of the bonuses
+covered by the permanent `TestAdjacentTierCeilingMatrix` real-engine
+regression (see [Validation](#validation)), which verifies directly through
+the engine that a fully decorated lower Anime tier — including this
+preference — never outscores a clean candidate one tier higher on the
+synchronized Anime WEB/BluRay ladders.
 
 The final resolution/quality ceiling is also season-pack aware. Ordinary
 episode/non-pack releases and episodic season packs no longer compete for the
@@ -415,12 +427,18 @@ The maximum ordinary low-weight Movie edition stack is therefore an effective
 `+50` when Open Matte and the shared Director's Cut / Extended Edition
 preference both apply.
 
-The full scoring-ceiling audit also combines that `+50` edition stack with
-effective Dual/Multi Audio `+10`, corrected release up to `+7`, and positive
-availability up to `+30`. The resulting maximum ordinary Movie stack is
-`+97`, leaving `103` points of headroom inside the `200`-point Movie
-release-group tier gap. Equivalent Show WEB/Remux tests reach only `+47`,
-leaving `153` points of headroom.
+That `+50` edition stack combines with effective Dual/Multi Audio `+10`,
+corrected release up to `+7`, positive availability up to `+30`, and audio
+codec metadata (see [High-Impact Audio Normalization](#high-impact-audio-normalization))
+inside the `200`-point Movie/Show release-group tier gap. Rather than citing
+a single hand-picked combined total as proof the gap always holds, the
+permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see
+[Validation](#validation)) directly verifies every Movie Remux/UHD
+BluRay/HD BluRay/WEB and Show Remux/BluRay/WEB tier family: a fully
+decorated lower tier must score below a clean candidate one tier higher, as
+measured by the engine itself. This replaced an earlier hardcoded-maximum
+approach after it let a real adjacent-tier regression reach production
+undetected.
 
 Criterion Collection, Final Cut, and generic Special Edition currently
 remain score-neutral. The pinned Jhin v0.6 parser does not classify those
@@ -713,6 +731,12 @@ This approach provides two layers of behavioral validation:
 2. **Production regression validation** — verifies the exact rule shipped in `profile.txt` against the same cases.
 
 The compatibility harness is intentionally used selectively for rules where parsing, traits, regular expressions or other StreamNZB engine behavior can materially affect matching. It is not intended to duplicate every profile rule into a second configuration file.
+
+### Adjacent-tier ceiling matrix
+
+`TestAdjacentTierCeilingMatrix` is a permanent, table-driven real-engine regression covering release-group tier authority for every production tier family: Movie Remux/UHD BluRay/HD BluRay/WEB, Show Remux/BluRay/WEB, and Anime Show/Movie BluRay/WEB. For every adjacent tier pair, it decorates the lower tier with every currently-reachable ordinary positive bonus (editions, dual/multi audio, corrected-release, revision, uncensored, complete season pack, availability, WEB service preference, and audio codec metadata) and asserts, through the engine's own score, that it stays below a clean candidate one tier higher.
+
+It intentionally does not compare against a hardcoded "maximum stack" constant. An earlier generation of ceiling tests did exactly that, and a real tier-authority regression (introduced when high-impact audio normalization was made a globally-scoped rule) reached production because nobody updated the hardcoded constant to include the new bonus — the tests kept passing against a stale assumption instead of the engine's actual behavior. See [High-Impact Audio Normalization](#high-impact-audio-normalization) for the fix. The matrix also includes a dedicated case proving that DTS lossy, AAC, and Dolby Digital — codecs intentionally left untouched for Movies/Shows — are still safe for Anime specifically.
 
 Validation runs automatically through GitHub Actions.
 

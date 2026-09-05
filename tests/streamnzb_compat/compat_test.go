@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 114 {
+	if len(neutralRules) != 121 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 114",
+			"neutral profile contains %d rules; want 121",
 			len(neutralRules),
 		)
 	}
@@ -4136,23 +4136,23 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 		false,
 	)
 
-	if web != 63264 {
+	if web != 63239 {
 		t.Fatalf(
-			"production-equivalent BYNDR score = %d, want 63264",
+			"production-equivalent BYNDR score = %d, want 63239",
 			web,
 		)
 	}
 
-	if remux != 62850 {
+	if remux != 62775 {
 		t.Fatalf(
-			"production-equivalent CiNEPHiLES score = %d, want 62850",
+			"production-equivalent CiNEPHiLES score = %d, want 62775",
 			remux,
 		)
 	}
 
-	if got := web - remux; got != 414 {
+	if got := web - remux; got != 464 {
 		t.Fatalf(
-			"bounded WEB-over-REMUX interaction = %+d, want +414",
+			"bounded WEB-over-REMUX interaction = %+d, want +464",
 			got,
 		)
 	}
@@ -4205,6 +4205,20 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 			"REMUX TrueHD Atmos",
 			fmt.Sprintf(
 				"Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.TrueHD.Atmos.7.1-%s",
+				remuxT1,
+			),
+		},
+		{
+			"REMUX TrueHD only",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.TrueHD.7.1-%s",
+				remuxT1,
+			),
+		},
+		{
+			"REMUX Atmos only",
+			fmt.Sprintf(
+				"Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.Atmos-%s",
 				remuxT1,
 			),
 		},
@@ -4320,9 +4334,11 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 		base string
 		want int
 	}{
-		{"TrueHD+Atmos", "REMUX TrueHD Atmos", "REMUX clean", 150},
+		{"TrueHD+Atmos", "REMUX TrueHD Atmos", "REMUX clean", 75},
+		{"TrueHD alone", "REMUX TrueHD only", "REMUX clean", 50},
+		{"Atmos alone", "REMUX Atmos only", "REMUX clean", 25},
 		{"DDPlus", "WEB DDPlus", "WEB clean", 25},
-		{"DTS Lossless", "BLURAY DTS-HD MA", "BLURAY clean", 100},
+		{"DTS Lossless", "BLURAY DTS-HD MA", "BLURAY clean", 50},
 	}
 
 	for _, delta := range deltas {
@@ -4347,6 +4363,99 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 				name,
 				neutral[name],
 				remux,
+			)
+		}
+	}
+}
+
+// TestAnimeAudioNeutrality proves the Anime side of the scoring-ceiling
+// fix directly: every codec DraCuLa touches for audio -- the four
+// high-impact codecs normalized for everyone (TrueHD/DTS Lossless/
+// Atmos/Dolby Digital Plus) and the three previously-untouched native
+// codecs newly neutralized for Anime only (AAC/DTS Lossy/Dolby Digital)
+// -- must contribute exactly 0 effective points for an Anime release.
+// Anime's 80-point minimum tier gap has no room for any of them.
+func TestAnimeAudioNeutrality(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Anime audio neutrality",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	group, ok := defines["Anime Shows BluRay T4 Groups"]
+	if !ok || len(group) == 0 {
+		t.Fatalf("missing/empty Define %q", "Anime Shows BluRay T4 Groups")
+	}
+	animeGroup := group[0]
+
+	score := func(extra string) int {
+		t.Helper()
+
+		title := fmt.Sprintf(
+			"Example.Anime.S01E01.1080p.BluRay.x264.%s-%s",
+			extra, animeGroup,
+		)
+		if extra == "" {
+			title = fmt.Sprintf(
+				"Example.Anime.S01E01.1080p.BluRay.x264-%s",
+				animeGroup,
+			)
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{
+				Kind:    ranking.KindAnimeShow,
+				IsAnime: true,
+				Title:   "Example Anime",
+				Season:  1,
+				Episode: 1,
+			},
+			[]triage.Candidate{{
+				Release: &release.Release{Title: title},
+			}},
+			jhinrank.RankOptions{},
+		)
+
+		if len(rejected) != 0 || len(kept) != 1 {
+			t.Fatalf(
+				"%q: kept=%d rejected=%+v", title, len(kept), rejected,
+			)
+		}
+
+		return kept[0].Torrent.Rank
+	}
+
+	clean := score("")
+
+	cases := []struct {
+		name  string
+		extra string
+	}{
+		{"TrueHD", "TrueHD"},
+		{"DTS Lossless", "DTS-HD.MA.5.1"},
+		{"Atmos", "Atmos"},
+		{"Dolby Digital Plus", "DDP5.1"},
+		{"AAC", "AAC2.0"},
+		{"DTS Lossy", "DTS5.1"},
+		{"Dolby Digital", "DD5.1"},
+		{"TrueHD+Atmos", "TrueHD.Atmos.7.1"},
+	}
+
+	for _, tc := range cases {
+		if got := score(tc.extra) - clean; got != 0 {
+			t.Errorf(
+				"Anime %s effective delta=%+d; want 0 (clean=%d)",
+				tc.name, got, clean,
 			)
 		}
 	}

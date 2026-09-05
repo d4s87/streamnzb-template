@@ -37,6 +37,37 @@ EXPECTED_PRESENTATION_RULES = {
     "HIDIVE",
 }
 
+# High-impact audio normalization contract (post scoring-ceiling audit):
+# the universal "Neutralize X" half of each pair must compensate the
+# native Jhin score for every content kind, including Anime. The "Prefer
+# X" half is the deliberate small residual bonus and must remain
+# non-Anime-only, exactly mirroring the existing Neutralize/Prefer HDR10
+# Plus split. If either side drifts, Anime's 80-point minimum tier gap
+# (already proven razor-thin) can silently be violated again.
+EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS = {
+    "Neutralize TrueHD",
+    "Neutralize DTS Lossless",
+    "Neutralize Atmos",
+    "Neutralize Dolby Digital Plus",
+}
+
+EXPECTED_NON_ANIME_AUDIO_PREFERENCES = {
+    "Prefer TrueHD",
+    "Prefer DTS Lossless",
+    "Prefer Atmos",
+    "Prefer Dolby Digital Plus",
+}
+
+# Codecs Jhin scores natively without any DraCuLa compensation for
+# Movies/Shows (their 200-point tier gap safely absorbs +100/+100/+50).
+# Anime's 80-point gap cannot, so these three are neutralized for Anime
+# only; Movies/Shows must remain untouched.
+EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS = {
+    "Neutralize Anime AAC",
+    "Neutralize Anime DTS Lossy",
+    "Neutralize Anime Dolby Digital",
+}
+
 
 def load_json(path: Path):
     return json.loads(
@@ -177,9 +208,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 115:
+    if len(entries) != 122:
         raise ValueError(
-            f"expected 115 source rules, found {len(entries)}"
+            f"expected 122 source rules, found {len(entries)}"
         )
 
     names = []
@@ -223,7 +254,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 110,
+    "core": 117,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -271,7 +302,60 @@ def validate_registry(payload: dict):
             "Reject 3D must remain owned by core"
         )
 
+    validate_audio_neutralization_scoping(entries)
+
     return entries
+
+
+def validate_audio_neutralization_scoping(entries):
+    by_name = {
+        entry["rule"]["name"]: entry["rule"]
+        for entry in entries
+    }
+
+    expected_names = (
+        EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS
+        | EXPECTED_NON_ANIME_AUDIO_PREFERENCES
+        | EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS
+    )
+
+    missing = expected_names - set(by_name)
+
+    if missing:
+        raise ValueError(
+            "expected audio neutralization rule(s) missing: "
+            + ", ".join(sorted(missing))
+        )
+
+    for name in EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS:
+        when = by_name[name]["when"]
+
+        if "isAnime" in when:
+            raise ValueError(
+                f"{name!r} must remain universal (compensate the native "
+                "score for every content kind, including Anime); found "
+                f"an isAnime condition in its when clause: {when!r}"
+            )
+
+    for name in EXPECTED_NON_ANIME_AUDIO_PREFERENCES:
+        when = by_name[name]["when"]
+
+        if "not isAnime" not in when:
+            raise ValueError(
+                f"{name!r} must remain scoped to non-Anime content "
+                "(the deliberate residual bonus must not reach Anime's "
+                f"80-point minimum tier gap); when clause: {when!r}"
+            )
+
+    for name in EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS:
+        when = by_name[name]["when"]
+
+        if "not isAnime" in when or "isAnime" not in when:
+            raise ValueError(
+                f"{name!r} must remain scoped to Anime only (Movies/Shows "
+                "keep this native codec score untouched); "
+                f"when clause: {when!r}"
+            )
 
 
 def validate_variants(payload: dict):
@@ -301,7 +385,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 115,
+            "expected_rules": 122,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -310,7 +394,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 114,
+            "expected_rules": 121,
         },
     }
 

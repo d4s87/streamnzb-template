@@ -79,17 +79,33 @@
     {
       "owner": "core",
       "rule": {
-        "name": "Normalize Atmos",
-        "points": -950,
+        "name": "Neutralize Atmos",
+        "points": -1000,
         "when": "\"atmos\" in traits"
       }
     },
     {
       "owner": "core",
       "rule": {
-        "name": "Normalize Dolby Digital Plus",
-        "points": -125,
+        "name": "Prefer Atmos",
+        "points": 25,
+        "when": "not isAnime and \"atmos\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize Dolby Digital Plus",
+        "points": -150,
         "when": "\"dolby_digital_plus\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Prefer Dolby Digital Plus",
+        "points": 25,
+        "when": "not isAnime and \"dolby_digital_plus\" in traits"
       }
     },
     {
@@ -824,17 +840,57 @@
     {
       "owner": "core",
       "rule": {
-        "name": "Normalize TrueHD",
-        "points": -1900,
+        "name": "Neutralize TrueHD",
+        "points": -2000,
         "when": "\"truehd\" in traits"
       }
     },
     {
       "owner": "core",
       "rule": {
-        "name": "Normalize DTS Lossless",
-        "points": -1900,
+        "name": "Prefer TrueHD",
+        "points": 50,
+        "when": "not isAnime and \"truehd\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize DTS Lossless",
+        "points": -2000,
         "when": "\"dts_lossless\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Prefer DTS Lossless",
+        "points": 50,
+        "when": "not isAnime and \"dts_lossless\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize Anime AAC",
+        "points": -100,
+        "when": "isAnime and \"aac\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize Anime DTS Lossy",
+        "points": -100,
+        "when": "isAnime and \"dts_lossy\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize Anime Dolby Digital",
+        "points": -50,
+        "when": "isAnime and \"dolby_digital\" in traits"
       }
     },
     {

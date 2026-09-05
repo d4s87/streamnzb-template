@@ -178,7 +178,7 @@ The subtitle-only form is handled explicitly so it does not render a leading
 separator such as ` · sᴜʙ`.
 
 This presentation follows the data currently exported by
-**StreamNZB 5.16.1 / Jhin 0.6.1**. Jhin exposes parsed `Languages` metadata
+**StreamNZB 5.17.0 / Jhin 0.6.1**. Jhin exposes parsed `Languages` metadata
 separately from the boolean `Subbed` flag. It does **not** currently expose a
 separate list of subtitle-language identities to StreamNZB's formatter
 context. DraCuLa therefore does not infer or fabricate forms such as
@@ -188,7 +188,7 @@ The `Languages` field should be understood as Jhin's parsed language metadata
 surface rather than a guaranteed inventory of media-file audio tracks.
 Permanent compatibility regressions pin ordinary language parsing, explicit
 subtitle markers, combined Dubbed/Subbed metadata, and hardcoded-subtitle
-behavior against Jhin 0.6.1. Separate real-StreamNZB formatter regressions pin
+behavior against Jhin 0.6.1. Separate real-StreamNZB 5.17.0 formatter regressions pin
 all three display forms above for both the canonical formatter source and the
 published `formatter.txt` artifact.
 
@@ -214,7 +214,7 @@ substantially better alternatives exist. Sparse searches therefore preserve a
 fallback instead of being emptied by an absolute threshold.
 
 This policy depends on StreamNZB's candidate-relative prune aggregates. The
-required result-set behavior is pinned to **StreamNZB 5.16.1**, which includes
+required result-set behavior is pinned to **StreamNZB 5.17.0**, which includes
 the upstream fix for issue `#249`. Permanent real-engine regressions verify
 both sides of the threshold: a dense weak Movie LQ tail is pruned, while the
 same class of candidate survives when the result set is sparse.
@@ -568,7 +568,7 @@ matched production rules. They do not change scoring, filtering,
 release-group tiers, Library priority, availability bonuses, or same-release
 fallback behavior.
 
-Permanent pinned real-StreamNZB 5.16.1 regressions cover both the readable
+Permanent pinned real-StreamNZB 5.17.0 regressions cover both the readable
 formatter source and the published `formatter.txt` artifact for:
 
 - same-release variant visibility and single-variant suppression;

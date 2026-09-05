@@ -6,6 +6,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **compatibility:** advance the pinned StreamNZB runtime from released **5.16.1** to released **5.17.0** commit `018807c6f8417797ab633427d2de72e68aca3c12`. The full DraCuLa profile and formatter compatibility suites pass unchanged against the new stable runtime. StreamNZB 5.17.0 still embeds Jhin 0.6.1; the post-release upstream Jhin 0.6.2 dependency update is audited separately.
 - **profile:** bound StreamNZB's inherited preset size scoring to a shared **+500 maximum** while preserving the existing 4K preset targets (20 GB for Movies/Anime Movies, 6 GB for Series/Anime Shows), preventing efficient WEB encodes from receiving an implicit +3000 advantage over large Remux releases while retaining size as a secondary streaming-cost preference.
 - **testing:** add permanent production-profile regression coverage for the bounded size-scoring contract, including exact shared Samsung/Neutral scoring metadata and a real Project Hail Mary WEB-DL-versus-Remux interaction reproduced through the pinned StreamNZB/Jhin ranking pipeline.
 - **profile:** normalize Jhin v0.6's high-impact native audio ranks in shared Core policy: TrueHD and DTS Lossless are bounded to effective `+100`, Atmos to an additional `+50`, and Dolby Digital Plus to `+25`, preventing audio metadata from overturning intended Movie source/release-group authority.

@@ -308,10 +308,22 @@ def validate_anime_bluray_tier_scores(
         T7  80
         T8   0
 
-    The complete pinned StreamNZB/Jhin ranking regression establishes
-    +77 as the largest currently supported effective portable Anime
-    stack (Anime Show WEB). Every adjacent Anime tier must therefore
-    retain at least an 80-point release-group gap.
+    This is a narrow structural sanity check on the tier-score ladder and
+    a known, deliberately partial metadata combination (Dual/Multi Audio,
+    corrected-release, revision, Uncensored, Complete Season Pack,
+    availability, WEB service) that predates Anime audio-codec scoring.
+    It is NOT the authoritative proof that every currently-reachable
+    lower-tier combination stays below the next tier up: that guarantee
+    belongs to the real-engine
+    tests/streamnzb_compat/adjacent_tier_ceiling_test.go
+    TestAdjacentTierCeilingMatrix, which decorates each tier family with
+    every reachable ordinary bonus (audio codecs included) and compares
+    engine output directly instead of relying on a hardcoded stack
+    constant. A prior version of this exact "hardcoded max stack vs.
+    tier gap" pattern is what let the high-impact audio-normalization
+    change reach production without anyone re-checking Anime's much
+    tighter 80-point gap (see the Scoring-ceiling audit completed item
+    in the project backlog).
 
     Tier conditions may contain intentional classification logic such
     as the LazyRemux / UltraRemux exception, so this validation does
@@ -391,6 +403,10 @@ def validate_anime_bluray_tier_scores(
                     )
 
     min_anime_tier_gap = 80
+
+    # Secondary sanity check only, not the authoritative ceiling proof.
+    # See the docstring above and TestAdjacentTierCeilingMatrix in
+    # tests/streamnzb_compat/adjacent_tier_ceiling_test.go.
     max_effective_anime_stack = 77
 
     for family, expected in families.items():

@@ -1099,6 +1099,25 @@ func TestCompatibilityFixtures(t *testing.T) {
 	}
 }
 
+// TestAnimeTierEffectiveCeilings is a narrow arithmetic regression: it
+// verifies the intended Anime WEB/BluRay tier-score ladder and a known,
+// deliberately partial set of ordinary Anime metadata bonuses (Dual/Multi
+// Audio, Uncensored, revision, corrected-release, Complete Season Pack,
+// availability, WEB service) against the 80-point minimum adjacent tier
+// gap. It intentionally predates Anime audio-codec scoring and does not
+// exercise it.
+//
+// This test does NOT prove that every currently-reachable lower-tier
+// combination stays below the next tier up. That guarantee belongs to
+// TestAdjacentTierCeilingMatrix (adjacent_tier_ceiling_test.go), which
+// decorates each tier family with every reachable ordinary bonus,
+// including audio codecs, and compares the engine's own output directly
+// instead of a hardcoded stack constant. This exact "hardcoded max stack
+// vs. tier gap" pattern is what let the high-impact audio-normalization
+// change reach production without anyone re-checking it against Anime's
+// much tighter gap (see the Scoring-ceiling audit completed item in the
+// project backlog) — kept here only as a secondary sanity check on the
+// ladder spacing itself, not as ceiling proof.
 func TestAnimeTierEffectiveCeilings(t *testing.T) {
 	productionRules := loadProductionRules(t)
 	defineLibrary := loadDefineLibrary(t)
@@ -1250,7 +1269,10 @@ func TestAnimeTierEffectiveCeilings(t *testing.T) {
 		CheckedAt:    time.Now().Add(-3 * 24 * time.Hour),
 	}
 
-	// Effective portable Anime Show maxima:
+	// Effective portable Anime Show maxima for the deliberately partial
+	// metadata combination this test covers (audio codecs excluded — see
+	// the function doc comment above and TestAdjacentTierCeilingMatrix
+	// for the combination that includes them):
 	//
 	// BluRay:
 	//   Dual/Multi Audio       +10

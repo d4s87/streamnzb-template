@@ -124,6 +124,18 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// decorated" lower-tier candidate: every ordinary positive bonus
 		// actually reachable by this content kind/source combination.
 		decorations []string
+		// hdr10PlusDecorations, when set, adds a second per-tier-pair
+		// check for this family using decorations plus an HDR10+ marker.
+		// HDR10+ is not mutually exclusive with high-impact lossless
+		// audio on physical media (a real UHD BluRay/Remux can be
+		// mastered in HDR10+ and carry a TrueHD Atmos track at the same
+		// time), so this covers a realistic combined interaction that
+		// the base decorations list above does not exercise. Left nil
+		// for families where the combination is not realistic (WEB
+		// encodes rarely if ever advertise both) to keep this coverage
+		// about reachable interactions rather than synthetic
+		// combinatorics.
+		hdr10PlusDecorations []string
 	}
 
 	seriesTitle := func(source []string, group string, extras []string) string {
@@ -167,6 +179,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
 				},
+				hdr10PlusDecorations: []string{
+					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
+					"REPACK3", "TrueHD", "Atmos", "7.1",
+				},
 			},
 			build: movieTitle,
 		},
@@ -183,6 +199,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
 				},
+				hdr10PlusDecorations: []string{
+					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
+					"REPACK3", "TrueHD", "Atmos", "7.1",
+				},
 			},
 			build: movieTitle,
 		},
@@ -198,6 +218,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				decorations: []string{
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
+				},
+				hdr10PlusDecorations: []string{
+					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
+					"REPACK3", "TrueHD", "Atmos", "7.1",
 				},
 			},
 			build: movieTitle,
@@ -368,6 +392,52 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 						lowerFullTitle,
 						higherCleanTitle,
 					)
+				}
+
+				// HDR10+ is not mutually exclusive with high-impact
+				// lossless audio on physical media, so a release can
+				// realistically be decorated with both at once. This is
+				// a distinct combination from the base decorations
+				// above (which omit HDR10+) and was never covered by
+				// any prior ceiling regression. Deliberately no
+				// hardcoded expected margin: the point is that any
+				// future change consuming the remaining headroom fails
+				// this assertion automatically, not that today's exact
+				// margin is pinned as a constant to keep in sync.
+				if f.hdr10PlusDecorations != nil {
+					decoratedTitle := f.build(
+						source, lowerGroup, f.hdr10PlusDecorations,
+					)
+					cleanTitle := f.build(source, higherGroup, nil)
+
+					decoratedLower := score(f.kind, decoratedTitle, &fullAvail)
+					cleanHigher := score(f.kind, cleanTitle, nil)
+
+					t.Logf(
+						"%s T%d HDR10+/lossless-audio combo: decorated=%d "+
+							"clean-T%d=%d margin=%+d",
+						f.label,
+						lowerTier,
+						decoratedLower,
+						higherTier,
+						cleanHigher,
+						decoratedLower-cleanHigher,
+					)
+
+					if decoratedLower >= cleanHigher {
+						t.Errorf(
+							"%s: T%d HDR10+ + lossless audio combo (%d) does "+
+								"not stay below clean T%d (%d)\n"+
+								"  decorated: %s\n  clean:     %s",
+							f.label,
+							lowerTier,
+							decoratedLower,
+							higherTier,
+							cleanHigher,
+							decoratedTitle,
+							cleanTitle,
+						)
+					}
 				}
 			}
 		})

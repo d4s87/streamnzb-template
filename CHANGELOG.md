@@ -6,6 +6,8 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Features
 
+- **profile:** bound StreamNZB's inherited preset size scoring to a shared **+500 maximum** while preserving the existing 4K preset targets (20 GB for Movies/Anime Movies, 6 GB for Series/Anime Shows), preventing efficient WEB encodes from receiving an implicit +3000 advantage over large Remux releases while retaining size as a secondary streaming-cost preference.
+- **testing:** add permanent production-profile regression coverage for the bounded size-scoring contract, including exact shared Samsung/Neutral scoring metadata and a real Project Hail Mary WEB-DL-versus-Remux interaction reproduced through the pinned StreamNZB/Jhin ranking pipeline.
 - **profile:** normalize Jhin v0.6's high-impact native audio ranks in shared Core policy: TrueHD and DTS Lossless are bounded to effective `+100`, Atmos to an additional `+50`, and Dolby Digital Plus to `+25`, preventing audio metadata from overturning intended Movie source/release-group authority.
 - **testing:** add permanent pinned real-StreamNZB/Jhin regression coverage for shared Neutral/Samsung audio normalization, including effective audio deltas and clean T1 Remux headroom over decorated T1 WEB-DL and UHD BluRay results.
 - **profile:** reject `Sword Art Online II` releases that reset their own `S01` numbering when the resolved request is specifically the base `Sword Art Online` Season 1 Anime Show, closing a real pinned-StreamNZB short-suffix title-matching collision without weakening normal title matching.
@@ -21,6 +23,7 @@ Changes in this section are under development and are not part of the latest sta
 
 ### Changes
 
+- **scoring:** make DraCuLa's NZB size influence explicit instead of inheriting StreamNZB's `4k` preset `+3000` size weight. Both generated profiles now publish the same profile-level `scoring` map with `size_weight: 500`; `SNZBP1` and `streamnzb_profile == 1` remain unchanged, while the internal canonical rules-source schema advances from 1 to 2.
 - **profile:** increase the Samsung profile from 114 to **115** rules and the hardware-neutral profile from 110 to **114** rules as high-impact audio normalization moves into shared Core policy and Dolby Digital Plus normalization is added. Canonical ownership becomes **110 Core**, 4 presentation, and **1 Samsung device rule**.
 - **architecture:** move Atmos, TrueHD, and DTS Lossless compensation out of the Samsung device layer and into shared Portable Core, add shared Dolby Digital Plus normalization, and leave `DV without HDR fallback` as the only Samsung-specific device rule.
 - **profile:** increase the Samsung profile from 113 to **114** rules and the hardware-neutral profile from 109 to **110** rules with the shared SAO Season 1 title-collision safeguard. Canonical ownership becomes **106 Core**, 4 presentation, and 4 Samsung device rules.

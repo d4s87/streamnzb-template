@@ -16,7 +16,8 @@ RULES_PATH = ROOT / "profiles" / "rules.json"
 VARIANTS_PATH = ROOT / "profiles" / "variants.json"
 
 PROFILE_PREFIX = "SNZBP1:"
-EXPECTED_SOURCE_SCHEMA = 1
+EXPECTED_RULES_SOURCE_SCHEMA = 2
+EXPECTED_VARIANTS_SOURCE_SCHEMA = 1
 EXPECTED_STREAMNZB_SCHEMA = 1
 
 EXPECTED_OWNERS = {
@@ -129,15 +130,41 @@ def validate_registry(payload: dict):
     if set(payload) != {
         "schema_version",
         "streamnzb_profile",
+        "scoring",
         "rules",
     }:
         raise ValueError(
             "rules source keys differ from expected schema"
         )
 
-    if payload["schema_version"] != EXPECTED_SOURCE_SCHEMA:
+    if payload["schema_version"] != EXPECTED_RULES_SOURCE_SCHEMA:
         raise ValueError(
             "unsupported rules source schema"
+        )
+
+    expected_scoring = {
+        "movie": {
+            "size_target_gb": 20,
+            "size_weight": 500,
+        },
+        "anime_movie": {
+            "size_target_gb": 20,
+            "size_weight": 500,
+        },
+        "series": {
+            "size_target_gb": 6,
+            "size_weight": 500,
+        },
+        "anime_show": {
+            "size_target_gb": 6,
+            "size_weight": 500,
+        },
+    }
+
+    if payload["scoring"] != expected_scoring:
+        raise ValueError(
+            "rules source scoring policy differs from expected "
+            "bounded size policy"
         )
 
     if payload["streamnzb_profile"] != EXPECTED_STREAMNZB_SCHEMA:
@@ -253,7 +280,7 @@ def validate_variants(payload: dict):
             "variants source keys differ from expected schema"
         )
 
-    if payload["schema_version"] != EXPECTED_SOURCE_SCHEMA:
+    if payload["schema_version"] != EXPECTED_VARIANTS_SOURCE_SCHEMA:
         raise ValueError(
             "unsupported variants source schema"
         )
@@ -342,6 +369,7 @@ def build_variant(
     entries,
     variant,
     streamnzb_profile,
+    scoring,
 ):
     owners = set(variant["owners"])
 
@@ -360,6 +388,7 @@ def build_variant(
     payload = {
         "name": variant["name"],
         "preset": variant["preset"],
+        "scoring": scoring,
         "rules": rules,
         "streamnzb_profile": streamnzb_profile,
     }
@@ -441,6 +470,7 @@ def build_all():
             entries=entries,
             variant=variant,
             streamnzb_profile=rules_source["streamnzb_profile"],
+            scoring=rules_source["scoring"],
         )
 
     samsung = payloads["profile.txt"]
@@ -512,7 +542,7 @@ def command_check(_args):
         )
 
     print("PASS: Reject 3D is present in both variants")
-    print("PASS: exactly four Samsung-only rules")
+    print("PASS: exactly one Samsung-only device rule")
 
 
 def command_build(_args):
@@ -542,7 +572,7 @@ def command_build(_args):
         f"({len(payloads['profile-neutral.txt']['rules'])} rules)"
     )
     print("PASS: Reject 3D present in both profiles")
-    print("PASS: neutral excludes exactly four Samsung device rules")
+    print("PASS: neutral excludes exactly one Samsung device rule")
 
 
 def build_parser():

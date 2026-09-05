@@ -496,6 +496,19 @@ The rule uses direct release-name matching and does not add a new
 Vidhin-backed Define or formatter badge.
 
 
+## Bounded Preset Size Scoring
+
+StreamNZB's built-in `4k` preset normally gives NZB size up to `+3000` ranking points, targeting approximately 20 GB for Movies/Anime Movies and 6 GB per episode for Series/Anime Shows. That upstream default is intentionally strong enough to make efficient encodes competitive with very large Remux releases during streaming, but the full `+3000` ceiling can overwhelm DraCuLa's quality-first source and release-group hierarchy.
+
+DraCuLa therefore publishes an explicit shared profile-level size-scoring policy in both `profile.txt` and `profile-neutral.txt`. The upstream size targets are preserved, but the maximum contribution is bounded to **`+500`** for every supported content kind:
+
+- Movie / Anime Movie: target **20 GB**, maximum **+500**
+- Series / Anime Show: target **6 GB per episode**, maximum **+500**
+
+The size factor still tapers linearly away from the target and reaches zero at twice the target, so efficient releases remain meaningfully preferred when quality is otherwise close. Large Remux releases simply no longer lose up to 3000 points of effective headroom solely because of file size.
+
+A production regression reproduces the live `Project Hail Mary` case that exposed this interaction. With DraCuLa's bounded size policy, the ~19.55 GB BYNDR WEB-DL receives about `+489` from size instead of about `+2932`, while the ~88 GB CiNEPHiLES Remux receives `0`; the remaining ordering difference is then attributable to explicit profile preferences such as IMAX and Library status rather than hidden preset size weight.
+
 ## Availability and Library Scoring
 
 Positive NZB availability metadata is intentionally a **small tie-breaker** rather than a second release-quality hierarchy.

@@ -54,8 +54,30 @@ variants_source = json.loads(
     VARIANTS_PATH.read_text(encoding="utf-8")
 )
 
-assert rules_source["schema_version"] == 1
+assert rules_source["schema_version"] == 2
+assert variants_source["schema_version"] == 1
 assert rules_source["streamnzb_profile"] == 1
+
+EXPECTED_SCORING = {
+    "movie": {
+        "size_target_gb": 20,
+        "size_weight": 500,
+    },
+    "anime_movie": {
+        "size_target_gb": 20,
+        "size_weight": 500,
+    },
+    "series": {
+        "size_target_gb": 6,
+        "size_weight": 500,
+    },
+    "anime_show": {
+        "size_target_gb": 6,
+        "size_weight": 500,
+    },
+}
+
+assert rules_source["scoring"] == EXPECTED_SCORING
 assert len(rules_source["rules"]) == 115
 
 entries = rules_source["rules"]
@@ -157,6 +179,10 @@ assert neutral["name"] == "DraCuLa Neutral"
 
 assert samsung["preset"] == "4k"
 assert neutral["preset"] == "4k"
+
+assert samsung["scoring"] == EXPECTED_SCORING
+assert neutral["scoring"] == EXPECTED_SCORING
+assert samsung["scoring"] == neutral["scoring"]
 
 assert samsung["streamnzb_profile"] == 1
 assert neutral["streamnzb_profile"] == 1

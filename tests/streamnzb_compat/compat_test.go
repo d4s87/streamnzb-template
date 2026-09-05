@@ -68,8 +68,11 @@ type Expectation struct {
 }
 
 type profilePayload struct {
-	StreamNZBProfile int                 `json:"streamnzb_profile"`
-	Rules            []config.RuleConfig `json:"rules"`
+	Name             string                           `json:"name"`
+	Preset           string                           `json:"preset"`
+	StreamNZBProfile int                              `json:"streamnzb_profile"`
+	Scoring          map[string]*config.ScoringConfig `json:"scoring"`
+	Rules            []config.RuleConfig              `json:"rules"`
 }
 
 func loadFixtures(t *testing.T) FixtureFile {
@@ -105,11 +108,11 @@ func validateProfileSchema(schema int) error {
 	return nil
 }
 
-func loadProfileRules(
+func loadProfilePayload(
 	t *testing.T,
 	path string,
 	label string,
-) []config.RuleConfig {
+) profilePayload {
 	t.Helper()
 
 	data, err := os.ReadFile(path)
@@ -173,7 +176,17 @@ func loadProfileRules(
 		t.Fatalf("%s profile contains no rules", label)
 	}
 
-	return profile.Rules
+	return profile
+}
+
+func loadProfileRules(
+	t *testing.T,
+	path string,
+	label string,
+) []config.RuleConfig {
+	t.Helper()
+
+	return loadProfilePayload(t, path, label).Rules
 }
 
 func loadProductionRules(t *testing.T) []config.RuleConfig {
@@ -3997,6 +4010,151 @@ func TestLanguageSubtitleParserRegression(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
+	profilePayload := loadProfilePayload(
+		t,
+		"../../profile.txt",
+		"production",
+	)
+
+	if profilePayload.Preset != "4k" {
+		t.Fatalf(
+			"production preset = %q, want 4k",
+			profilePayload.Preset,
+		)
+	}
+
+	expected := map[string]config.ScoringConfig{
+		ranking.KindMovie: {
+			SizeTargetGB: 20,
+			SizeWeight:   500,
+		},
+		ranking.KindAnimeMovie: {
+			SizeTargetGB: 20,
+			SizeWeight:   500,
+		},
+		ranking.KindSeries: {
+			SizeTargetGB: 6,
+			SizeWeight:   500,
+		},
+		ranking.KindAnimeShow: {
+			SizeTargetGB: 6,
+			SizeWeight:   500,
+		},
+	}
+
+	if len(profilePayload.Scoring) != len(expected) {
+		t.Fatalf(
+			"production scoring contains %d kinds, want %d: %+v",
+			len(profilePayload.Scoring),
+			len(expected),
+			profilePayload.Scoring,
+		)
+	}
+
+	for kind, want := range expected {
+		got := config.ResolveScoring(
+			profilePayload.Scoring,
+			kind,
+		)
+
+		if got != want {
+			t.Fatalf(
+				"%s scoring = %+v, want %+v",
+				kind,
+				got,
+				want,
+			)
+		}
+	}
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:    "Production bounded size scoring",
+			Preset:  profilePayload.Preset,
+			Scoring: profilePayload.Scoring,
+			Rules:   profilePayload.Rules,
+		},
+		loadDefineLibrary(t)...,
+	)
+	if err != nil {
+		t.Fatalf(
+			"compile production profile: %v",
+			err,
+		)
+	}
+
+	score := func(
+		name string,
+		title string,
+		size int64,
+		library bool,
+	) int {
+		t.Helper()
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{
+				Kind:  ranking.KindMovie,
+				Title: "Project Hail Mary",
+			},
+			[]triage.Candidate{{
+				Release: &release.Release{
+					Title:     title,
+					Size:      size,
+					IsLibrary: library,
+				},
+			}},
+			jhinrank.RankOptions{},
+		)
+
+		if len(rejected) != 0 || len(kept) != 1 {
+			t.Fatalf(
+				"%s: kept=%d rejected=%+v",
+				name,
+				len(kept),
+				rejected,
+			)
+		}
+
+		return kept[0].Torrent.Rank
+	}
+
+	web := score(
+		"BYNDR WEB-DL",
+		"Project.Hail.Mary.2026.IMAX.2160p.AMZN.WEB-DL.DDP5.1.Atmos.H.265-BYNDR",
+		19549082295,
+		true,
+	)
+
+	remux := score(
+		"CiNEPHiLES REMUX",
+		"Project.Hail.Mary.2026.2160p.UHD.Blu-ray.Remux.DV.HDR.HEVC.TrueHD.Atmos.7.1-CiNEPHiLES",
+		88029307806,
+		false,
+	)
+
+	if web != 63264 {
+		t.Fatalf(
+			"production-equivalent BYNDR score = %d, want 63264",
+			web,
+		)
+	}
+
+	if remux != 62850 {
+		t.Fatalf(
+			"production-equivalent CiNEPHiLES score = %d, want 62850",
+			remux,
+		)
+	}
+
+	if got := web - remux; got != 414 {
+		t.Fatalf(
+			"bounded WEB-over-REMUX interaction = %+d, want +414",
+			got,
+		)
 	}
 }
 

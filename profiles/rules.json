@@ -1,6 +1,24 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "streamnzb_profile": 1,
+  "scoring": {
+    "movie": {
+      "size_target_gb": 20,
+      "size_weight": 500
+    },
+    "anime_movie": {
+      "size_target_gb": 20,
+      "size_weight": 500
+    },
+    "series": {
+      "size_target_gb": 6,
+      "size_weight": 500
+    },
+    "anime_show": {
+      "size_target_gb": 6,
+      "size_weight": 500
+    }
+  },
   "rules": [
     {
       "owner": "device:samsung-qn90a",

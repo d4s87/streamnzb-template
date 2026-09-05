@@ -1,16 +1,11 @@
 # Vidhin sync report
 
-## Movies Obfuscated
+## Anime LQ Groups
 
-**Raw regex added**
+**Raw release-name regex changed**
 
-- Source: `Obfuscated (Radarr)`
-
-## Shows Obfuscated
-
-**Raw regex added**
-
-- Source: `Obfuscated (Sonarr)`
+**Upstream source(s)**
+- `Anime LQ Groups`
 
 ---
 Tracked StreamNZB Defines: **55**

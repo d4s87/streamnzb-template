@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 121 {
+	if len(neutralRules) != 124 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 121",
+			"neutral profile contains %d rules; want 124",
 			len(neutralRules),
 		)
 	}
@@ -1884,7 +1884,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"",
 			),
 			kind:      "movie",
-			wantScore: 500,
+			wantScore: 200,
 		},
 		{
 			name: "Movie T2 IMAX",
@@ -1894,7 +1894,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 1000,
+			wantScore: 700,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1905,7 +1905,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 800,
+			wantScore: 500,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1916,7 +1916,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"Open.Matte",
 			),
 			kind:      "movie",
-			wantScore: 325,
+			wantScore: 25,
 			wantRules: []string{
 				"Open matte",
 			},
@@ -1929,7 +1929,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"Open.Matte",
 			),
 			kind:      "movie",
-			wantScore: 125,
+			wantScore: -175,
 			wantRules: []string{
 				"Open matte",
 			},
@@ -1942,7 +1942,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX.Open.Matte",
 			),
 			kind:      "movie",
-			wantScore: 825,
+			wantScore: 525,
 			wantRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1956,7 +1956,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX.Open.Matte",
 			),
 			kind:      "series",
-			wantScore: 100,
+			wantScore: -200,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1971,7 +1971,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: 0,
+			wantScore: -300,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1986,7 +1986,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: 20,
+			wantScore: -280,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -4158,16 +4158,16 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 		false,
 	)
 
-	if web != 63239 {
+	if web != 62539 {
 		t.Fatalf(
-			"production-equivalent BYNDR score = %d, want 63239",
+			"production-equivalent BYNDR score = %d, want 62539",
 			web,
 		)
 	}
 
-	if remux != 62775 {
+	if remux != 62075 {
 		t.Fatalf(
-			"production-equivalent CiNEPHiLES score = %d, want 62775",
+			"production-equivalent CiNEPHiLES score = %d, want 62075",
 			remux,
 		)
 	}
@@ -4480,5 +4480,155 @@ func TestAnimeAudioNeutrality(t *testing.T) {
 				tc.name, got, clean,
 			)
 		}
+	}
+}
+
+// TestVideoCodecNeutrality is the permanent real-engine proof for the
+// codec-scoring tier-authority regression: StreamNZB's own streaming preset
+// gives AVC/HEVC/AV1 different native ranks (+300/+700/+700) regardless of
+// content kind, a +400 swing that overturned 7 of 11 production tier
+// families. Neutralize AVC/HEVC/AV1 must bring every recognized codec's
+// effective contribution to exactly 0, for every content kind, with no
+// Anime/non-Anime split (unlike the audio neutralizers above, this policy
+// has no bounded residual: the tightest actual non-Anime margin measured
+// anywhere in the system, the HDR10+/lossless-audio physical-media combo,
+// is only +3, leaving no safe room for any positive codec preference).
+func TestVideoCodecNeutrality(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Video codec neutrality",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	groupFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		return toks[0]
+	}
+
+	type kindCase struct {
+		label       string
+		kind        string
+		isAnime     bool
+		hasEpisode  bool
+		titlePrefix string
+		group       string
+	}
+
+	kinds := []kindCase{
+		{
+			label:       "movie",
+			kind:        ranking.KindMovie,
+			titlePrefix: "Example.Movie.2026",
+			group:       groupFor("Movies WEB T3 Groups"),
+		},
+		{
+			label:       "series",
+			kind:        ranking.KindSeries,
+			hasEpisode:  true,
+			titlePrefix: "Example.Show.S01E01",
+			group:       groupFor("Shows WEB T3 Groups"),
+		},
+		{
+			label:       "anime_movie",
+			kind:        ranking.KindAnimeMovie,
+			isAnime:     true,
+			titlePrefix: "Example.Anime.Movie.2025",
+			group:       groupFor("Anime Movies BluRay T4 Groups"),
+		},
+		{
+			label:       "anime_show",
+			kind:        ranking.KindAnimeShow,
+			isAnime:     true,
+			hasEpisode:  true,
+			titlePrefix: "Example.Anime.S01E01",
+			group:       groupFor("Anime Shows BluRay T4 Groups"),
+		},
+	}
+
+	codecCases := []struct {
+		name    string
+		aliases []string
+	}{
+		{"AVC", []string{"x264", "AVC"}},
+		{"HEVC", []string{"x265", "HEVC"}},
+		{"AV1", []string{"AV1"}},
+	}
+
+	for _, kc := range kinds {
+		kc := kc
+
+		t.Run(kc.label, func(t *testing.T) {
+			score := func(codec string) int {
+				t.Helper()
+
+				var title string
+				if codec == "" {
+					title = fmt.Sprintf(
+						"%s.1080p.WEB-DL-%s", kc.titlePrefix, kc.group,
+					)
+				} else {
+					title = fmt.Sprintf(
+						"%s.1080p.WEB-DL.%s-%s",
+						kc.titlePrefix, codec, kc.group,
+					)
+				}
+
+				request := ranking.Request{
+					Kind:    kc.kind,
+					IsAnime: kc.isAnime,
+					Title:   "Example",
+				}
+				if kc.hasEpisode {
+					request.Season = 1
+					request.Episode = 1
+				}
+
+				kept, rejected := profile.ApplyWithRejected(
+					request,
+					[]triage.Candidate{{
+						Release: &release.Release{Title: title},
+					}},
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 || len(kept) != 1 {
+					t.Fatalf(
+						"%q: kept=%d rejected=%+v",
+						title, len(kept), rejected,
+					)
+				}
+
+				return kept[0].Torrent.Rank
+			}
+
+			clean := score("")
+
+			for _, cc := range codecCases {
+				for _, alias := range cc.aliases {
+					t.Run(cc.name+"/"+alias, func(t *testing.T) {
+						if got := score(alias) - clean; got != 0 {
+							t.Errorf(
+								"%s codec=%s(%s) effective delta=%+d; "+
+									"want 0 (clean=%d)",
+								kc.label, cc.name, alias, got, clean,
+							)
+						}
+					})
+				}
+			}
+		})
 	}
 }

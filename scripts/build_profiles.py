@@ -68,6 +68,20 @@ EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS = {
     "Neutralize Anime Dolby Digital",
 }
 
+# Video-codec neutralization contract (codec-scoring tier-authority audit):
+# StreamNZB's own streaming preset gives AVC/HEVC/AV1 different native ranks
+# (+300/+700/+700) regardless of content kind, a +400 swing that overturned
+# 7 of 11 production tier families. Unlike the audio split above, the
+# tightest actual non-Anime margin measured anywhere in the system (+3, the
+# HDR10+/lossless-audio physical-media combo) leaves no room for any bounded
+# residual preference, so all three are neutralized to exactly 0 universally
+# with no Anime/non-Anime split and no residual "Prefer" counterpart.
+EXPECTED_VIDEO_CODEC_NEUTRALIZERS = {
+    "Neutralize AVC": (-300, "avc"),
+    "Neutralize HEVC": (-700, "hevc"),
+    "Neutralize AV1": (-700, "av1"),
+}
+
 
 def load_json(path: Path):
     return json.loads(
@@ -208,9 +222,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 122:
+    if len(entries) != 125:
         raise ValueError(
-            f"expected 122 source rules, found {len(entries)}"
+            f"expected 125 source rules, found {len(entries)}"
         )
 
     names = []
@@ -254,7 +268,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 117,
+    "core": 120,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -303,6 +317,7 @@ def validate_registry(payload: dict):
         )
 
     validate_audio_neutralization_scoping(entries)
+    validate_video_codec_neutralization_scoping(entries)
 
     return entries
 
@@ -358,6 +373,85 @@ def validate_audio_neutralization_scoping(entries):
             )
 
 
+def validate_video_codec_neutralization_scoping(entries):
+    by_name = {}
+
+    for entry in entries:
+        name = entry["rule"]["name"]
+
+        if name not in EXPECTED_VIDEO_CODEC_NEUTRALIZERS:
+            continue
+
+        if name in by_name:
+            raise ValueError(
+                f"{name!r} must appear exactly once, found more than one"
+            )
+
+        by_name[name] = entry["rule"]
+
+    missing = set(EXPECTED_VIDEO_CODEC_NEUTRALIZERS) - set(by_name)
+
+    if missing:
+        raise ValueError(
+            "expected video-codec neutralization rule(s) missing: "
+            + ", ".join(sorted(missing))
+        )
+
+    for name, (
+        expected_points,
+        codec_value,
+    ) in EXPECTED_VIDEO_CODEC_NEUTRALIZERS.items():
+        rule = by_name[name]
+        when = rule["when"]
+        points = rule["points"]
+
+        if points != expected_points:
+            raise ValueError(
+                f"{name!r} points drifted: "
+                f"expected {expected_points}, found {points}"
+            )
+
+        if "isAnime" in when:
+            raise ValueError(
+                f"{name!r} must remain universal (no Anime/non-Anime "
+                f"condition); when clause: {when!r}"
+            )
+
+        if "kind" in when:
+            raise ValueError(
+                f"{name!r} must remain universal (no content-kind "
+                f"condition); when clause: {when!r}"
+            )
+
+        expected_condition = f'parsed.codec == "{codec_value}"'
+
+        if when != expected_condition:
+            raise ValueError(
+                f"{name!r} must condition on parsed codec identity only "
+                f"({expected_condition!r}); found: {when!r}"
+            )
+
+    all_names = {
+        entry["rule"]["name"]
+        for entry in entries
+    }
+
+    forbidden_residuals = {
+        "Prefer AVC",
+        "Prefer HEVC",
+        "Prefer AV1",
+    }
+
+    unexpected_residuals = forbidden_residuals & all_names
+
+    if unexpected_residuals:
+        raise ValueError(
+            "unexpected video-codec residual preference rule(s) found "
+            "without a deliberate reviewed change: "
+            + ", ".join(sorted(unexpected_residuals))
+        )
+
+
 def validate_variants(payload: dict):
     if set(payload) != {"schema_version", "variants"}:
         raise ValueError(
@@ -385,7 +479,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 122,
+            "expected_rules": 125,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -394,7 +488,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 121,
+            "expected_rules": 124,
         },
     }
 

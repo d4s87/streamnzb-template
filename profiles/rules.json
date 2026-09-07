@@ -79,6 +79,30 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Neutralize AVC",
+        "points": -300,
+        "when": "parsed.codec == \"avc\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize HEVC",
+        "points": -700,
+        "when": "parsed.codec == \"hevc\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize AV1",
+        "points": -700,
+        "when": "parsed.codec == \"av1\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Neutralize Atmos",
         "points": -1000,
         "when": "\"atmos\" in traits"

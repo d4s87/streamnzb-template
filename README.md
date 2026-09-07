@@ -3,7 +3,7 @@ DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https
 
 **Current version: V5.2**
 
-V5.2 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.18.0 / Jhin 0.6.2 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
+V5.2 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.18.0 / Jhin 0.6.2 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, universal video-codec normalization, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **122** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **125** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **121** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **124** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks so audio metadata remains a bounded preference rather than overriding release-group/source authority. All **121 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. All **124 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -260,6 +260,20 @@ DTS lossy, AAC, and Dolby Digital remain fully untouched (native `+100` / `+100`
 This is intentionally selective, codec-by-codec normalization rather than a complete audio hierarchy or a blanket Anime exemption from audio scoring generally — Anime Dual/Multi Audio (a language preference, not a codec preference) is unaffected and keeps its own effective `+10`. The goal is to bound every codec that can materially threaten source/tier ordering while preserving a small, real preference for non-Anime content where the tier gap can safely absorb it.
 
 The normalization is identical in `profile.txt` and `profile-neutral.txt`. The permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see [Validation](#validation)) is the authoritative guard for this contract across every production tier family — Movie Remux/UHD BluRay/HD BluRay/WEB, Show Remux/BluRay/WEB, and Anime Show/Movie BluRay/WEB — rather than a hardcoded per-family maximum. A structural check separately fails closed if a `Neutralize` rule ever gains an Anime-conditional clause, or a `Prefer` rule ever loses its non-Anime scoping.
+
+## Video Codec Normalization
+
+StreamNZB's own streaming preset assigns native ranks to each of Jhin's three recognized video codecs regardless of content kind: `+300` for AVC, `+700` for HEVC, and `+700` for AV1 — a `+400` swing between AVC and either modern codec that has nothing to do with DraCuLa's own release-group/source tier design.
+
+A codec-scoring audit found this had already reached production: a real-engine adjacent-tier matrix showed the `+400` swing alone overturning 7 of the 11 production tier families — every family whose ordinary encode is AVC (Movie HD BluRay, Show BluRay, and all four Anime BluRay/WEB families) — with a bottom-tier AV1-encoded release outscoring not just the adjacent tier but every tier above it in that family. Unlike the audio codecs above, no bounded residual preference is safe here: the tightest actual non-Anime margin measured anywhere in the system (the HDR10+/lossless-audio physical-media combination, see above) is only `+3`, leaving no room for any positive codec preference at all.
+
+The shared Portable Core neutralizes all three recognized codecs to exactly `0`, universally, with no Anime/non-Anime split and no `Prefer` residual:
+
+- AVC: `+300` native, neutralized to `0`
+- HEVC: `+700` native, neutralized to `0`
+- AV1: `+700` native, neutralized to `0`
+
+This is identical in `profile.txt` and `profile-neutral.txt`. The permanent `TestVideoCodecNeutrality` real-engine regression asserts all three codecs contribute exactly `0` for every content kind (Movie, Show, Anime Movie, Anime Show), and `TestAdjacentTierCeilingMatrix` decorates each family's lower tier with the codec that previously broke it, proving the fix holds against the same tier-authority contract as every other bounded preference. A structural check separately fails closed if any of the three rules gains a content-kind condition, or a matching `Prefer` rule is ever introduced without a deliberate, reviewed change.
 
 ## Anime Scoring
 
@@ -739,6 +753,8 @@ The compatibility harness is intentionally used selectively for rules where pars
 `TestAdjacentTierCeilingMatrix` is a permanent, table-driven real-engine regression covering release-group tier authority for every production tier family: Movie Remux/UHD BluRay/HD BluRay/WEB, Show Remux/BluRay/WEB, and Anime Show/Movie BluRay/WEB. For every adjacent tier pair, it decorates the lower tier with every currently-reachable ordinary positive bonus (editions, dual/multi audio, corrected-release, revision, uncensored, complete season pack, availability, WEB service preference, and audio codec metadata) and asserts, through the engine's own score, that it stays below a clean candidate one tier higher.
 
 It intentionally does not compare against a hardcoded "maximum stack" constant. An earlier generation of ceiling tests did exactly that, and a real tier-authority regression (introduced when high-impact audio normalization was made a globally-scoped rule) reached production because nobody updated the hardcoded constant to include the new bonus — the tests kept passing against a stale assumption instead of the engine's actual behavior. See [High-Impact Audio Normalization](#high-impact-audio-normalization) for the fix. The matrix also includes a dedicated case proving that DTS lossy, AAC, and Dolby Digital — codecs intentionally left untouched for Movies/Shows — are still safe for Anime specifically.
+
+Each family's lower-tier candidate is also built with the video codec that previously broke it — AV1 for AVC-baseline families, proving the fix against the exact `+400` native swing that caused the regression; AV1 for HEVC-baseline families too, proving HEVC and AV1 stay equalized at `0`. See [Video Codec Normalization](#video-codec-normalization).
 
 Validation runs automatically through GitHub Actions.
 

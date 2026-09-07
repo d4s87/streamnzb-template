@@ -118,8 +118,23 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// sourceTokens are the release-name tokens establishing the
 		// quality/source traits this family's tier rule requires
 		// (resolution, remux/bluray/webdl trait, etc.), independent of
-		// tier group and decorations.
+		// tier group, codec and decorations. Codec is deliberately not
+		// included here (see ordinaryCodec/codecUpgrade below).
 		sourceTokens func(isSeries bool) []string
+		// ordinaryCodec is the codec the family's clean higher tier is
+		// built with — StreamNZB's native rank for it must no longer
+		// matter now that codec is neutralized, but it stays realistic
+		// (HEVC for families that conventionally ship it, AVC otherwise).
+		ordinaryCodec string
+		// codecUpgrade is the "better" codec (by StreamNZB's own native
+		// rank) applied only to the fully-decorated lower tier. This is
+		// the exact shape of the codec-scoring tier-authority regression:
+		// StreamNZB ranks AVC +300 and HEVC/AV1 +700 regardless of
+		// content kind, so an AVC-baseline family's lower tier is
+		// decorated with AV1 (a genuine, real +400 native swing before
+		// neutralization) and a HEVC-baseline family's lower tier gets
+		// AV1 too, proving HEVC and AV1 stay equalized.
+		codecUpgrade string
 		// decorations are the extra tokens applied only to the "fully
 		// decorated" lower-tier candidate: every ordinary positive bonus
 		// actually reachable by this content kind/source combination.
@@ -173,8 +188,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Movies Remux",
 				tierCount:    3,
 				sourceTokens: func(bool) []string {
-					return []string{"2160p", "UHD", "BluRay", "REMUX", "HEVC"}
+					return []string{"2160p", "UHD", "BluRay", "REMUX"}
 				},
+				ordinaryCodec: "HEVC",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -193,8 +210,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Movies UHD BluRay",
 				tierCount:    3,
 				sourceTokens: func(bool) []string {
-					return []string{"2160p", "UHD", "BluRay", "HEVC"}
+					return []string{"2160p", "UHD", "BluRay"}
 				},
+				ordinaryCodec: "HEVC",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -213,8 +232,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Movies HD BluRay",
 				tierCount:    3,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "BluRay", "x264"}
+					return []string{"1080p", "BluRay"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -233,8 +254,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Movies WEB",
 				tierCount:    3,
 				sourceTokens: func(bool) []string {
-					return []string{"2160p", "WEB-DL", "HEVC"}
+					return []string{"2160p", "WEB-DL"}
 				},
+				ordinaryCodec: "HEVC",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
 					"DDP5.1", "Atmos",
@@ -249,8 +272,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Shows Remux",
 				tierCount:    2,
 				sourceTokens: func(bool) []string {
-					return []string{"2160p", "UHD", "BluRay", "REMUX", "HEVC"}
+					return []string{"2160p", "UHD", "BluRay", "REMUX"}
 				},
+				ordinaryCodec: "HEVC",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"S01.COMPLETE", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -265,8 +290,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Shows BluRay",
 				tierCount:    2,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "BluRay", "x264"}
+					return []string{"1080p", "BluRay"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"S01.COMPLETE", "Dual.Audio", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -281,8 +308,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Shows WEB",
 				tierCount:    3,
 				sourceTokens: func(bool) []string {
-					return []string{"2160p", "WEB-DL", "HEVC"}
+					return []string{"2160p", "WEB-DL"}
 				},
+				ordinaryCodec: "HEVC",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"S01.COMPLETE", "Dual.Audio", "REPACK3",
 					"DDP5.1", "Atmos",
@@ -297,8 +326,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Anime Shows BluRay",
 				tierCount:    8,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "BluRay", "x264"}
+					return []string{"1080p", "BluRay"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"S01.COMPLETE", "Dual", "Audio", "Uncensored", "v4", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -313,8 +344,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Anime Shows WEB",
 				tierCount:    6,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "WEB-DL", "x264"}
+					return []string{"1080p", "WEB-DL"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"CR", "S01.COMPLETE", "Dual", "Audio", "Uncensored", "v4",
 					"REPACK3", "DDP5.1", "Atmos",
@@ -329,8 +362,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Anime Movies BluRay",
 				tierCount:    8,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "BluRay", "x264"}
+					return []string{"1080p", "BluRay"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Dual", "Audio", "Uncensored", "v4", "REPACK3",
 					"TrueHD", "Atmos", "7.1",
@@ -345,8 +380,10 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				definePrefix: "Anime Movies WEB",
 				tierCount:    6,
 				sourceTokens: func(bool) []string {
-					return []string{"1080p", "WEB-DL", "x264"}
+					return []string{"1080p", "WEB-DL"}
 				},
+				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
 				decorations: []string{
 					"CR", "Dual", "Audio", "Uncensored", "v4", "REPACK3",
 					"DDP5.1", "Atmos",
@@ -373,8 +410,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 
 				source := f.sourceTokens(true)
 
-				lowerFullTitle := f.build(source, lowerGroup, f.decorations)
-				higherCleanTitle := f.build(source, higherGroup, nil)
+				lowerSource := append(append([]string{}, source...), f.codecUpgrade)
+				higherSource := append(append([]string{}, source...), f.ordinaryCodec)
+
+				lowerFullTitle := f.build(lowerSource, lowerGroup, f.decorations)
+				higherCleanTitle := f.build(higherSource, higherGroup, nil)
 
 				lowerFull := score(f.kind, lowerFullTitle, &fullAvail)
 				higherClean := score(f.kind, higherCleanTitle, nil)
@@ -405,10 +445,12 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				// this assertion automatically, not that today's exact
 				// margin is pinned as a constant to keep in sync.
 				if f.hdr10PlusDecorations != nil {
+					hdr10Source := append(append([]string{}, source...), f.ordinaryCodec)
+
 					decoratedTitle := f.build(
-						source, lowerGroup, f.hdr10PlusDecorations,
+						hdr10Source, lowerGroup, f.hdr10PlusDecorations,
 					)
-					cleanTitle := f.build(source, higherGroup, nil)
+					cleanTitle := f.build(hdr10Source, higherGroup, nil)
 
 					decoratedLower := score(f.kind, decoratedTitle, &fullAvail)
 					cleanHigher := score(f.kind, cleanTitle, nil)

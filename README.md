@@ -3,7 +3,7 @@ DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https
 
 **Current version: V5.1**
 
-V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.16.1 / Jhin 0.6.1 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
+V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.18.0 / Jhin 0.6.2 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -178,7 +178,7 @@ The subtitle-only form is handled explicitly so it does not render a leading
 separator such as ` · sᴜʙ`.
 
 This presentation follows the data currently exported by
-**StreamNZB 5.17.0 / Jhin 0.6.1**. Jhin exposes parsed `Languages` metadata
+**StreamNZB 5.18.0 / Jhin 0.6.2**. Jhin exposes parsed `Languages` metadata
 separately from the boolean `Subbed` flag. It does **not** currently expose a
 separate list of subtitle-language identities to StreamNZB's formatter
 context. DraCuLa therefore does not infer or fabricate forms such as
@@ -188,7 +188,9 @@ The `Languages` field should be understood as Jhin's parsed language metadata
 surface rather than a guaranteed inventory of media-file audio tracks.
 Permanent compatibility regressions pin ordinary language parsing, explicit
 subtitle markers, combined Dubbed/Subbed metadata, and hardcoded-subtitle
-behavior against Jhin 0.6.1. Separate real-StreamNZB 5.17.0 formatter regressions pin
+behavior against Jhin 0.6.2, including the compact `JA` alias fix (upstream
+issue `dreulavelle/jhin#39`) landed in that release. Separate real-StreamNZB
+5.18.0 formatter regressions pin
 all three display forms above for both the canonical formatter source and the
 published `formatter.txt` artifact.
 
@@ -214,7 +216,7 @@ substantially better alternatives exist. Sparse searches therefore preserve a
 fallback instead of being emptied by an absolute threshold.
 
 This policy depends on StreamNZB's candidate-relative prune aggregates. The
-required result-set behavior is pinned to **StreamNZB 5.17.0**, which includes
+required result-set behavior is pinned to **StreamNZB 5.18.0**, which includes
 the upstream fix for issue `#249`. Permanent real-engine regressions verify
 both sides of the threshold: a dense weak Movie LQ tail is pruned, while the
 same class of candidate survives when the result set is sparse.
@@ -586,7 +588,7 @@ matched production rules. They do not change scoring, filtering,
 release-group tiers, Library priority, availability bonuses, or same-release
 fallback behavior.
 
-Permanent pinned real-StreamNZB 5.17.0 regressions cover both the readable
+Permanent pinned real-StreamNZB 5.18.0 regressions cover both the readable
 formatter source and the published `formatter.txt` artifact for:
 
 - same-release variant visibility and single-variant suppression;
@@ -719,7 +721,7 @@ The repository includes automated validation for both generated profile variants
 
 For release-matching logic where StreamNZB parser or rule-engine behavior is important, the repository also includes a compatibility harness that runs test fixtures against a pinned revision of the real StreamNZB engine rather than reimplementing its behavior.
 
-The harness separately validates StreamNZB's share-code compatibility contract. The `SNZBP1:` prefix identifies the profile share-code container format, while the `streamnzb_profile` marker versions the profile payload semantics. The harness currently requires `streamnzb_profile == 1`; a missing or different schema version fails validation so compatibility can be reviewed before the template accepts it.
+The harness separately validates StreamNZB's share-code compatibility contract. The `SNZBP1:` prefix identifies the profile share-code container format, while the `streamnzb_profile` marker versions the profile payload semantics. Upstream (`Gaisberg/streamnzb#267`, StreamNZB 5.18.0) made `streamnzb_profile` a version range: `1` for a profile without a scoring map, `2` for one that has one. DraCuLa's profiles always carry a scoring map, so the harness requires published profiles to emit `streamnzb_profile == 2` unambiguously; a missing or different schema version fails validation so compatibility can be reviewed before the template accepts it.
 
 New or changed compatibility-sensitive rules can first be developed as fixtures containing representative positive and negative release names. Once a rule is published, the fixture can reference the Samsung production rule by name. The harness decodes `profile.txt`, locates the exact published rule, verifies that its expression and score have not drifted from the tested fixture, and executes the same cases against the production rule. The compatibility harness also decodes and compiles the complete `profile-neutral.txt` artifact against the same pinned StreamNZB engine and shared Define Library.
 

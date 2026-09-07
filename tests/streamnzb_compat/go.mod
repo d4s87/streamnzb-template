@@ -3,7 +3,7 @@ module dracula-streamnzb-compat
 go 1.25.6
 
 require (
-	github.com/dreulavelle/jhin v0.6.1
+	github.com/dreulavelle/jhin v0.6.2
 	streamnzb v0.0.0
 )
 

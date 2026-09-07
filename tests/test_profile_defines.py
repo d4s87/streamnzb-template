@@ -1795,10 +1795,10 @@ profile = decode_share_code(
     PROFILE_PREFIX,
 )
 
-if profile.get("streamnzb_profile") != 1:
+if profile.get("streamnzb_profile") != 2:
     raise AssertionError(
         "Decoded profile is not a StreamNZB profile "
-        '(expected "streamnzb_profile": 1)'
+        '(expected "streamnzb_profile": 2)'
     )
 
 profile_name = profile.get("name")

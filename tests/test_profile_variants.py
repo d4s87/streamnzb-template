@@ -56,7 +56,7 @@ variants_source = json.loads(
 
 assert rules_source["schema_version"] == 2
 assert variants_source["schema_version"] == 1
-assert rules_source["streamnzb_profile"] == 1
+assert rules_source["streamnzb_profile"] == 2
 
 EXPECTED_SCORING = {
     "movie": {
@@ -184,8 +184,8 @@ assert samsung["scoring"] == EXPECTED_SCORING
 assert neutral["scoring"] == EXPECTED_SCORING
 assert samsung["scoring"] == neutral["scoring"]
 
-assert samsung["streamnzb_profile"] == 1
-assert neutral["streamnzb_profile"] == 1
+assert samsung["streamnzb_profile"] == 2
+assert neutral["streamnzb_profile"] == 2
 
 samsung_rules = samsung["rules"]
 neutral_rules = neutral["rules"]
@@ -359,5 +359,49 @@ else:
     raise AssertionError(
         "missing audio neutralization rule was not detected"
     )
+
+# ---------------------------------------------------------------------------
+# Scoring share-code round-trip (schema v2). StreamNZB v5.18.0 / Jhin 0.6.2
+# closed Gaisberg/streamnzb#267: SNZBP1 share codes now carry the
+# profile-level `scoring` map, marked by `streamnzb_profile: 2`. This proves
+# DraCuLa's own encode_payload/decode_share_code round-trip preserves the
+# exact four-entry scoring map byte-for-byte through the real code path, and
+# that no stray content kind (e.g. a "default" entry) or stray field sneaks
+# into either direction.
+# ---------------------------------------------------------------------------
+
+_roundtrip_payload = {
+    "name": "Round-trip fixture",
+    "preset": "4k",
+    "scoring": EXPECTED_SCORING,
+    "rules": [],
+    "streamnzb_profile": 2,
+}
+
+_roundtrip_encoded = build_profiles.encode_payload(_roundtrip_payload)
+_roundtrip_decoded = build_profiles.decode_share_code(_roundtrip_encoded)
+
+assert _roundtrip_decoded["streamnzb_profile"] == 2
+assert _roundtrip_decoded["scoring"] == EXPECTED_SCORING
+assert set(_roundtrip_decoded["scoring"].keys()) == {
+    "movie",
+    "anime_movie",
+    "series",
+    "anime_show",
+}
+
+for _kind, _expected_kind_scoring in EXPECTED_SCORING.items():
+    _decoded_kind_scoring = _roundtrip_decoded["scoring"][_kind]
+
+    assert _decoded_kind_scoring == _expected_kind_scoring, (
+        f"scoring[{_kind!r}] round-trip mismatch: "
+        f"{_decoded_kind_scoring!r} != {_expected_kind_scoring!r}"
+    )
+    assert set(_decoded_kind_scoring.keys()) == {
+        "size_target_gb",
+        "size_weight",
+    }, f"scoring[{_kind!r}] carries a stray field: {_decoded_kind_scoring!r}"
+
+print("PASS: scoring share-code round-trip (schema v2, all 4 content kinds)")
 
 print("PASS: profile variant generation tests")

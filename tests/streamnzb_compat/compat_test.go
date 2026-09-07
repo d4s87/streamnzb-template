@@ -26,7 +26,7 @@ import (
 
 const (
 	profilePrefix         = "SNZBP1:"
-	expectedProfileSchema = 1
+	expectedProfileSchema = 2
 )
 
 type FixtureFile struct {
@@ -996,7 +996,7 @@ func TestProfileSchemaCompatibility(t *testing.T) {
 		)
 	}
 
-	for _, schema := range []int{0, 2} {
+	for _, schema := range []int{0, 1, 3} {
 		if err := validateProfileSchema(schema); err == nil {
 			t.Fatalf(
 				"schema %d unexpectedly passed compatibility guard",
@@ -3944,15 +3944,15 @@ func TestDynamicRangeAndBitDepthPolicy(t *testing.T) {
 	}
 }
 
-// TestLanguageSubtitleParserRegression pins the Jhin v0.6.1 language/subtitle
+// TestLanguageSubtitleParserRegression pins the Jhin v0.6.2 language/subtitle
 // surface consumed by the DraCuLa formatter. Languages and subtitle presence
 // are intentionally separate: Jhin exports parsed language metadata through
 // Languages and only a boolean Subbed flag, not subtitle-language identities.
 //
-// The compact JA alias case intentionally records the current upstream
-// limitation tracked in dreulavelle/jhin#39: JA.EN parses as English only.
-// This is a compatibility sentinel, not desired DraCuLa policy; when Jhin fixes
-// the alias, this expectation should change alongside the compatibility review.
+// The compact JA alias case previously recorded an upstream limitation
+// tracked in dreulavelle/jhin#39: JA.EN parsed as English only. That was
+// fixed in Jhin 0.6.2 (compatibility-audited alongside StreamNZB v5.18.0);
+// the case now asserts both languages parse correctly.
 func TestLanguageSubtitleParserRegression(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -3968,9 +3968,9 @@ func TestLanguageSubtitleParserRegression(t *testing.T) {
 			wantLanguages: []string{"en", "ja"},
 		},
 		{
-			name:          "compact JA alias remains unrecognized",
+			name:          "compact JA alias",
 			release:       "Anime.Show.S01E01.1080p.WEB-DL.JA.EN.DDP5.1.H.264-GRP",
-			wantLanguages: []string{"en"},
+			wantLanguages: []string{"en", "ja"},
 		},
 		{
 			name:          "subbed",

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "streamnzb_profile": 1,
+  "streamnzb_profile": 2,
   "scoring": {
     "movie": {
       "size_target_gb": 20,

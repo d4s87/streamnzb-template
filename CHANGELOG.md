@@ -1,8 +1,12 @@
 # Changelog
 
-## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.1...HEAD)
+## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.2...HEAD)
 
 Changes in this section are under development and are not part of the latest stable release.
+
+## [5.2](https://github.com/d4s87/streamnzb-template/compare/v5.1...v5.2) (2026-09-07)
+
+V5.2 advances DraCuLa's ranking and formatter behavior around the released StreamNZB 5.18.0 / Jhin 0.6.2 baseline, adopting `SNZBP1` scoring-map portability (`streamnzb_profile` schema v2). It closes a real scoring-integrity regression in high-impact audio normalization that let low-tier Anime, Movie, and Show releases outscore an adjacent higher tier, extends Vidhin's tier-collision guard from Anime-only to every non-Anime Movie/Show family, and consolidates Discord notification tooling behind one shared, tested payload/webhook layer.
 
 ### Features
 

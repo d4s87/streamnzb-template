@@ -1,9 +1,9 @@
 # 🧛 DraCuLa's StreamNZB Template
 DraCuLa's custom filtering, scoring and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: V5.1**
+**Current version: V5.2**
 
-V5.1 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.18.0 / Jhin 0.6.2 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
+V5.2 builds on the generated multi-profile architecture introduced in V5.0 with stronger scoring integrity, adaptive low-score filtering, Vidhin-backed Obfuscated release handling, StreamNZB 5.18.0 / Jhin 0.6.2 compatibility, and improved formatter language/subtitle presentation. The existing `profile.txt` remains the Samsung QN90A-oriented variant, while `profile-neutral.txt` provides a hardware-neutral alternative without the Samsung-specific Dolby Vision compatibility rule. Both profiles share the same Core policy, including bounded high-impact audio normalization, presentation classifications, Define Library, and formatter architecture.
 
 The profile is designed around:
 - SeaDex Best / Alternative prioritization
@@ -132,7 +132,7 @@ Both profile variants require the shared Define Library described below. Import 
 
 ## Define Library
 
-V5.1 continues to use one shared StreamNZB Define Library for both profile variants and their Vidhin-backed release-group classifications.
+V5.2 continues to use one shared StreamNZB Define Library for both profile variants and their Vidhin-backed release-group classifications.
 
 Import the linked library before using the profile:
 
@@ -263,7 +263,7 @@ The normalization is identical in `profile.txt` and `profile-neutral.txt`. The p
 
 ## Anime Scoring
 
-V5.1 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
+V5.2 retains the full Vidhin Anime tier hierarchy for both Anime Movies and Anime Shows across both profile variants.
 
 WEB release groups are scored as follows for both Anime Movies and Anime Shows:
 - T1: +500
@@ -566,7 +566,7 @@ template is updated.
 The normal formatter uses the stable user-facing name **DraCuLa**.
 Individual formatter artifacts are not independently versioned; they evolve
 with the DraCuLa template/repository release instead of carrying a second
-version number alongside template versions such as V5.1.
+version number alongside template versions such as V5.2.
 
 ### Reliability and corrected-release metadata
 

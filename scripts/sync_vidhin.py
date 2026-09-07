@@ -1269,6 +1269,41 @@ def report(old,new,mapping):
 
     return "\n".join(lines),changed
 
+ANIME_VERSION_MARKER_TOKENS = {"v0", "v1", "v2", "v3", "v4"}
+
+
+def validate_no_version_marker_tokens(current):
+    """
+    Fail closed if any resolved Define token is exactly one of the Anime
+    v0-v4 revision markers DraCuLa's "Anime Version vN Preference" rules
+    match on (profiles/rules.json).
+
+    Those rules match a standalone "v0".."v4" token anywhere in a release
+    name, using a boundary condition that a release-group suffix at the end
+    of a title also satisfies (preceded by a separator, followed by
+    end-of-string). A future Vidhin-synced release-group token that happens
+    to be exactly "V2" (or V0/V1/V3/V4) would therefore silently collide
+    with a genuine revision marker and misfire the version-preference
+    scoring. Checked across every resolved target, not just tier families,
+    since any Define token could in principle become a release-name suffix.
+    """
+    problems = []
+
+    for target, entry in current.items():
+        for token in entry.get("tokens", []):
+            if token.casefold() in ANIME_VERSION_MARKER_TOKENS:
+                problems.append(f"{token!r} in {target!r}")
+
+    if problems:
+        raise RuntimeError(
+            "Vidhin upstream token exactly matches an Anime v0-v4 version "
+            "marker, which would collide with the version-preference "
+            "scoring rules:\n\n  - "
+            + "\n  - ".join(problems)
+            + "\n\nAutomatic synchronization stopped."
+        )
+
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--mapping",type=Path,default=MAPPING)
@@ -1283,6 +1318,7 @@ def main():
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
     validate_movie_show_tier_collisions(cur)
+    validate_no_version_marker_tokens(cur)
     old=read_old(a.baseline)
     text,changed=report(old,cur,mapping)
     a.library.parent.mkdir(parents=True,exist_ok=True)

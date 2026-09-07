@@ -1161,3 +1161,66 @@ else:
     raise AssertionError(
         "Empty resolved Movie/Show tier was not detected"
     )
+
+# ---------------------------------------------------------------------------
+# validate_no_version_marker_tokens: fail closed if any resolved Define
+# token exactly equals an Anime v0-v4 version-preference marker. Guards
+# against a future Vidhin-synced release-group token silently colliding
+# with the version-preference rules in profiles/rules.json (identified
+# during the Anime version-preference audit).
+# ---------------------------------------------------------------------------
+
+# Clean real-world-shaped fixture must pass.
+m.validate_no_version_marker_tokens({
+    "Movies WEB T1 Groups": {"tokens": ["FraMeSToR", "NTb"]},
+    "Anime Shows BluRay T1 Groups": {"tokens": ["9volt", "Reaktor"]},
+})
+
+# A token that merely contains "v2" as a substring (not an exact match)
+# must not be flagged.
+m.validate_no_version_marker_tokens({
+    "Movies WEB T1 Groups": {"tokens": ["V2Subs", "FakeGroupv2"]},
+})
+
+# A token that is exactly "V2" (any case) must fail closed.
+exact_v2 = {
+    "Movies WEB T1 Groups": {"tokens": ["V2"]},
+}
+
+try:
+    m.validate_no_version_marker_tokens(exact_v2)
+except RuntimeError as exc:
+    assert "'V2'" in str(exc)
+    assert "Movies WEB T1 Groups" in str(exc)
+else:
+    raise AssertionError(
+        "exact 'V2' release-group token was not detected"
+    )
+
+# Case-insensitivity: lowercase "v0" must also fail closed.
+exact_v0_lower = {
+    "Anime Shows WEB T3 Groups": {"tokens": ["v0"]},
+}
+
+try:
+    m.validate_no_version_marker_tokens(exact_v0_lower)
+except RuntimeError as exc:
+    assert "'v0'" in str(exc)
+    assert "Anime Shows WEB T3 Groups" in str(exc)
+else:
+    raise AssertionError(
+        "exact lowercase 'v0' release-group token was not detected"
+    )
+
+# Every marker v0-v4 must be individually detected, not just v0/v2.
+for marker in ("v0", "v1", "v2", "v3", "v4"):
+    fixture = {"Some Target": {"tokens": [marker.upper()]}}
+
+    try:
+        m.validate_no_version_marker_tokens(fixture)
+    except RuntimeError as exc:
+        assert repr(marker.upper()) in str(exc)
+    else:
+        raise AssertionError(
+            f"exact {marker.upper()!r} release-group token was not detected"
+        )

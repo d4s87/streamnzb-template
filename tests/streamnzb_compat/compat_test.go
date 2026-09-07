@@ -4632,3 +4632,229 @@ func TestVideoCodecNeutrality(t *testing.T) {
 		})
 	}
 }
+
+// TestAnimeVersionPreferenceRegression is the permanent real-engine proof for
+// the Anime v0-v4 release-version tie-breaker (profiles/rules.json "Anime
+// Version vN Preference" rules, shipped since V4.4). It restores the
+// dedicated fixture coverage that CHANGELOG [4.4] originally described —
+// episode-suffix forms such as 01v2, case variants, REPACK interaction,
+// unsupported v5+, false positives, and multi-version non-stacking — which
+// had lapsed to only implicit coverage (v4 baked into
+// TestAdjacentTierCeilingMatrix's decorations) after the V5.0 rearchitecture.
+//
+// The v0-v4 regex intentionally matches a version marker fused directly onto
+// an episode number with no separator (a real fansub convention, e.g.
+// "01v2"), which is why it also accepts being preceded by a bare digit and
+// not only a word boundary. That behavior is deliberate and preserved here,
+// not something this test should weaken.
+func TestAnimeVersionPreferenceRegression(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Anime version preference regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	groupFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		return toks[0]
+	}
+
+	type familyCase struct {
+		label string
+		kind  string
+		group string
+	}
+
+	families := []familyCase{
+		{
+			label: "Anime Show",
+			kind:  ranking.KindAnimeShow,
+			group: groupFor("Anime Shows WEB T6 Groups"),
+		},
+		{
+			label: "Anime Movie",
+			kind:  ranking.KindAnimeMovie,
+			group: groupFor("Anime Movies WEB T6 Groups"),
+		},
+	}
+
+	for _, fam := range families {
+		fam := fam
+
+		t.Run(fam.label, func(t *testing.T) {
+			score := func(title string) int {
+				t.Helper()
+
+				request := ranking.Request{
+					Kind:    fam.kind,
+					IsAnime: true,
+					Title:   "Example",
+				}
+				if fam.kind == ranking.KindAnimeShow {
+					request.Season = 1
+					request.Episode = 1
+				}
+
+				kept, rejected := profile.ApplyWithRejected(
+					request,
+					[]triage.Candidate{{
+						Release: &release.Release{Title: title},
+					}},
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 || len(kept) != 1 {
+					t.Fatalf(
+						"%q: kept=%d rejected=%+v",
+						title, len(kept), rejected,
+					)
+				}
+
+				return kept[0].Torrent.Rank
+			}
+
+			var prefix string
+			if fam.kind == ranking.KindAnimeShow {
+				prefix = "Example.Anime.S01E01"
+			} else {
+				prefix = "Example.Anime.Movie.2025"
+			}
+
+			build := func(extra string) string {
+				if extra == "" {
+					return fmt.Sprintf(
+						"%s.1080p.WEB-DL.x264-%s", prefix, fam.group,
+					)
+				}
+				return fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264.%s-%s", prefix, extra, fam.group,
+				)
+			}
+
+			clean := score(build(""))
+
+			deltaCases := []struct {
+				name  string
+				title string
+				want  int
+			}{
+				{"v0 explicit", build("v0"), -1},
+				{"v1 ordinary", build("v1"), 1},
+				{"v2 ordinary", build("v2"), 2},
+				{"v3 ordinary", build("v3"), 3},
+				{"v4 ordinary", build("v4"), 4},
+				{"v2 uppercase", build("V2"), 2},
+				{
+					"v5 unsupported",
+					build("v5"),
+					0,
+				},
+				{
+					"multi-version non-stacking",
+					fmt.Sprintf(
+						"%s.1080p.WEB-DL.x264.v2.v3-%s", prefix, fam.group,
+					),
+					0,
+				},
+				{
+					"REPACK interaction with v2",
+					fmt.Sprintf(
+						"%s.1080p.WEB-DL.x264.v2.REPACK-%s", prefix, fam.group,
+					),
+					7, // +2 version, +5 effective REPACK
+				},
+			}
+
+			for _, dc := range deltaCases {
+				t.Run(dc.name, func(t *testing.T) {
+					if got := score(dc.title) - clean; got != dc.want {
+						t.Errorf(
+							"delta=%+d, want %+d (clean=%d)\n  title=%s",
+							got, dc.want, clean, dc.title,
+						)
+					}
+				})
+			}
+
+			// Fused episode+version form (real fansub convention): the
+			// version marker directly follows the episode/part number with
+			// no separator. Must still resolve to the correct version
+			// delta, matching the "01v2" case the regex was written for.
+			t.Run("fused episode+version 01v2", func(t *testing.T) {
+				fusedClean := score(fmt.Sprintf(
+					"Example.Anime.01.1080p.WEB-DL.x264-%s", fam.group,
+				))
+				fusedVersioned := score(fmt.Sprintf(
+					"Example.Anime.01v2.1080p.WEB-DL.x264-%s", fam.group,
+				))
+
+				if got := fusedVersioned - fusedClean; got != 2 {
+					t.Errorf(
+						"fused 01v2 delta=%+d, want +2 (clean=%d)",
+						got, fusedClean,
+					)
+				}
+			})
+
+			// False positives: tokens containing a bare "v" + digit that
+			// must NOT be mistaken for a version marker. Proven by score
+			// delta (this pipeline does not expose matched-rule names),
+			// matching the pattern every other test in this file uses.
+			t.Run("AV1 codec must not match v1", func(t *testing.T) {
+				// AV1 itself is separately neutralized to 0 (see
+				// TestVideoCodecNeutrality); this proves the version rule
+				// specifically does not also fire on the "AV1" substring.
+				if got := score(fmt.Sprintf(
+					"%s.1080p.WEB-DL.AV1-%s", prefix, fam.group,
+				)) - clean; got != 0 {
+					t.Errorf("AV1 delta=%+d, want 0 (clean=%d)", got, clean)
+				}
+			})
+
+			if fam.kind == ranking.KindAnimeShow {
+				t.Run("season number S02 must not match v2", func(t *testing.T) {
+					s01 := score(fmt.Sprintf(
+						"Example.Anime.S01E01.1080p.WEB-DL.x264-%s",
+						fam.group,
+					))
+					s02 := score(fmt.Sprintf(
+						"Example.Anime.S02E01.1080p.WEB-DL.x264-%s",
+						fam.group,
+					))
+					if got := s02 - s01; got != 0 {
+						t.Errorf(
+							"S02E01 vs S01E01 delta=%+d, want 0", got,
+						)
+					}
+				})
+			}
+
+			t.Run("group name fused as suffix must not match", func(t *testing.T) {
+				plain := score(fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264-FakeGroup", prefix,
+				))
+				fused := score(fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264-FakeGroupv2", prefix,
+				))
+				if got := fused - plain; got != 0 {
+					t.Errorf(
+						"FakeGroupv2 vs FakeGroup delta=%+d, want 0", got,
+					)
+				}
+			})
+		})
+	}
+}

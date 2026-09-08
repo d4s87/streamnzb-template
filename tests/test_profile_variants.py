@@ -78,7 +78,7 @@ EXPECTED_SCORING = {
 }
 
 assert rules_source["scoring"] == EXPECTED_SCORING
-assert len(rules_source["rules"]) == 127
+assert len(rules_source["rules"]) == 128
 
 entries = rules_source["rules"]
 
@@ -88,7 +88,7 @@ for entry in entries:
     owners[entry["owner"]] = owners.get(entry["owner"], 0) + 1
 
 assert owners == {
-    "core": 122,
+    "core": 123,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -137,7 +137,7 @@ assert variants["profile.txt"] == {
         "presentation",
         "device:samsung-qn90a",
     ],
-    "expected_rules": 127,
+    "expected_rules": 128,
 }
 
 assert variants["profile-neutral.txt"] == {
@@ -148,7 +148,7 @@ assert variants["profile-neutral.txt"] == {
         "core",
         "presentation",
     ],
-    "expected_rules": 126,
+    "expected_rules": 127,
 }
 
 samsung_before = SAMSUNG_PATH.read_bytes()
@@ -190,8 +190,8 @@ assert neutral["streamnzb_profile"] == 2
 samsung_rules = samsung["rules"]
 neutral_rules = neutral["rules"]
 
-assert len(samsung_rules) == 127
-assert len(neutral_rules) == 126
+assert len(samsung_rules) == 128
+assert len(neutral_rules) == 127
 
 samsung_names = [
     rule["name"]

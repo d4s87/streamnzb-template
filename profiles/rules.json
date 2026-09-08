@@ -972,6 +972,15 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Generated Dynamic HDR Penalty",
+        "points": -10000,
+        "scope": "movie",
+        "when": "matched(\"Movies Generated Dynamic HDR Groups\")\nand (dolbyVision or any(hdr, # == \"HDR10+\"))"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "action": "reject",
         "name": "Adaptive HD x265",
         "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)"

@@ -248,9 +248,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 127:
+    if len(entries) != 128:
         raise ValueError(
-            f"expected 127 source rules, found {len(entries)}"
+            f"expected 128 source rules, found {len(entries)}"
         )
 
     names = []
@@ -294,7 +294,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 122,
+    "core": 123,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -805,7 +805,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 127,
+            "expected_rules": 128,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -814,7 +814,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 126,
+            "expected_rules": 127,
         },
     }
 

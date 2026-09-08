@@ -645,6 +645,72 @@ else:
     )
 
 # ---------------------------------------------------------------------------
+# Generated Dynamic HDR: group-lookahead extraction and upstream-drift guard
+#
+# Vidhin's real branches are two independent lookaheads ANDed together
+# (group list, HDR10+/DV marker). DraCuLa syncs only the group half; the
+# marker half is represented by Jhin's own parsed dolbyVision/hdr facts in
+# the production rule instead, so a silent shape or vocabulary change on
+# the upstream side must fail closed rather than pass unnoticed.
+
+gdh_branch_a = (
+    r"/^(?=.*\b(BiTOR|DepraveD|SasukeducK|tarunk9c|VD0N|VECTOR|VisionXpert)\b)"
+    r"(?=.*(?:\bHDR10(\+|P(lus)?)\b|\b(dv|dovi|dolby[ .]?v(ision)?)\b)).*/i"
+)
+gdh_branch_b = (
+    r"/^(?=.*\b(Flights|GuyZo|BR-GuyZo)\b)"
+    r"(?=.*(?:\bHDR10(\+|P(lus)?)\b|\b(dv|dovi|dolby[ .]?v(ision)?)\b)).*/"
+)
+
+# Correct extraction: only the group half, merged across both real branches.
+assert m.generated_dynamic_hdr_tokens(gdh_branch_a) == [
+    "BiTOR", "DepraveD", "SasukeducK", "tarunk9c", "VD0N", "VECTOR",
+    "VisionXpert",
+]
+assert m.generated_dynamic_hdr_tokens(gdh_branch_b) == [
+    "BR-GuyZo", "Flights", "GuyZo",
+]
+
+# Both real branches must pass the upstream pre-validator unchanged.
+m.validate_generated_dynamic_hdr_source([
+    {"name": "Generated Dynamic HDR", "pattern": gdh_branch_a},
+    {"name": "Generated Dynamic HDR", "pattern": gdh_branch_b},
+])
+
+# Shape drift: a branch collapsing to a single lookahead must fail closed.
+shape_drift = [{
+    "name": "Generated Dynamic HDR",
+    "pattern": r"/^(?=.*\b(BiTOR)\b).*/i",
+}]
+
+try:
+    m.validate_generated_dynamic_hdr_source(shape_drift)
+except ValueError as exc:
+    assert "lookaheads" in str(exc)
+else:
+    raise AssertionError(
+        "Generated Dynamic HDR shape drift (single lookahead) was not detected"
+    )
+
+# Marker-vocabulary drift: the HDR10+/DV family disappearing must fail
+# closed, even though the group list itself is untouched.
+marker_drift = [{
+    "name": "Generated Dynamic HDR",
+    "pattern": (
+        r"/^(?=.*\b(BiTOR)\b)(?=.*(?:\bXYZ99(\+|P(lus)?)\b)).*/i"
+    ),
+}]
+
+try:
+    m.validate_generated_dynamic_hdr_source(marker_drift)
+except ValueError as exc:
+    assert "HDR10+/DV vocabulary" in str(exc)
+else:
+    raise AssertionError(
+        "Generated Dynamic HDR marker-vocabulary drift was not detected"
+    )
+
+# ---------------------------------------------------------------------------
 # Generated metadata change detection
 #
 # Mapping-only changes must trigger regeneration even when the upstream

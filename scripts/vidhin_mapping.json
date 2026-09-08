@@ -477,6 +477,14 @@
       "field": "group",
       "mode": "raw_regex"
     },
+    "Movies Generated Dynamic HDR Groups": {
+      "sources": [
+        "Generated Dynamic HDR"
+      ],
+      "scope": "movie",
+      "field": "group",
+      "mode": "generated_dynamic_hdr_groups"
+    },
     "Shows Bad Dual Groups": {
       "sources": [
         "Sonarr Bad Dual Groups"

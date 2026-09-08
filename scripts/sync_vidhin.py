@@ -131,6 +131,69 @@ def dedupe_casefold(tokens):
             seen[key]=token
     return list(seen.values())
 
+# Vidhin's "Generated Dynamic HDR" branches carry two independent lookaheads
+# ANDed together: a release-group list, and an HDR10+/DV marker predicate.
+# DraCuLa deliberately syncs only the group half into a Define; the marker
+# half is represented in the production rule by Jhin's own parsed
+# dolbyVision/hdr facts instead of a duplicated title regex (see the audit
+# behind "Generated Dynamic HDR Penalty" in profiles/rules.json). Because the
+# marker half is no longer re-derived from regex at all, a silent upstream
+# change to what that marker predicate covers would otherwise be invisible to
+# DraCuLa. This fragment set is the minimum vocabulary the current audited
+# rule (dolbyVision or any(hdr, # == "HDR10+")) actually covers; if upstream's
+# marker predicate stops containing one of these, the classification's real
+# meaning has drifted away from what the rule still checks for.
+GENERATED_DYNAMIC_HDR_MARKER_FRAGMENTS = ("hdr10", "dv", "dovi", "dolby")
+
+def generated_dynamic_hdr_tokens(pattern):
+    """
+    Extract only the release-group half of one Vidhin Generated Dynamic HDR
+    branch: (?=.*GROUP_LIST)(?=.*HDR10+/DV_MARKER).
+
+    Fails closed if the upstream shape drifts away from exactly two
+    lookaheads, or if the second (marker) lookahead stops containing the
+    audited HDR10+/DV vocabulary, since either change would mean the synced
+    group list no longer means what the production rule assumes it means.
+    """
+    la=lookaheads(pattern)
+    if len(la)!=2:
+        raise ValueError(
+            "Generated Dynamic HDR regex changed shape; expected exactly "
+            f"2 lookaheads (group list, HDR10+/DV marker), found {len(la)}: "
+            f"{pattern}"
+        )
+
+    group_classifier,marker_classifier=la[0],la[1]
+
+    marker_lower=marker_classifier.casefold()
+    missing=[
+        frag for frag in GENERATED_DYNAMIC_HDR_MARKER_FRAGMENTS
+        if frag not in marker_lower
+    ]
+    if missing:
+        raise ValueError(
+            "Generated Dynamic HDR marker predicate no longer contains "
+            f"expected HDR10+/DV vocabulary {missing}; upstream classification "
+            f"semantics may have changed and require manual review: {pattern}"
+        )
+
+    out=set()
+    for body in innermost_groups(group_classifier):
+        if "|" in body:
+            for x in body.split("|"):
+                x=clean_token(x)
+                if x: out.add(x)
+        else:
+            x=clean_token(body)
+            if x: out.add(x)
+
+    if not out:
+        raise ValueError(
+            f"Generated Dynamic HDR group classifier yielded no tokens: {pattern}"
+        )
+
+    return dedupe_casefold(out)
+
 def split_top_level(text, sep="|"):
     out=[]; buf=[]; depth=0; cls=False; esc=False
     for ch in text:
@@ -390,7 +453,33 @@ def validate_anime_upstream_structure(upstream):
             + "\n\n".join(problems)
             + "\n\nManual review and mapping update required."
         )
-    
+
+def validate_generated_dynamic_hdr_source(upstream):
+    """
+    Guard against an unnoticed upstream shape change to Vidhin's Generated
+    Dynamic HDR classification before resolve() ever runs.
+
+    generated_dynamic_hdr_tokens() already fails closed per-branch during
+    resolve(), but running the same check here, directly against the raw
+    upstream rows, gives an early, focused error (and a synthetic-drift unit
+    test a direct hook) independent of the rest of the resolve() pipeline.
+    Does not require byte-identical regex formatting -- only that every
+    branch still has the audited two-lookahead (group, HDR10+/DV marker)
+    shape.
+    """
+    for rec in rows(upstream):
+        if n(rec) != "Generated Dynamic HDR":
+            continue
+
+        pattern = p(rec)
+
+        if not isinstance(pattern, str):
+            raise RuntimeError(
+                "Vidhin Generated Dynamic HDR record has no usable pattern."
+            )
+
+        generated_dynamic_hdr_tokens(pattern)
+
 def resolve(mapping,upstream):
     by={}
     for rec in rows(upstream):
@@ -423,6 +512,12 @@ def resolve(mapping,upstream):
                         "pattern":pat,
                         "tokens":[],
                         "raw_regex_pattern":raw_regex_pattern(pat),
+                    })
+                elif mode=="generated_dynamic_hdr_groups":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":generated_dynamic_hdr_tokens(pat),
                     })
                 elif mode=="obfuscated":
                     recs.append({
@@ -1315,6 +1410,7 @@ def main():
     mapping=jload(a.mapping)
     upstream=jload(a.upstream_file) if a.upstream_file else fetch(mapping["upstream_url"])
     validate_anime_upstream_structure(upstream)
+    validate_generated_dynamic_hdr_source(upstream)
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
     validate_movie_show_tier_collisions(cur)

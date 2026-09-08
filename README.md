@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **126** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **128** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **125** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **127** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **125 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **127 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -138,7 +138,7 @@ Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 56 published Define rules. Fifty-five are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, and Anime Dubs Only classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
+The library currently provides 57 published Define rules. Fifty-six are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, Movie Generated Dynamic HDR, and Anime Dubs Only classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -234,6 +234,18 @@ The non-Anime-only scope is intentional. Anime's minimum adjacent release-group 
 Rather than citing a single hand-picked "maximum stack" figure as proof, the permanent `TestAdjacentTierCeilingMatrix` real-engine regression (see [Validation](#validation)) is the authoritative guard for this contract: for every production tier family it decorates the lowest tier with every currently-reachable ordinary bonus and asserts the engine's own score stays below a clean candidate one tier higher. A prior audit found that relying on a hardcoded maximum instead of the engine's actual output is exactly what let a real tier-authority regression reach production undetected (see [High-Impact Audio Normalization](#high-impact-audio-normalization)).
 
 The Samsung QN90A profile retains one device-specific dynamic-range compatibility rule: Dolby Vision releases without an HDR fallback are rejected. Dolby Vision releases that include HDR/HDR10 fallback remain eligible, and Dolby Vision releases with HDR10+ fallback receive the same non-Anime `+25` HDR10+ preference. The hardware-neutral profile performs no Dolby Vision compatibility rejection; Dolby Vision-only remains eligible and score-neutral.
+
+## Generated Dynamic HDR
+
+A small number of release groups are known to generate their own Dolby Vision or HDR10+ metadata rather than sourcing it from a retail disc or streaming master. This does not mean the underlying video is necessarily defective — it means the dynamic-range metadata itself is unverified and generated rather than authoritative, which is exactly the kind of uncertainty DraCuLa strongly deprioritizes without treating as a hard rejection.
+
+The Vidhin-backed `Movies Generated Dynamic HDR Groups` Define identifies this specific group list. Matching a release from one of these groups **and** a parsed Dolby Vision or HDR10+ marker applies a `-10,000` **Movie-only** penalty. Ordinary releases from one of these groups are not penalized at all — the classification only applies when a dynamic-HDR marker is also present. For example, `Flights` remains a normal `Movies WEB T2` release-group on its ordinary releases; only its Generated Dynamic HDR releases receive the `-10,000` penalty.
+
+This is a `score` penalty, not a `reject`: a matching release remains eligible as a last-resort fallback rather than being discarded outright. The classification deliberately overrides ordinary release-group tier trust — a normally trusted higher-tier release carrying this classification can rank below a clean lower-tier release, the same design already used for the Bad Dual and LQ classifications above.
+
+The existing Dolby Vision/HDR10+ native-score neutralization described above remains completely separate and additive: native dynamic-range ranks are still compensated exactly as before, and the non-Anime HDR10+ `+25` preference still applies independently. Generated Dynamic HDR only adds one further, independent scoring layer on top.
+
+The scope is strictly Movie — Series, Anime Movie, and Anime Show are unaffected. There is currently no [Adaptive Low-Score Filtering](#adaptive-low-score-filtering) integration for this classification.
 
 ## High-Impact Audio Normalization
 

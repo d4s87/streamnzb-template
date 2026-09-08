@@ -4016,6 +4016,56 @@ func TestLanguageSubtitleParserRegression(t *testing.T) {
 			wantSubbed:    true,
 			wantHardcoded: true,
 		},
+		// Fused language+subtitle tokens (jhin, not PTT): ENGSUB, ESub,
+		// VOSTFR, SWESUB, KORSUB, PLSUB, SUBFRENCH. Jhin 0.6.2 added a
+		// dedicated compound "subbed" handler for these because no word
+		// boundary precedes "sub" in any of them, so the generic subbed
+		// handlers never matched and subtitle evidence was previously lost
+		// (Languages was already correct on 0.6.1; only Subbed changed).
+		// Languages and Subbed are asserted as independent public facts,
+		// never as a bound "French subtitles"-style pair.
+		{
+			name:          "fused ENGSUB",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.ENGSUB.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused ESub",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.ESub.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"en"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused VOSTFR",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.VOSTFR.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"fr"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused SWESUB",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.SWESUB.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"sv"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused KORSUB",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.KORSUB.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"ko"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused PLSUB",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.PLSUB.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"pl"},
+			wantSubbed:    true,
+		},
+		{
+			name:          "fused SUBFRENCH",
+			release:       "Anime.Show.S01E01.1080p.WEB-DL.SUBFRENCH.DDP5.1.H.264-GRP",
+			wantLanguages: []string{"fr"},
+			wantSubbed:    true,
+		},
 	}
 
 	for _, tc := range cases {

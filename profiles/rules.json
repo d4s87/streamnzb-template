@@ -135,6 +135,14 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Neutralize Dolby Digital",
+        "points": -50,
+        "when": "\"dolby_digital\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Neutralize Edition",
         "points": -100,
         "when": "edition != \"\""
@@ -915,14 +923,6 @@
         "name": "Neutralize Anime DTS Lossy",
         "points": -100,
         "when": "isAnime and \"dts_lossy\" in traits"
-      }
-    },
-    {
-      "owner": "core",
-      "rule": {
-        "name": "Neutralize Anime Dolby Digital",
-        "points": -50,
-        "when": "isAnime and \"dolby_digital\" in traits"
       }
     },
     {

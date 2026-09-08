@@ -361,6 +361,143 @@ else:
     )
 
 # ---------------------------------------------------------------------------
+# Dolby Digital ordering-integrity fix (post-V5.2). Prove
+# validate_dolby_digital_ordering() actually fires on drift, not just that
+# the current committed source happens to pass: "Neutralize Dolby Digital"
+# must exist exactly as specified (points -50, exact when clause, no
+# scope), "Prefer Dolby Digital Plus" must keep its +25/non-Anime shape,
+# and neither "Neutralize Anime Dolby Digital" (subsumed) nor a "Prefer
+# Dolby Digital" residual (never intended) may exist.
+# ---------------------------------------------------------------------------
+
+_dd_good_entries = [
+    {
+        "owner": "core",
+        "rule": {
+            "name": "Neutralize Dolby Digital",
+            "points": -50,
+            "when": '"dolby_digital" in traits',
+        },
+    },
+    {
+        "owner": "core",
+        "rule": {
+            "name": "Prefer Dolby Digital Plus",
+            "points": 25,
+            "when": 'not isAnime and "dolby_digital_plus" in traits',
+        },
+    },
+]
+
+# Valid shape must pass.
+build_profiles.validate_dolby_digital_ordering(_dd_good_entries)
+
+# Missing "Neutralize Dolby Digital" must fail closed.
+_dd_missing = [
+    e for e in _dd_good_entries if e["rule"]["name"] != "Neutralize Dolby Digital"
+]
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_missing)
+except ValueError as exc:
+    assert "Neutralize Dolby Digital" in str(exc)
+else:
+    raise AssertionError("missing 'Neutralize Dolby Digital' was not detected")
+
+# Points drift on the neutralizer must fail closed.
+_dd_drifted_points = [
+    {
+        "owner": e["owner"],
+        "rule": {**e["rule"], "points": -49} if e["rule"]["name"] == "Neutralize Dolby Digital" else e["rule"],
+    }
+    for e in _dd_good_entries
+]
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_drifted_points)
+except ValueError as exc:
+    assert "points drifted" in str(exc)
+else:
+    raise AssertionError("'Neutralize Dolby Digital' points drift was not detected")
+
+# Condition drift on the neutralizer must fail closed.
+_dd_drifted_when = _with_when(
+    _dd_good_entries, "Neutralize Dolby Digital", '"dolby_digital_plus" in traits'
+)
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_drifted_when)
+except ValueError as exc:
+    assert "when clause drifted" in str(exc)
+else:
+    raise AssertionError("'Neutralize Dolby Digital' condition drift was not detected")
+
+# A scope appearing on the universal neutralizer must fail closed.
+_dd_scoped = [
+    {
+        "owner": e["owner"],
+        "rule": {**e["rule"], "scope": "movie"} if e["rule"]["name"] == "Neutralize Dolby Digital" else e["rule"],
+    }
+    for e in _dd_good_entries
+]
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_scoped)
+except ValueError as exc:
+    assert "unscoped" in str(exc)
+else:
+    raise AssertionError("scope appearing on 'Neutralize Dolby Digital' was not detected")
+
+# Prefer Dolby Digital Plus losing its non-Anime scoping must fail closed.
+_dd_ddp_universal = _with_when(
+    _dd_good_entries, "Prefer Dolby Digital Plus", '"dolby_digital_plus" in traits'
+)
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_ddp_universal)
+except ValueError as exc:
+    assert "Prefer Dolby Digital Plus" in str(exc)
+else:
+    raise AssertionError(
+        "'Prefer Dolby Digital Plus' losing non-Anime scoping was not detected"
+    )
+
+# The subsumed Anime-only rule reappearing must fail closed.
+_dd_resurrected = _dd_good_entries + [
+    {
+        "owner": "core",
+        "rule": {
+            "name": "Neutralize Anime Dolby Digital",
+            "points": -50,
+            "when": 'isAnime and "dolby_digital" in traits',
+        },
+    }
+]
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_resurrected)
+except ValueError as exc:
+    assert "Neutralize Anime Dolby Digital" in str(exc)
+else:
+    raise AssertionError(
+        "resurrected 'Neutralize Anime Dolby Digital' was not detected"
+    )
+
+# A never-intended "Prefer Dolby Digital" residual must fail closed.
+_dd_prefer_dd = _dd_good_entries + [
+    {
+        "owner": "core",
+        "rule": {
+            "name": "Prefer Dolby Digital",
+            "points": 10,
+            "when": 'not isAnime and "dolby_digital" in traits',
+        },
+    }
+]
+try:
+    build_profiles.validate_dolby_digital_ordering(_dd_prefer_dd)
+except ValueError as exc:
+    assert "Prefer Dolby Digital" in str(exc)
+else:
+    raise AssertionError("unexpected 'Prefer Dolby Digital' residual was not detected")
+
+print("PASS: Dolby Digital ordering-integrity structural guards")
+
+# ---------------------------------------------------------------------------
 # Scoring share-code round-trip (schema v2). StreamNZB v5.18.0 / Jhin 0.6.2
 # closed Gaisberg/streamnzb#267: SNZBP1 share codes now carry the
 # profile-level `scoring` map, marked by `streamnzb_profile: 2`. This proves

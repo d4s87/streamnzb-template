@@ -49,6 +49,12 @@ EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS = {
     "Neutralize DTS Lossless",
     "Neutralize Atmos",
     "Neutralize Dolby Digital Plus",
+    # Dolby Digital is a scoring-integrity-only universal neutralizer: it
+    # has no paired "Prefer Dolby Digital" residual (see
+    # EXPECTED_DOLBY_DIGITAL_NEUTRALIZER below). Native +50 previously beat
+    # DDP's compensated effective +25 for Movies/Shows; this closes that
+    # inversion without adding any new positive score.
+    "Neutralize Dolby Digital",
 }
 
 EXPECTED_NON_ANIME_AUDIO_PREFERENCES = {
@@ -59,13 +65,33 @@ EXPECTED_NON_ANIME_AUDIO_PREFERENCES = {
 }
 
 # Codecs Jhin scores natively without any DraCuLa compensation for
-# Movies/Shows (their 200-point tier gap safely absorbs +100/+100/+50).
-# Anime's 80-point gap cannot, so these three are neutralized for Anime
-# only; Movies/Shows must remain untouched.
+# Movies/Shows (their 200-point tier gap safely absorbs +100/+100).
+# Anime's 80-point gap cannot, so these two are neutralized for Anime
+# only; Movies/Shows must remain untouched. Dolby Digital was formerly a
+# third member of this set, but it is now neutralized universally (see
+# EXPECTED_DOLBY_DIGITAL_NEUTRALIZER) because its native +50 outranked
+# DTS Lossless Plus's compensated effective +25 for Movies/Shows too —
+# "Neutralize Anime Dolby Digital" is subsumed and must no longer exist.
 EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS = {
     "Neutralize Anime AAC",
     "Neutralize Anime DTS Lossy",
+}
+
+# Dolby Digital ordering-integrity fix: native +50 must be neutralized to 0
+# for every content kind, universally, with no non-Anime residual "Prefer
+# Dolby Digital" rule (unlike the Neutralize/Prefer pairs above, this is a
+# pure correctness fix, not a new preference layer) so that Dolby Digital
+# Plus's existing effective +25 remains strictly preferred over plain
+# Dolby Digital everywhere.
+EXPECTED_DOLBY_DIGITAL_NEUTRALIZER = {
+    "name": "Neutralize Dolby Digital",
+    "points": -50,
+    "when": '"dolby_digital" in traits',
+}
+
+FORBIDDEN_AUDIO_RULE_NAMES = {
     "Neutralize Anime Dolby Digital",
+    "Prefer Dolby Digital",
 }
 
 # Video-codec neutralization contract (codec-scoring tier-authority audit):
@@ -317,6 +343,7 @@ def validate_registry(payload: dict):
         )
 
     validate_audio_neutralization_scoping(entries)
+    validate_dolby_digital_ordering(entries)
     validate_video_codec_neutralization_scoping(entries)
     validate_retag_rules(entries)
     validate_edition_neutralization_scoping(entries)
@@ -373,6 +400,63 @@ def validate_audio_neutralization_scoping(entries):
                 "keep this native codec score untouched); "
                 f"when clause: {when!r}"
             )
+
+
+def validate_dolby_digital_ordering(entries):
+    by_name = {
+        entry["rule"]["name"]: entry["rule"]
+        for entry in entries
+    }
+
+    dd_rule = by_name.get("Neutralize Dolby Digital")
+
+    if dd_rule is None:
+        raise ValueError("expected rule missing: 'Neutralize Dolby Digital'")
+
+    if dd_rule["points"] != EXPECTED_DOLBY_DIGITAL_NEUTRALIZER["points"]:
+        raise ValueError(
+            "'Neutralize Dolby Digital' points drifted: expected "
+            f"{EXPECTED_DOLBY_DIGITAL_NEUTRALIZER['points']}, "
+            f"found {dd_rule['points']}"
+        )
+
+    if dd_rule["when"] != EXPECTED_DOLBY_DIGITAL_NEUTRALIZER["when"]:
+        raise ValueError(
+            "'Neutralize Dolby Digital' when clause drifted: expected "
+            f"{EXPECTED_DOLBY_DIGITAL_NEUTRALIZER['when']!r}, "
+            f"found {dd_rule['when']!r}"
+        )
+
+    if "scope" in dd_rule:
+        raise ValueError(
+            "'Neutralize Dolby Digital' must remain unscoped (universal); "
+            f"found scope {dd_rule['scope']!r}"
+        )
+
+    ddp_prefer = by_name.get("Prefer Dolby Digital Plus")
+
+    if ddp_prefer is None:
+        raise ValueError("expected rule missing: 'Prefer Dolby Digital Plus'")
+
+    if ddp_prefer["points"] != 25:
+        raise ValueError(
+            "'Prefer Dolby Digital Plus' points drifted: expected 25, "
+            f"found {ddp_prefer['points']}"
+        )
+
+    if "not isAnime" not in ddp_prefer["when"]:
+        raise ValueError(
+            "'Prefer Dolby Digital Plus' must remain scoped to non-Anime "
+            f"content; when clause: {ddp_prefer['when']!r}"
+        )
+
+    present_forbidden = FORBIDDEN_AUDIO_RULE_NAMES & set(by_name)
+
+    if present_forbidden:
+        raise ValueError(
+            "Dolby Digital ordering fix subsumed these rule(s); they must "
+            "no longer exist: " + ", ".join(sorted(present_forbidden))
+        )
 
 
 def validate_video_codec_neutralization_scoping(entries):

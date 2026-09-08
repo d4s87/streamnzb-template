@@ -4415,12 +4415,16 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 }
 
 // TestAnimeAudioNeutrality proves the Anime side of the scoring-ceiling
-// fix directly: every codec DraCuLa touches for audio -- the four
-// high-impact codecs normalized for everyone (TrueHD/DTS Lossless/
-// Atmos/Dolby Digital Plus) and the three previously-untouched native
-// codecs newly neutralized for Anime only (AAC/DTS Lossy/Dolby Digital)
-// -- must contribute exactly 0 effective points for an Anime release.
-// Anime's 80-point minimum tier gap has no room for any of them.
+// fix directly: every codec DraCuLa touches for audio -- the five
+// high-impact/ordering-integrity codecs normalized for everyone
+// (TrueHD/DTS Lossless/Atmos/Dolby Digital Plus/Dolby Digital) and the two
+// remaining previously-untouched native codecs neutralized for Anime only
+// (AAC/DTS Lossy) -- must contribute exactly 0 effective points for an
+// Anime release. Anime's 80-point minimum tier gap has no room for any of
+// them. Dolby Digital reaches 0 through the universal "Neutralize Dolby
+// Digital" rule (see TestDolbyDigitalOrderingRegression), not a dedicated
+// Anime-only rule -- "Neutralize Anime Dolby Digital" no longer exists,
+// subsumed by the universal fix.
 func TestAnimeAudioNeutrality(t *testing.T) {
 	productionRules := loadProductionRules(t)
 	defineLibrary := loadDefineLibrary(t)
@@ -4505,6 +4509,179 @@ func TestAnimeAudioNeutrality(t *testing.T) {
 			)
 		}
 	}
+}
+
+// TestDolbyDigitalOrderingRegression proves the Dolby Digital / Dolby
+// Digital Plus ordering-integrity fix. Before this fix, plain Dolby Digital
+// was left completely native (+50 for Movies/Shows) while Dolby Digital
+// Plus was neutralized and given a smaller deliberate residual (effective
+// +25) -- meaning the objectively worse codec silently outranked the
+// better one by 25 points, for every non-Anime content kind. The universal
+// "Neutralize Dolby Digital" rule (-50, no scope, no residual "Prefer"
+// counterpart) closes that inversion without adding any new positive
+// score, so it cannot consume any adjacent-tier headroom -- it can only
+// ever remove points from the fully-decorated stack the ceiling matrix
+// already exercises.
+func TestDolbyDigitalOrderingRegression(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Dolby Digital ordering regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	groupFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		return toks[0]
+	}
+
+	score := func(kind string, isAnime bool, title string) int {
+		t.Helper()
+
+		request := ranking.Request{Kind: kind, Title: "Example"}
+		if kind == ranking.KindSeries || kind == ranking.KindAnimeShow {
+			request.Season, request.Episode = 1, 1
+		}
+		if isAnime {
+			request.IsAnime = true
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			request,
+			[]triage.Candidate{{Release: &release.Release{Title: title}}},
+			jhinrank.RankOptions{},
+		)
+		if len(rejected) != 0 || len(kept) != 1 {
+			t.Fatalf("%q: kept=%d rejected=%+v", title, len(kept), rejected)
+		}
+		return kept[0].Torrent.Rank
+	}
+
+	type isolatedCase struct {
+		label    string
+		kind     string
+		isAnime  bool
+		group    string
+		wantDD   int
+		wantDDP  int
+		nonAnime bool
+	}
+
+	cases := []isolatedCase{
+		{
+			label:    "Movie",
+			kind:     ranking.KindMovie,
+			group:    groupFor("Movies WEB T1 Groups"),
+			wantDD:   0,
+			wantDDP:  25,
+			nonAnime: true,
+		},
+		{
+			label:    "Series",
+			kind:     ranking.KindSeries,
+			group:    groupFor("Shows WEB T1 Groups"),
+			wantDD:   0,
+			wantDDP:  25,
+			nonAnime: true,
+		},
+		{
+			label:   "Anime Movie",
+			kind:    ranking.KindAnimeMovie,
+			isAnime: true,
+			group:   groupFor("Anime Movies WEB T1 Groups"),
+			wantDD:  0,
+			wantDDP: 0,
+		},
+		{
+			label:   "Anime Show",
+			kind:    ranking.KindAnimeShow,
+			isAnime: true,
+			group:   groupFor("Anime Shows WEB T1 Groups"),
+			wantDD:  0,
+			wantDDP: 0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.label, func(t *testing.T) {
+			var titlePrefix string
+			switch tc.kind {
+			case ranking.KindSeries:
+				titlePrefix = "Example.Show.S01E01"
+			case ranking.KindAnimeShow:
+				titlePrefix = "Example.Anime.S01E01"
+			case ranking.KindAnimeMovie:
+				titlePrefix = "Example.Anime.Movie.2025"
+			default:
+				titlePrefix = "Example.Movie.2026"
+			}
+
+			clean := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.x264-%s", titlePrefix, tc.group,
+			))
+			withDD := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.DD5.1.x264-%s", titlePrefix, tc.group,
+			))
+			withDDP := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.DDP5.1.x264-%s", titlePrefix, tc.group,
+			))
+
+			if got := withDD - clean; got != tc.wantDD {
+				t.Errorf("%s DD effective delta=%+d; want %+d", tc.label, got, tc.wantDD)
+			}
+			if got := withDDP - clean; got != tc.wantDDP {
+				t.Errorf("%s DDP effective delta=%+d; want %+d", tc.label, got, tc.wantDDP)
+			}
+			if tc.nonAnime && withDDP <= withDD {
+				t.Errorf(
+					"%s: DDP (%d) does not strictly outrank DD (%d)",
+					tc.label, withDDP, withDD,
+				)
+			}
+		})
+	}
+
+	// Tier-authority interaction: a lower-tier Movie WEB release decorated
+	// with DD instead of the usual DDP+Atmos combo must still stay below a
+	// clean immediately-higher tier, proving the neutralizer introduces no
+	// unexpected scoring interaction when substituted into the same
+	// fully-decorated-lower-tier shape the adjacent-tier ceiling matrix
+	// already exercises for DDP.
+	t.Run("lower tier decorated with DD instead of DDP", func(t *testing.T) {
+		t2 := groupFor("Movies WEB T2 Groups")
+		t1 := groupFor("Movies WEB T1 Groups")
+
+		decoratedWithDD := joinCeilingParts([]string{
+			"Example.Movie", "2026", "2160p", "WEB-DL", "AV1",
+			"Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3",
+			"DD5.1", "Atmos",
+		}) + "-" + t2
+		cleanHigher := joinCeilingParts([]string{
+			"Example.Movie", "2026", "2160p", "WEB-DL", "HEVC",
+		}) + "-" + t1
+
+		lower := score(ranking.KindMovie, false, decoratedWithDD)
+		higher := score(ranking.KindMovie, false, cleanHigher)
+
+		if lower >= higher {
+			t.Errorf(
+				"decorated-with-DD lower tier (%d) does not stay below clean higher tier (%d)\n  decorated: %s\n  clean:     %s",
+				lower, higher, decoratedWithDD, cleanHigher,
+			)
+		}
+	})
 }
 
 // TestVideoCodecNeutrality is the permanent real-engine proof for the

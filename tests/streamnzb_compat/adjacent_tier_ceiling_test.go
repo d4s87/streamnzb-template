@@ -139,6 +139,19 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// decorated" lower-tier candidate: every ordinary positive bonus
 		// actually reachable by this content kind/source combination.
 		decorations []string
+		// editionDecoration, when set, adds a per-tier-pair check for this
+		// family using decorations plus one of the canonical Jhin Edition
+		// values that the Edition Preference Layer audit proved was
+		// previously uncompensated (a silent native +100 with no DraCuLa
+		// offset). "Theatrical" is used universally: its Jhin pattern
+		// (`\bTheatrical\b`) has no fragile boundary requirements, unlike
+		// Diamond Edition's `\b\.Diamond\.\b`, which consumes both
+		// flanking dots and can fuse an adjacent token depending on
+		// placement - Theatrical is a clean, representative stand-in for
+		// the whole previously-broken class (Anniversary, Ultimate,
+		// Collectors, Theatrical, Uncut, Diamond, Remastered all behave
+		// identically post-fix: fully neutralized to zero contribution).
+		editionDecoration string
 		// hdr10PlusDecorations, when set, adds a second per-tier-pair
 		// check for this family using decorations plus an HDR10+ marker.
 		// HDR10+ is not mutually exclusive with high-impact lossless
@@ -183,10 +196,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 	}{
 		{
 			family: family{
-				label:        "Movie Remux",
-				kind:         ranking.KindMovie,
-				definePrefix: "Movies Remux",
-				tierCount:    3,
+				label:             "Movie Remux",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindMovie,
+				definePrefix:      "Movies Remux",
+				tierCount:         3,
 				sourceTokens: func(bool) []string {
 					return []string{"2160p", "UHD", "BluRay", "REMUX"}
 				},
@@ -205,10 +219,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Movie UHD BluRay",
-				kind:         ranking.KindMovie,
-				definePrefix: "Movies UHD BluRay",
-				tierCount:    3,
+				label:             "Movie UHD BluRay",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindMovie,
+				definePrefix:      "Movies UHD BluRay",
+				tierCount:         3,
 				sourceTokens: func(bool) []string {
 					return []string{"2160p", "UHD", "BluRay"}
 				},
@@ -227,10 +242,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Movie HD BluRay",
-				kind:         ranking.KindMovie,
-				definePrefix: "Movies HD BluRay",
-				tierCount:    3,
+				label:             "Movie HD BluRay",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindMovie,
+				definePrefix:      "Movies HD BluRay",
+				tierCount:         3,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "BluRay"}
 				},
@@ -249,10 +265,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Movie WEB",
-				kind:         ranking.KindMovie,
-				definePrefix: "Movies WEB",
-				tierCount:    3,
+				label:             "Movie WEB",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindMovie,
+				definePrefix:      "Movies WEB",
+				tierCount:         3,
 				sourceTokens: func(bool) []string {
 					return []string{"2160p", "WEB-DL"}
 				},
@@ -267,10 +284,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Show Remux",
-				kind:         ranking.KindSeries,
-				definePrefix: "Shows Remux",
-				tierCount:    2,
+				label:             "Show Remux",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindSeries,
+				definePrefix:      "Shows Remux",
+				tierCount:         2,
 				sourceTokens: func(bool) []string {
 					return []string{"2160p", "UHD", "BluRay", "REMUX"}
 				},
@@ -285,10 +303,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Show BluRay",
-				kind:         ranking.KindSeries,
-				definePrefix: "Shows BluRay",
-				tierCount:    2,
+				label:             "Show BluRay",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindSeries,
+				definePrefix:      "Shows BluRay",
+				tierCount:         2,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "BluRay"}
 				},
@@ -303,10 +322,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Show WEB",
-				kind:         ranking.KindSeries,
-				definePrefix: "Shows WEB",
-				tierCount:    3,
+				label:             "Show WEB",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindSeries,
+				definePrefix:      "Shows WEB",
+				tierCount:         3,
 				sourceTokens: func(bool) []string {
 					return []string{"2160p", "WEB-DL"}
 				},
@@ -321,10 +341,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Anime Show BluRay",
-				kind:         ranking.KindAnimeShow,
-				definePrefix: "Anime Shows BluRay",
-				tierCount:    8,
+				label:             "Anime Show BluRay",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeShow,
+				definePrefix:      "Anime Shows BluRay",
+				tierCount:         8,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "BluRay"}
 				},
@@ -339,10 +360,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Anime Show WEB",
-				kind:         ranking.KindAnimeShow,
-				definePrefix: "Anime Shows WEB",
-				tierCount:    6,
+				label:             "Anime Show WEB",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeShow,
+				definePrefix:      "Anime Shows WEB",
+				tierCount:         6,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "WEB-DL"}
 				},
@@ -357,10 +379,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Anime Movie BluRay",
-				kind:         ranking.KindAnimeMovie,
-				definePrefix: "Anime Movies BluRay",
-				tierCount:    8,
+				label:             "Anime Movie BluRay",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeMovie,
+				definePrefix:      "Anime Movies BluRay",
+				tierCount:         8,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "BluRay"}
 				},
@@ -375,10 +398,11 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		},
 		{
 			family: family{
-				label:        "Anime Movie WEB",
-				kind:         ranking.KindAnimeMovie,
-				definePrefix: "Anime Movies WEB",
-				tierCount:    6,
+				label:             "Anime Movie WEB",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeMovie,
+				definePrefix:      "Anime Movies WEB",
+				tierCount:         6,
 				sourceTokens: func(bool) []string {
 					return []string{"1080p", "WEB-DL"}
 				},
@@ -476,6 +500,62 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 							decoratedLower,
 							higherTier,
 							cleanHigher,
+							decoratedTitle,
+							cleanTitle,
+						)
+					}
+				}
+
+				// Edition-neutrality regression: the Edition Preference
+				// Layer audit proved that 6 of Jhin's 10 canonical Edition
+				// values were silently uncompensated (a raw native +100
+				// with no offsetting DraCuLa rule), and specifically
+				// measured a real production inversion for Movie physical
+				// media (-42 margin, a fully decorated lower tier
+				// outscoring a clean immediately-higher tier). The
+				// universal "Neutralize Edition" rule fixes this; this
+				// check directly proves it holds for every family, not
+				// just Movie, by adding a previously-uncompensated
+				// canonical Edition token to the fully decorated lower
+				// tier. No hardcoded margin — strict inequality only.
+				if f.editionDecoration != "" {
+					editionDecorations := append(
+						append([]string{}, f.decorations...),
+						f.editionDecoration,
+					)
+
+					decoratedTitle := f.build(
+						lowerSource, lowerGroup, editionDecorations,
+					)
+					cleanTitle := higherCleanTitle
+
+					decoratedLower := score(f.kind, decoratedTitle, &fullAvail)
+					cleanHigher := higherClean
+
+					t.Logf(
+						"%s T%d + %s (previously uncompensated edition): "+
+							"decorated=%d clean-T%d=%d margin=%+d",
+						f.label,
+						lowerTier,
+						f.editionDecoration,
+						decoratedLower,
+						higherTier,
+						cleanHigher,
+						decoratedLower-cleanHigher,
+					)
+
+					if decoratedLower >= cleanHigher {
+						t.Errorf(
+							"%s: T%d fully decorated + %s (%d) does not stay "+
+								"below clean T%d (%d); margin=%+d\n"+
+								"  decorated: %s\n  clean:     %s",
+							f.label,
+							lowerTier,
+							f.editionDecoration,
+							decoratedLower,
+							higherTier,
+							cleanHigher,
+							decoratedLower-cleanHigher,
 							decoratedTitle,
 							cleanTitle,
 						)

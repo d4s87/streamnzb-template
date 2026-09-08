@@ -135,6 +135,14 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Neutralize Edition",
+        "points": -100,
+        "when": "edition != \"\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "IMAX",
         "points": 700,
         "when": "releaseName matches \"(?i)\\\\bIMAX\\\\b\"",
@@ -154,7 +162,7 @@
       "owner": "core",
       "rule": {
         "name": "Movie Edition Preference",
-        "points": -75,
+        "points": 25,
         "when": "edition == \"Directors Cut\" or edition == \"Extended Edition\"",
         "scope": "movie"
       }

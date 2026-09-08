@@ -4439,11 +4439,73 @@
       ]
     },
     {
+      "name": "Neutralize Edition",
+      "productionRule": "Neutralize Edition",
+      "when": "edition != \"\"",
+      "points": -100,
+      "cases": [
+        {
+          "name": "movie Directors Cut parsed edition",
+          "release": "Example.Movie.2026.Directors.Cut.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "movie Theatrical parsed edition",
+          "release": "Example.Movie.2026.Theatrical.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "show Diamond Edition parsed edition, universal scope",
+          "release": "Example.Show.S01E01.1080p.WEB-DL.X.Diamond.Edition.X.x264-GROUP",
+          "kind": "series",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "anime Remastered parsed edition, universal scope",
+          "release": "Example.Anime.S01E01.1080p.BluRay.Remastered.x264-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "plain movie no edition",
+          "release": "Example.Movie.2026.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "movie Unrated is a separate boolean, no edition",
+          "release": "Example.Movie.2026.Unrated.1080p.BluRay.x264-GROUP",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        }
+      ]
+    },
+    {
       "name": "Movie Edition Preference",
       "productionRule": "Movie Edition Preference",
       "scope": "movie",
       "when": "edition == \"Directors Cut\" or edition == \"Extended Edition\"",
-      "points": -75,
+      "points": 25,
       "cases": [
         {
           "name": "movie Directors Cut",

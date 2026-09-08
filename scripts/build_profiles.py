@@ -222,9 +222,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 126:
+    if len(entries) != 127:
         raise ValueError(
-            f"expected 126 source rules, found {len(entries)}"
+            f"expected 127 source rules, found {len(entries)}"
         )
 
     names = []
@@ -268,7 +268,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 121,
+    "core": 122,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -319,6 +319,7 @@ def validate_registry(payload: dict):
     validate_audio_neutralization_scoping(entries)
     validate_video_codec_neutralization_scoping(entries)
     validate_retag_rules(entries)
+    validate_edition_neutralization_scoping(entries)
 
     return entries
 
@@ -540,6 +541,159 @@ def validate_retag_rules(entries):
             )
 
 
+# Edition audit contract: Jhin's scalar Edition field grants a generic
+# native AttrEdition rank of +100 for any non-empty parsed value, with zero
+# differentiation between the 10 canonical values. "Neutralize Edition" is a
+# universal Core rule that removes that native authority unconditionally, so
+# every parsed Edition is effective 0 unless an explicit, reviewed DraCuLa
+# residual preference independently applies. "Movie Edition Preference"
+# restores exactly +25 for Directors Cut/Extended Edition on Movies only;
+# every other canonical value (Anniversary, Ultimate, Collectors, Theatrical,
+# Uncut, IMAX, Diamond, Remastered) must stay at effective 0 from this rule.
+EXPECTED_EDITION_NEUTRALIZER_RULE = {
+    "name": "Neutralize Edition",
+    "when": 'edition != ""',
+    "points": -100,
+}
+
+EXPECTED_MOVIE_EDITION_PREFERENCE_RULE = {
+    "name": "Movie Edition Preference",
+    "when": 'edition == "Directors Cut" or edition == "Extended Edition"',
+    "points": 25,
+    "scope": "movie",
+}
+
+
+def validate_edition_neutralization_scoping(entries):
+    by_name = {}
+
+    for entry in entries:
+        name = entry["rule"]["name"]
+
+        if name not in (
+            EXPECTED_EDITION_NEUTRALIZER_RULE["name"],
+            EXPECTED_MOVIE_EDITION_PREFERENCE_RULE["name"],
+        ):
+            continue
+
+        if name in by_name:
+            raise ValueError(
+                f"{name!r} must appear exactly once, found more than one"
+            )
+
+        by_name[name] = entry
+
+    neutralizer_name = EXPECTED_EDITION_NEUTRALIZER_RULE["name"]
+
+    if neutralizer_name not in by_name:
+        raise ValueError(f"expected edition rule missing: {neutralizer_name!r}")
+
+    neutralizer_entry = by_name[neutralizer_name]
+    neutralizer_rule = neutralizer_entry["rule"]
+
+    if neutralizer_entry["owner"] != "core":
+        raise ValueError(
+            f"{neutralizer_name!r} must remain owned by core; "
+            f"found owner {neutralizer_entry['owner']!r}"
+        )
+
+    if "scope" in neutralizer_rule:
+        raise ValueError(
+            f"{neutralizer_name!r} must remain universal (no scope key, "
+            "must neutralize the native Edition score for every content "
+            f"kind); found scope {neutralizer_rule['scope']!r}"
+        )
+
+    if neutralizer_rule.get("points") != EXPECTED_EDITION_NEUTRALIZER_RULE["points"]:
+        raise ValueError(
+            f"{neutralizer_name!r} points drifted: expected "
+            f"{EXPECTED_EDITION_NEUTRALIZER_RULE['points']}, "
+            f"found {neutralizer_rule.get('points')!r}"
+        )
+
+    if neutralizer_rule.get("when") != EXPECTED_EDITION_NEUTRALIZER_RULE["when"]:
+        raise ValueError(
+            f"{neutralizer_name!r} condition drifted from its audited "
+            f"form:\n  expected: {EXPECTED_EDITION_NEUTRALIZER_RULE['when']!r}\n"
+            f"  found:    {neutralizer_rule.get('when')!r}"
+        )
+
+    preference_name = EXPECTED_MOVIE_EDITION_PREFERENCE_RULE["name"]
+
+    if preference_name not in by_name:
+        raise ValueError(f"expected edition rule missing: {preference_name!r}")
+
+    preference_entry = by_name[preference_name]
+    preference_rule = preference_entry["rule"]
+
+    if preference_entry["owner"] != "core":
+        raise ValueError(
+            f"{preference_name!r} must remain owned by core; "
+            f"found owner {preference_entry['owner']!r}"
+        )
+
+    if preference_rule.get("scope") != EXPECTED_MOVIE_EDITION_PREFERENCE_RULE["scope"]:
+        raise ValueError(
+            f"{preference_name!r} must remain scoped to movie only; "
+            f"found scope {preference_rule.get('scope')!r}"
+        )
+
+    if (
+        preference_rule.get("points")
+        != EXPECTED_MOVIE_EDITION_PREFERENCE_RULE["points"]
+    ):
+        raise ValueError(
+            f"{preference_name!r} points drifted: expected "
+            f"{EXPECTED_MOVIE_EDITION_PREFERENCE_RULE['points']}, "
+            f"found {preference_rule.get('points')!r}"
+        )
+
+    if (
+        preference_rule.get("when")
+        != EXPECTED_MOVIE_EDITION_PREFERENCE_RULE["when"]
+    ):
+        raise ValueError(
+            f"{preference_name!r} condition drifted from its audited "
+            f"form:\n  expected: "
+            f"{EXPECTED_MOVIE_EDITION_PREFERENCE_RULE['when']!r}\n"
+            f"  found:    {preference_rule.get('when')!r}"
+        )
+
+    all_names = {
+        entry["rule"]["name"]
+        for entry in entries
+    }
+
+    if "IMAX" not in all_names:
+        raise ValueError(
+            "expected the pre-existing IMAX rule to remain present"
+        )
+
+    if "Open matte" not in all_names:
+        raise ValueError(
+            "expected the pre-existing Open matte rule to remain present"
+        )
+
+    forbidden_residuals = {
+        "Anniversary Edition Preference",
+        "Ultimate Edition Preference",
+        "Collectors Edition Preference",
+        "Theatrical Preference",
+        "Uncut Preference",
+        "Diamond Edition Preference",
+        "Remastered Preference",
+    }
+
+    unexpected_residuals = forbidden_residuals & all_names
+
+    if unexpected_residuals:
+        raise ValueError(
+            "unexpected edition residual preference rule(s) found without "
+            "a deliberate reviewed change: "
+            + ", ".join(sorted(unexpected_residuals))
+        )
+
+
 def validate_variants(payload: dict):
     if set(payload) != {"schema_version", "variants"}:
         raise ValueError(
@@ -567,7 +721,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 126,
+            "expected_rules": 127,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -576,7 +730,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 125,
+            "expected_rules": 126,
         },
     }
 

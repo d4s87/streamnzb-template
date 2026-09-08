@@ -1310,15 +1310,72 @@ def validate_movie_edition_preferences(
     """
     Validate DraCuLa's Movie-version preference policy.
 
-    IMAX is intentionally a strong Movie preference and may outrank
-    release-group tiers.
+    Jhin's scalar Edition field grants a generic native +100 rank for
+    any non-empty parsed value. The universal "Neutralize Edition" Core
+    rule (-100, no scope) cancels that native rank unconditionally for
+    every content kind, so only explicit, reviewed DraCuLa residuals
+    reach an effective non-zero score.
 
-    Open Matte and the parser-backed Director's Cut / Extended Edition
-    preference are deliberately small Movie-only tie-breakers.
+    IMAX is intentionally a strong Movie preference and, once native
+    Edition scoring is neutralized, its stored +700 becomes the full
+    effective score (rather than the previous +800, which included an
+    uncompensated +100 native contribution).
 
-    Director's Cut and Extended Edition share one +25 rule, preventing
-    equivalent alternate-cut labels from stacking with each other.
+    Open Matte has no native Edition score of its own (Jhin has no
+    "Open Matte" edition pattern), so it is unaffected by neutralization
+    and remains an independent, deliberately small Movie-only
+    tie-breaker.
+
+    Director's Cut and Extended Edition share one +25 residual rule,
+    preventing equivalent alternate-cut labels from stacking with
+    each other; every other canonical Edition value (Anniversary,
+    Ultimate, Collectors, Theatrical, Uncut, Diamond, Remastered)
+    stays at effective 0 from this rule.
     """
+
+    neutralizer_matches = [
+        rule
+        for rule in rules
+        if rule.get("name") == "Neutralize Edition"
+    ]
+
+    if len(neutralizer_matches) != 1:
+        raise AssertionError(
+            "Expected exactly one 'Neutralize Edition' rule, "
+            f"found {len(neutralizer_matches)}"
+        )
+
+    neutralizer_rule = neutralizer_matches[0]
+
+    if "scope" in neutralizer_rule:
+        raise AssertionError(
+            "'Neutralize Edition' must remain universal (no scope key); "
+            f"found scope {neutralizer_rule.get('scope')!r}"
+        )
+
+    if neutralizer_rule.get("points") != -100:
+        raise AssertionError(
+            "'Neutralize Edition' must score exactly -100; "
+            f"found {neutralizer_rule.get('points')!r}"
+        )
+
+    if neutralizer_rule.get("when") != 'edition != ""':
+        raise AssertionError(
+            "'Neutralize Edition' condition drifted: "
+            f"{neutralizer_rule.get('when')!r}"
+        )
+
+    native_edition_points = 100
+    neutralized_native_points = (
+        native_edition_points + neutralizer_rule["points"]
+    )
+
+    if neutralized_native_points != 0:
+        raise AssertionError(
+            "Native Edition scoring must be fully neutralized "
+            f"(native + neutralizer must equal 0); found "
+            f"{neutralized_native_points}"
+        )
 
     expected = {
         "IMAX": {
@@ -1336,7 +1393,7 @@ def validate_movie_edition_preferences(
         },
         "Movie Edition Preference": {
             "scope": "movie",
-            "points": -75,
+            "points": 25,
             "when": (
                 'edition == "Directors Cut" or '
                 'edition == "Extended Edition"'
@@ -1395,25 +1452,23 @@ def validate_movie_edition_preferences(
                 f"{name} must not depend on a Define"
             )
 
-    native_edition_points = 100
-
     imax_effective_points = (
-        resolved["IMAX"]["points"] + native_edition_points
+        resolved["IMAX"]["points"] + neutralized_native_points
     )
-    if imax_effective_points != 800:
+    if imax_effective_points != 700:
         raise AssertionError(
-            "IMAX effective score must remain +800 after Jhin "
-            f"native +100 edition ranking; found {imax_effective_points}"
+            "IMAX effective score must be +700 after native Edition "
+            f"neutralization; found {imax_effective_points}"
         )
 
     movie_edition_effective_points = (
         resolved["Movie Edition Preference"]["points"]
-        + native_edition_points
+        + neutralized_native_points
     )
     if movie_edition_effective_points != 25:
         raise AssertionError(
             "Movie Edition Preference effective score must remain +25 "
-            "after Jhin native +100 edition ranking; found "
+            "after native Edition neutralization; found "
             f"{movie_edition_effective_points}"
         )
 
@@ -1821,9 +1876,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 126:
+if len(rules) != 127:
     raise AssertionError(
-        f"Expected 126 profile rules, found {len(rules)}"
+        f"Expected 127 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

@@ -389,22 +389,63 @@ additional upstream season-completion or episode-count request metadata.
 
 ## Movie Edition Preferences
 
-Movie-version preferences are explicitly limited to **Movies** so edition
-markers cannot alter Show or Anime ranking.
+Jhin v0.6's `Edition` field is a single scalar string covering 10 canonical
+values (`Anniversary Edition`, `Ultimate Edition`, `Directors Cut`,
+`Extended Edition`, `Collectors Edition`, `Theatrical`, `Uncut`, `IMAX`,
+`Diamond Edition`, `Remastered`), and Jhin contributes a generic native
+`+100` rank whenever it recognizes *any* of them — with zero
+differentiation between values, and no scope of its own (it applies to
+every content kind, not just Movies).
 
-Current **effective** Movie edition scoring:
+DraCuLa neutralizes that native rank universally, then restores only its
+own deliberate, reviewed preferences on top:
 
-- **IMAX:** `+800`
-- **Open Matte:** `+25`
-- **Director's Cut / Extended Edition:** one shared, non-stacking `+25`
+- **`Neutralize Edition` (universal Core, `-100`, no scope):** cancels
+  Jhin's native `+100` unconditionally for every content kind whenever any
+  canonical Edition value is parsed. This is the scoring-integrity
+  baseline: without an explicit DraCuLa residual, every canonical Edition
+  value is effective `0` everywhere, including Series and Anime.
+- **`Movie Edition Preference` (Movie-only, stored `+25`):** matches
+  `Directors Cut` or `Extended Edition`. Combined with the universal
+  neutralizer, its effective score is `+25` — unchanged from before this
+  fix.
+- **`IMAX` (Movie-only, stored `+700`):** unchanged. Its effective score is
+  now `+700` (previously `+800`, when Jhin's native rank was still
+  uncompensated for IMAX). A real-engine safety audit — an isolated
+  same-tier measurement and the full `TestAdjacentTierCeilingMatrix`
+  ceiling matrix with IMAX reachable in the fully decorated lower tier —
+  confirmed `+700` introduces no tier-authority violation, so the stored
+  value is preserved rather than raised back to net `+800`.
+- **`Open Matte` (Movie-only, `+25`):** unchanged. It is matched on raw
+  release-name text, not on the parsed `Edition` field, so it has no native
+  rank to compensate for and is completely unaffected by the neutralizer.
+- **Anime `Uncensored` (Anime-only, `+10`):** unchanged. It independently
+  matches `Uncut`/`Unrated`/`Uncensored`/`AT-X` on raw release-name text.
+  A release parsed with Edition `Uncut` nets effective `+10` for Anime:
+  native `+100`, `Neutralize Edition -100`, `Uncensored +10`.
 
-Jhin v0.6 contributes a native `+100` rank when its parser recognizes an
-edition. DraCuLa therefore stores compensated rule values for parser-backed
-Movie editions so the final effective policy remains unchanged:
+Every other canonical value — `Anniversary Edition`, `Ultimate Edition`,
+`Collectors Edition`, `Theatrical`, `Diamond Edition`, `Remastered`, and
+`Uncut`/`IMAX` outside the rules above — is fully neutralized to effective
+`0`. There is no blanket preference for any of them; before this fix, each
+carried a silent, uncompensated native `+100` that could invert
+release-group tier authority (a real measured `-42` margin was found for
+Movie physical media, and a razor-thin `+8` margin for Series).
 
-- **IMAX:** stored `+700` + native `+100` = effective `+800`
-- **Director's Cut / Extended Edition:** stored `-75` + native `+100` = effective `+25`
-- **Open Matte:** stored/effective `+25`; it is release-name matched and does not receive the native parsed-edition rank
+The permanent `TestEditionNeutralityRegression` real-engine regression
+(see [Validation](#validation)) asserts the exact effective delta for all
+10 canonical values across all 4 content kinds, plus Unrated remaining
+unaffected (a separate boolean, not an Edition value) and an
+Extended+IMAX shadowing case proving the scalar `Edition` field's native
+rank fires exactly once even when a raw-regex rule (IMAX) independently
+matches the same release. `TestAdjacentTierCeilingMatrix` was extended so
+every production family — not just Movie — directly measures a
+previously-uncompensated canonical Edition token on its fully decorated
+lower tier. A structural check separately fails closed if
+`Neutralize Edition` or `Movie Edition Preference` drift from their
+audited scope/points/condition, or if a new positive residual rule for
+any other canonical Edition value is ever introduced without a
+deliberate, reviewed change.
 
 IMAX is intentionally a strong Movie-version preference. It may outrank a
 higher release-group tier when the user is choosing between otherwise
@@ -431,7 +472,7 @@ Pinned parser and real-engine validation now confirms:
   policy.
 
 Canonical IMAX Enhanced releases therefore receive the same single effective
-`+800` IMAX preference as ordinary IMAX releases and remain eligible through
+`+700` IMAX preference as ordinary IMAX releases and remain eligible through
 the production profile.
 
 Open Matte and Director's Cut / Extended Edition are deliberately much
@@ -467,11 +508,14 @@ Pinned compatibility and real-engine regression coverage protects:
 - IMAX matching, including IMAX Enhanced fixture behavior
 - StreamNZB 5.16.1 / Jhin 0.6.1 IMAX Enhanced parser behavior, including
   continued detection of genuine AI-enhanced/upscaled releases
-- effective IMAX `+800` scoring after native-edition compensation
+- effective IMAX `+700` scoring after universal native-edition neutralization
 - Movie-only scope
 - Open Matte matching
-- effective Director's Cut / Extended Edition `+25` scoring after native-edition compensation
+- effective Director's Cut / Extended Edition `+25` scoring after universal native-edition neutralization
 - non-stacking alternate-cut behavior
+- universal `Neutralize Edition` scoring for all 10 canonical values across
+  Movie/Series/Anime Show/Anime Movie, including Unrated remaining
+  unaffected and the Extended+IMAX shadowing interaction
 - neutral Criterion / Final Cut / Special Edition behavior
 - full non-Anime Movie WEB/Remux ceiling interactions
 

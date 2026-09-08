@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 125 {
+	if len(neutralRules) != 126 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 125",
+			"neutral profile contains %d rules; want 126",
 			len(neutralRules),
 		)
 	}
@@ -1731,6 +1731,11 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		productionRules,
 		"Open matte",
 	)
+	neutralizeEdition := findProductionRule(
+		t,
+		productionRules,
+		"Neutralize Edition",
+	)
 
 	const nativeEditionPoints = 100
 
@@ -1742,13 +1747,32 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 		)
 	}
 
-	if imax.Points+nativeEditionPoints != 800 {
+	if neutralizeEdition.Points != -100 || neutralizeEdition.Scope != "" {
+		t.Fatalf(
+			"Neutralize Edition policy drifted: points=%d scope=%q",
+			neutralizeEdition.Points,
+			neutralizeEdition.Scope,
+		)
+	}
+
+	// IMAX's effective score is now +700, not the pre-fix +800: the
+	// universal Neutralize Edition rule cancels Jhin's native +100
+	// (IMAX is one of Jhin's 10 canonical Edition values), leaving the
+	// stored +700 rule as the entire effective contribution. The Edition
+	// Preference Layer audit's mandatory IMAX safety gate directly
+	// measured this via the full production pipeline
+	// (TestAdjacentTierCeilingMatrix, TestZZZIMAXSafetyGate) and found no
+	// tier-authority violation, so +700 is preserved unchanged rather
+	// than restored to net +800.
+	imaxEffective := imax.Points + nativeEditionPoints + neutralizeEdition.Points
+	if imaxEffective != 700 {
 		t.Fatalf(
 			"IMAX effective policy drifted: "+
-				"stored=%d native=%d effective=%d",
+				"stored=%d native=%d neutralizer=%d effective=%d",
 			imax.Points,
 			nativeEditionPoints,
-			imax.Points+nativeEditionPoints,
+			neutralizeEdition.Points,
+			imaxEffective,
 		)
 	}
 
@@ -1894,7 +1918,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 700,
+			wantScore: 600,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1905,7 +1929,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX",
 			),
 			kind:      "movie",
-			wantScore: 500,
+			wantScore: 400,
 			wantRules: []string{"IMAX"},
 		},
 		{
@@ -1942,7 +1966,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX.Open.Matte",
 			),
 			kind:      "movie",
-			wantScore: 525,
+			wantScore: 425,
 			wantRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1956,7 +1980,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 				"IMAX.Open.Matte",
 			),
 			kind:      "series",
-			wantScore: -200,
+			wantScore: -300,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1971,7 +1995,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: -300,
+			wantScore: -400,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -1986,7 +2010,7 @@ func TestMovieEditionPreferenceCeilings(t *testing.T) {
 			),
 			kind:      "anime_show",
 			anime:     true,
-			wantScore: -280,
+			wantScore: -380,
 			noRules: []string{
 				"IMAX",
 				"Open matte",
@@ -4158,9 +4182,9 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 		false,
 	)
 
-	if web != 62539 {
+	if web != 62439 {
 		t.Fatalf(
-			"production-equivalent BYNDR score = %d, want 62539",
+			"production-equivalent BYNDR score = %d, want 62439",
 			web,
 		)
 	}
@@ -4172,9 +4196,9 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 		)
 	}
 
-	if got := web - remux; got != 464 {
+	if got := web - remux; got != 364 {
 		t.Fatalf(
-			"bounded WEB-over-REMUX interaction = %+d, want +464",
+			"bounded WEB-over-REMUX interaction = %+d, want +364",
 			got,
 		)
 	}
@@ -5059,5 +5083,264 @@ func TestLiteralRetagRegression(t *testing.T) {
 				})
 			}
 		})
+	}
+}
+
+// TestEditionNeutralityRegression is the permanent real-engine proof for
+// the edition-scoring tier-authority regression discovered by the Edition
+// Preference Layer audit: Jhin's scalar Edition field grants a generic
+// native +100 rank for any non-empty parsed value, with zero
+// differentiation between the 10 canonical values (Anniversary Edition,
+// Ultimate Edition, Directors Cut, Extended Edition, Collectors Edition,
+// Theatrical, Uncut, IMAX, Diamond Edition, Remastered). Only Movie
+// Directors Cut/Extended Edition were ever compensated (native +100,
+// stored -75, effective +25); every other value stayed +100
+// uncompensated everywhere, including outside Movie scope entirely,
+// producing a real measured production tier inversion (-42 margin) for
+// Movie physical media and an untested exposure for Series/Anime. The
+// universal "Neutralize Edition" rule (-100, no scope) now cancels that
+// native rank unconditionally; only explicit, reviewed DraCuLa residuals
+// (Movie Directors Cut/Extended +25, Movie IMAX +700, Anime Uncensored
+// +10) reach a non-zero effective score.
+//
+// Unlike TestMovieEditionPreferenceCeilings (which uses the narrower
+// rules.Compile/Evaluate custom-rule-only layer and must add a hardcoded
+// nativeEditionPoints=100 constant by hand), this test uses the full
+// production ranking.Compile/ApplyWithRejected pipeline, so native Jhin
+// ranking is included automatically and every asserted delta is the true
+// effective production score change - no hand-added constant to drift.
+func TestEditionNeutralityRegression(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Edition neutrality regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	tok := func(name string) string {
+		e, ok := defines[name]
+		if !ok || len(e) == 0 {
+			t.Fatalf("missing/empty Define %q", name)
+		}
+		return e[0]
+	}
+
+	fullAvail := triage.AvailState{
+		Status:       triage.AvailAvailable,
+		OnMyBackbone: true,
+		CheckedAt:    time.Now().Add(-3 * 24 * time.Hour),
+	}
+
+	score := func(kind, title string) int {
+		t.Helper()
+
+		candidate := triage.Candidate{
+			Release: &release.Release{Title: title},
+		}
+		candidate.Verdict.Avail = fullAvail
+
+		request := ranking.Request{Kind: kind, Title: "Example"}
+		if kind == ranking.KindSeries || kind == ranking.KindAnimeShow {
+			request.Season = 1
+			request.Episode = 1
+		}
+		if kind == ranking.KindAnimeShow || kind == ranking.KindAnimeMovie {
+			request.IsAnime = true
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			request,
+			[]triage.Candidate{candidate},
+			jhinrank.RankOptions{},
+		)
+		if len(rejected) != 0 {
+			t.Fatalf("unexpectedly rejected %q: %+v", title, rejected)
+		}
+		if len(kept) != 1 {
+			t.Fatalf("kept %d releases for %q; want 1", len(kept), title)
+		}
+		return kept[0].Torrent.Rank
+	}
+
+	// Canonical Edition tokens, verified via a direct jhin.Parse probe to
+	// parse cleanly into the exact canonical Edition value (edition set,
+	// codec intact) at this placement - right after quality/resolution,
+	// before audio/codec - for all 4 content kinds. Diamond Edition's
+	// `\b\.Diamond\.\b` pattern consumes both flanking dots and can fuse
+	// an adjacent token (breaking that token's own boundary-based match)
+	// depending on placement; this placement was verified safe.
+	editionTokens := map[string]string{
+		"Anniversary Edition": "15th.Anniversary.Edition",
+		"Ultimate Edition":    "Ultimate.Edition",
+		"Directors Cut":       "Directors.Cut",
+		"Extended Edition":    "Extended.Edition",
+		"Collectors Edition":  "Collectors.Edition",
+		"Theatrical":          "Theatrical",
+		"Uncut":               "Uncut",
+		"IMAX":                "IMAX",
+		"Diamond Edition":     "Diamond.Edition",
+		"Remastered":          "Remastered",
+	}
+
+	type kindSetup struct {
+		kind       string
+		prefix     string
+		suffix     string
+		definePref string
+	}
+
+	setups := map[string]kindSetup{
+		"movie": {
+			ranking.KindMovie,
+			"Example.Movie.2026.1080p.WEB-DL",
+			"DDP5.1.x264",
+			"Movies WEB",
+		},
+		"series": {
+			ranking.KindSeries,
+			"Example.Show.2026.S01E01.1080p.WEB-DL",
+			"DDP5.1.x264",
+			"Shows WEB",
+		},
+		"anime_show": {
+			ranking.KindAnimeShow,
+			"Example.Anime.2026.S01E01.1080p.WEB-DL",
+			"AAC.x264",
+			"Anime Shows WEB",
+		},
+		"anime_movie": {
+			ranking.KindAnimeMovie,
+			"Example.Anime.Movie.2026.1080p.WEB-DL",
+			"AAC.x264",
+			"Anime Movies WEB",
+		},
+	}
+
+	buildTitle := func(s kindSetup, extra string) string {
+		group := tok(s.definePref + " T1 Groups")
+		if extra == "" {
+			return s.prefix + "." + s.suffix + "-" + group
+		}
+		// "X" buffer tokens on both sides of the inserted extra: Diamond
+		// Edition's `\b\.Diamond\.\b` pattern consumes both flanking
+		// dots, which - without a buffer - fuses "WEB-DL" with the token
+		// on either side (e.g. dropping the "-DL" suffix entirely,
+		// corrupting quality parsing, not just edition), verified via a
+		// direct jhin.Parse probe. The buffers absorb that fusion
+		// harmlessly for every canonical Edition token.
+		return s.prefix + ".X." + extra + ".X." + s.suffix + "-" + group
+	}
+
+	// Expected effective deltas (full production score, native + custom
+	// combined) relative to the same-kind, same-tier clean baseline.
+	// "-" entries: the value is not expected to differ from the universal
+	// baseline row and is covered by the shared "uncompensated" case.
+	uncompensated := []string{
+		"Anniversary Edition", "Ultimate Edition", "Collectors Edition",
+		"Theatrical", "Diamond Edition", "Remastered",
+	}
+
+	for kindName, s := range setups {
+		clean := score(s.kind, buildTitle(s, ""))
+
+		for _, name := range uncompensated {
+			got := score(s.kind, buildTitle(s, editionTokens[name])) - clean
+			if got != 0 {
+				t.Errorf(
+					"%s edition=%s: effective delta=%+d; want 0 (clean=%d)",
+					kindName, name, got, clean,
+				)
+			}
+		}
+
+		// Uncut: no residual outside Anime (Anime's separate "Uncensored"
+		// raw-regex rule also matches the literal "Uncut" text and grants
+		// +10, on top of the fully neutralized native Edition score).
+		uncutWant := 0
+		if kindName == "anime_show" || kindName == "anime_movie" {
+			uncutWant = 10
+		}
+		if got := score(s.kind, buildTitle(s, editionTokens["Uncut"])) - clean; got != uncutWant {
+			t.Errorf(
+				"%s edition=Uncut: effective delta=%+d; want %+d (clean=%d)",
+				kindName, got, uncutWant, clean,
+			)
+		}
+
+		// Directors Cut / Extended Edition: +25 residual, Movie only.
+		movieResidualWant := 0
+		if kindName == "movie" {
+			movieResidualWant = 25
+		}
+		for _, name := range []string{"Directors Cut", "Extended Edition"} {
+			got := score(s.kind, buildTitle(s, editionTokens[name])) - clean
+			if got != movieResidualWant {
+				t.Errorf(
+					"%s edition=%s: effective delta=%+d; want %+d (clean=%d)",
+					kindName, name, got, movieResidualWant, clean,
+				)
+			}
+		}
+
+		// IMAX: raw releaseName regex, scope=movie, stored +700. Effective
+		// delta is +700 for Movie (native neutralized, custom rule takes
+		// over entirely) and 0 for every other kind (scope-excluded, and
+		// native contribution is neutralized the same as any other
+		// canonical Edition value).
+		imaxWant := 0
+		if kindName == "movie" {
+			imaxWant = 700
+		}
+		if got := score(s.kind, buildTitle(s, editionTokens["IMAX"])) - clean; got != imaxWant {
+			t.Errorf(
+				"%s edition=IMAX: effective delta=%+d; want %+d (clean=%d)",
+				kindName, got, imaxWant, clean,
+			)
+		}
+
+		// Unrated: a separate boolean field with no Edition value of its
+		// own (edition stays ""), so it must be completely unaffected by
+		// Neutralize Edition. Anime's Uncensored rule also matches the
+		// literal "Unrated" text independently of the Edition field.
+		unratedWant := 0
+		if kindName == "anime_show" || kindName == "anime_movie" {
+			unratedWant = 10
+		}
+		if got := score(s.kind, buildTitle(s, "Unrated")) - clean; got != unratedWant {
+			t.Errorf(
+				"%s Unrated: effective delta=%+d; want %+d (clean=%d)",
+				kindName, got, unratedWant, clean,
+			)
+		}
+
+		// Extended+IMAX shadowing: Edition is scalar, so only one value
+		// (whichever the parser table matches first) is stored - proving
+		// the native neutralizer fires exactly once regardless of how
+		// many edition tokens appear. IMAX's raw releaseName regex is
+		// independent of the parsed Edition field, so it still fires on
+		// its own even when the parsed Edition is "Extended Edition".
+		shadowWant := 0
+		if kindName == "movie" {
+			// Native (+100, once) - Neutralize Edition (-100) +
+			// Movie Edition Preference (+25, parsed Extended Edition) +
+			// IMAX (+700, independent raw regex) = +725.
+			shadowWant = 725
+		}
+		shadowExtra := editionTokens["Extended Edition"] + ".IMAX"
+		if got := score(s.kind, buildTitle(s, shadowExtra)) - clean; got != shadowWant {
+			t.Errorf(
+				"%s Extended+IMAX shadow: effective delta=%+d; want %+d (clean=%d)",
+				kindName, got, shadowWant, clean,
+			)
+		}
 	}
 }

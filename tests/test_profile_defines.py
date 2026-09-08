@@ -1821,9 +1821,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 125:
+if len(rules) != 126:
     raise AssertionError(
-        f"Expected 125 profile rules, found {len(rules)}"
+        f"Expected 126 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

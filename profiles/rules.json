@@ -1028,6 +1028,14 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Literal RETAG Soft Penalty",
+        "when": "releaseName matches \"(?i)(?:^|[. _\\[-])RETAG(?:$|[. _\\]-])\"",
+        "points": -1
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Anime Version v0 Preference",
         "points": -1,
         "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v0\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"

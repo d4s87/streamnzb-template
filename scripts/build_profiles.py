@@ -222,9 +222,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 125:
+    if len(entries) != 126:
         raise ValueError(
-            f"expected 125 source rules, found {len(entries)}"
+            f"expected 126 source rules, found {len(entries)}"
         )
 
     names = []
@@ -268,7 +268,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 120,
+    "core": 121,
     "presentation": 4,
     "device:samsung-qn90a": 1,
 }
@@ -318,6 +318,7 @@ def validate_registry(payload: dict):
 
     validate_audio_neutralization_scoping(entries)
     validate_video_codec_neutralization_scoping(entries)
+    validate_retag_rules(entries)
 
     return entries
 
@@ -452,6 +453,93 @@ def validate_video_codec_neutralization_scoping(entries):
         )
 
 
+# Retag audit contract: the pre-existing "Retag Soft Penalty" rule matches
+# known redistribution-site markers (.heb, EZTV, RARBG, RARTV, TGx) and must
+# stay exactly as-is. "Literal RETAG Soft Penalty" is a separate, later rule
+# for a standalone scene RETAG token — a different semantic signal that
+# happens to share the same -1 magnitude, kept as an independent rule
+# deliberately so each stays independently testable/evolvable.
+EXPECTED_REDISTRIBUTION_RETAG_RULE = {
+    "name": "Retag Soft Penalty",
+    "when": (
+        "releaseName matches "
+        '"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]'
+        '|\\[(?:rarbg|rartv|TGx)\\])"'
+    ),
+    "points": -1,
+}
+
+EXPECTED_LITERAL_RETAG_RULE = {
+    "name": "Literal RETAG Soft Penalty",
+    "when": 'releaseName matches "(?i)(?:^|[. _\\[-])RETAG(?:$|[. _\\]-])"',
+    "points": -1,
+}
+
+
+def validate_retag_rules(entries):
+    by_name = {}
+
+    for entry in entries:
+        name = entry["rule"]["name"]
+
+        if name not in (
+            EXPECTED_REDISTRIBUTION_RETAG_RULE["name"],
+            EXPECTED_LITERAL_RETAG_RULE["name"],
+        ):
+            continue
+
+        if name in by_name:
+            raise ValueError(
+                f"{name!r} must appear exactly once, found more than one"
+            )
+
+        by_name[name] = entry
+
+    for expected in (
+        EXPECTED_REDISTRIBUTION_RETAG_RULE,
+        EXPECTED_LITERAL_RETAG_RULE,
+    ):
+        name = expected["name"]
+
+        if name not in by_name:
+            raise ValueError(
+                f"expected retag rule missing: {name!r}"
+            )
+
+        entry = by_name[name]
+        rule = entry["rule"]
+
+        if entry["owner"] != "core":
+            raise ValueError(
+                f"{name!r} must remain owned by core; "
+                f"found owner {entry['owner']!r}"
+            )
+
+        if "scope" in rule:
+            raise ValueError(
+                f"{name!r} must remain universal (no scope key); "
+                f"found scope {rule['scope']!r}"
+            )
+
+        if rule.get("points") != expected["points"]:
+            raise ValueError(
+                f"{name!r} points drifted: expected {expected['points']}, "
+                f"found {rule.get('points')!r}"
+            )
+
+        if rule.get("when") != expected["when"]:
+            raise ValueError(
+                f"{name!r} condition drifted from its audited form:\n"
+                f"  expected: {expected['when']!r}\n"
+                f"  found:    {rule.get('when')!r}"
+            )
+
+        if "releaseName matches" not in rule.get("when", ""):
+            raise ValueError(
+                f"{name!r} must remain a releaseName-based condition"
+            )
+
+
 def validate_variants(payload: dict):
     if set(payload) != {"schema_version", "variants"}:
         raise ValueError(
@@ -479,7 +567,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 125,
+            "expected_rules": 126,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -488,7 +576,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 124,
+            "expected_rules": 125,
         },
     }
 

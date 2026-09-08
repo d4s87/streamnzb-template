@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 124 {
+	if len(neutralRules) != 125 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 124",
+			"neutral profile contains %d rules; want 125",
 			len(neutralRules),
 		)
 	}
@@ -4855,6 +4855,209 @@ func TestAnimeVersionPreferenceRegression(t *testing.T) {
 					)
 				}
 			})
+		})
+	}
+}
+
+// TestLiteralRetagRegression is the permanent real-engine proof for the
+// "Literal RETAG Soft Penalty" rule (profiles/rules.json): a standalone
+// scene RETAG token scores exactly -1, universally, distinct from the
+// pre-existing "Retag Soft Penalty" redistribution-marker rule (.heb, EZTV,
+// RARBG, RARTV, TGx), which this test does not touch or exercise.
+func TestLiteralRetagRegression(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "literal RETAG regression",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	groupFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		return toks[0]
+	}
+
+	type kindCase struct {
+		label string
+		kind  string
+		group string
+		build func(extra string) string
+	}
+
+	kinds := []kindCase{
+		{
+			label: "movie",
+			kind:  ranking.KindMovie,
+			group: groupFor("Movies WEB T3 Groups"),
+			build: func(extra string) string {
+				t := "Example.Movie.2026.1080p.WEB-DL.x264"
+				if extra != "" {
+					t += "." + extra
+				}
+				return t
+			},
+		},
+		{
+			label: "series",
+			kind:  ranking.KindSeries,
+			group: groupFor("Shows WEB T3 Groups"),
+			build: func(extra string) string {
+				t := "Example.Show.S01E01.1080p.WEB-DL.x264"
+				if extra != "" {
+					t += "." + extra
+				}
+				return t
+			},
+		},
+		{
+			label: "anime_movie",
+			kind:  ranking.KindAnimeMovie,
+			group: groupFor("Anime Movies WEB T6 Groups"),
+			build: func(extra string) string {
+				t := "Example.Anime.Movie.2025.1080p.WEB-DL.x264"
+				if extra != "" {
+					t += "." + extra
+				}
+				return t
+			},
+		},
+		{
+			label: "anime_show",
+			kind:  ranking.KindAnimeShow,
+			group: groupFor("Anime Shows WEB T6 Groups"),
+			build: func(extra string) string {
+				t := "Example.Anime.S01E01.1080p.WEB-DL.x264"
+				if extra != "" {
+					t += "." + extra
+				}
+				return t
+			},
+		},
+	}
+
+	for _, kc := range kinds {
+		kc := kc
+
+		t.Run(kc.label, func(t *testing.T) {
+			score := func(title string) int {
+				t.Helper()
+
+				request := ranking.Request{
+					Kind:    kc.kind,
+					IsAnime: kc.kind == ranking.KindAnimeMovie || kc.kind == ranking.KindAnimeShow,
+					Title:   "Example",
+				}
+				if kc.kind == ranking.KindSeries || kc.kind == ranking.KindAnimeShow {
+					request.Season = 1
+					request.Episode = 1
+				}
+
+				kept, rejected := profile.ApplyWithRejected(
+					request,
+					[]triage.Candidate{{
+						Release: &release.Release{
+							Title: title + "-" + kc.group,
+						},
+					}},
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 || len(kept) != 1 {
+					t.Fatalf(
+						"%q: kept=%d rejected=%+v",
+						title, len(kept), rejected,
+					)
+				}
+
+				return kept[0].Torrent.Rank
+			}
+
+			clean := score(kc.build(""))
+
+			// Isolated delta, case-insensitive, boundary forms.
+			isolatedCases := []struct {
+				name  string
+				extra string
+			}{
+				{"uppercase dot-separated", "RETAG"},
+				{"lowercase", "retag"},
+				{"mixed case", "ReTaG"},
+			}
+			for _, ic := range isolatedCases {
+				t.Run(ic.name, func(t *testing.T) {
+					if got := score(kc.build(ic.extra)) - clean; got != -1 {
+						t.Errorf("delta=%+d, want -1", got)
+					}
+				})
+			}
+
+			// Token-boundary false positives: must NOT match.
+			falsePositiveCases := []struct {
+				name  string
+				extra string
+			}{
+				{"Pretag prefix", "Pretag"},
+				{"Retagged suffix", "Retagged"},
+				{"RETAGS plural", "RETAGS"},
+			}
+			for _, fp := range falsePositiveCases {
+				t.Run(fp.name, func(t *testing.T) {
+					got := score(kc.build(fp.extra)) - clean
+					if got != 0 {
+						t.Errorf(
+							"%s: delta=%+d, want 0 (no false-positive match)",
+							fp.name, got,
+						)
+					}
+				})
+			}
+			t.Run("fused into prior word", func(t *testing.T) {
+				fused := kc.build("") + "GroupRETAG"
+				got := score(fused) - clean
+				if got != 0 {
+					t.Errorf(
+						"fused into prior word: delta=%+d, want 0", got,
+					)
+				}
+			})
+
+			// PROPER/REPACK additive interaction.
+			properRepackCases := []struct {
+				name  string
+				extra string
+				want  int
+			}{
+				{"PROPER alone", "PROPER", 5},
+				{"RETAG + PROPER", "RETAG.PROPER", 4},
+				{"REPACK alone", "REPACK", 5},
+				{"RETAG + REPACK", "RETAG.REPACK", 4},
+				{"REPACK2 alone", "REPACK2", 6},
+				{"RETAG + REPACK2", "RETAG.REPACK2", 5},
+				{"REPACK3 alone", "REPACK3", 7},
+				{"RETAG + REPACK3", "RETAG.REPACK3", 6},
+			}
+			for _, pc := range properRepackCases {
+				t.Run(pc.name, func(t *testing.T) {
+					if got := score(kc.build(pc.extra)) - clean; got != pc.want {
+						t.Errorf(
+							"delta=%+d, want %+d\n  title=%s",
+							got, pc.want, kc.build(pc.extra),
+						)
+					}
+				})
+			}
 		})
 	}
 }

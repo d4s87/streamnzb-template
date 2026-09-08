@@ -481,6 +481,88 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 						)
 					}
 				}
+
+				// Inverse-risk case: a negative penalty (Literal RETAG Soft
+				// Penalty, -1) applied to the HIGHER tier instead of the
+				// lower one. A negative score creates the opposite failure
+				// mode from every other case in this matrix: instead of a
+				// decorated lower tier climbing too high, a penalized higher
+				// tier could fall too low. The invariant is strictly
+				// "lower tier < RETAG'd higher tier" for every family — no
+				// hardcoded margin, since the point is that any future
+				// change consuming the remaining headroom fails this
+				// assertion automatically.
+				retagHigherSource := append(
+					append([]string{}, source...), f.ordinaryCodec,
+				)
+				retagHigherTitle := f.build(
+					retagHigherSource, higherGroup, []string{"RETAG"},
+				)
+				retagHigher := score(f.kind, retagHigherTitle, nil)
+
+				t.Logf(
+					"%s T%d fully decorated (%d) vs RETAG'd clean T%d (%d): "+
+						"margin=%+d",
+					f.label,
+					lowerTier,
+					lowerFull,
+					higherTier,
+					retagHigher,
+					retagHigher-lowerFull,
+				)
+
+				if lowerFull >= retagHigher {
+					t.Errorf(
+						"%s: T%d fully decorated (%d) does not stay below "+
+							"RETAG'd T%d (%d); margin=%+d\n"+
+							"  decorated: %s\n  RETAG'd higher: %s",
+						f.label,
+						lowerTier,
+						lowerFull,
+						higherTier,
+						retagHigher,
+						retagHigher-lowerFull,
+						lowerFullTitle,
+						retagHigherTitle,
+					)
+				}
+
+				if f.hdr10PlusDecorations != nil {
+					hdr10Source := append(
+						append([]string{}, source...), f.ordinaryCodec,
+					)
+					comboTitle := f.build(
+						hdr10Source, lowerGroup, f.hdr10PlusDecorations,
+					)
+					comboLower := score(f.kind, comboTitle, &fullAvail)
+
+					t.Logf(
+						"%s T%d HDR10+/lossless-audio combo (%d) vs RETAG'd "+
+							"clean T%d (%d): margin=%+d",
+						f.label,
+						lowerTier,
+						comboLower,
+						higherTier,
+						retagHigher,
+						retagHigher-comboLower,
+					)
+
+					if comboLower >= retagHigher {
+						t.Errorf(
+							"%s: T%d HDR10+ + lossless audio combo (%d) does "+
+								"not stay below RETAG'd T%d (%d); margin=%+d\n"+
+								"  decorated: %s\n  RETAG'd higher: %s",
+							f.label,
+							lowerTier,
+							comboLower,
+							higherTier,
+							retagHigher,
+							retagHigher-comboLower,
+							comboTitle,
+							retagHigherTitle,
+						)
+					}
+				}
 			}
 		})
 	}

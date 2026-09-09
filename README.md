@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **128** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **144** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **127** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **143** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **127 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **143 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -324,6 +324,14 @@ The formatter displays matching releases as `₁₀ʙɪᴛ`.
 The profile also detects common **Streaming Services** for Anime WEB releases and applies the small source-preference scale recommended by TRaSH for Anime: Crunchyroll (`CR`) `+6`, Disney+ (`DSNP`) `+5`, Netflix (`NF`) `+4`, Amazon (`AMZN`) `+3`, VRV `+3`, Funimation (`FUNi`) `+2`, ABEMA `+1`, ADN `+1`, while B-Global, Bilibili, and HIDIVE score `0`. These are deliberately small source preferences and remain subordinate to the Anime release-group tier hierarchy.
 
 The formatter remains **Network-first**: when StreamNZB provides `.Network`, that value is displayed as the source. If `.Network` is absent, the formatter falls back to the matched Streaming Service rule. This provides a source label for Anime WEB releases where the service can be identified from the release name without overriding StreamNZB's parsed Network metadata.
+
+### Non-Anime streaming-service formatter badges
+
+A dedicated audit ("Non-Anime Streaming-Service Formatter Badges") found that Jhin v0.6.2's own `.Network` table only recognizes a handful of major US networks/services (Apple TV, Amazon, Netflix, Disney, HBO/HBO Max, Hulu, plus a few cable networks) and leaves `.Network` empty for many real Movie/Series WEB releases — with no fallback badge at all, unlike Anime's own Streaming Service rules above. The profile now adds **16 zero-point `presentation`-owned fallback rules** for the specific services the audit proved have no native `.Network` coverage and no PCRE-lookaround-dependent upstream regex: Peacock, Paramount+, Criterion Channel, Roku, Syfy, DC Universe, Coupang, DMM TV, FOD, Hotstar, KOCOWA, U-NEXT, Viki, Wavve, WeTV, and Youku.
+
+These rules are presentation-only, exactly mirroring the existing Anime `B-Global`/`Bilibili`/`HIDIVE` shape: `not isAnime`, the same WEB-traits gate the Anime service rules already use, a separator-safe release-token regex, `0` points, no reject/limit/scope change, and no scoring interaction with anything else in the profile. `.Network` remains authoritative — the formatter only falls back to one of these badges when `.Network` is empty, exactly as it already does for the Anime services.
+
+Eleven related services (bare `Max`, Movies Anywhere, Google Play, iTunes, Showtime, Stan, Fandango, Comedy Central, TVING, Viu, and iQIYI) were deliberately **not** added: their upstream Vidhin regexes rely on PCRE lookahead/lookbehind (e.g. excluding "HBO Max" from a bare `Max` badge, or "DTS-HD MA" from a "Movies Anywhere" badge) that Go's RE2 rule engine cannot express directly, the same class of constraint already documented for the Obfuscated `Scrambled` translation. Approximating them with a bare-token regex would reintroduce exactly the false-positive risk the audit was run to avoid, so this profile does not mirror Vidhin's full streaming-service list — only the 16 services proven safe.
 
 Anime releases explicitly marked as `Uncensored`, `Uncut`, `Unrated`, or with an `AT-X` source variant receive a small `+10` preference. The rule is intentionally Anime-only and acts as a tie-breaking preference rather than replacing the release-group tier hierarchy. Because most Anime BluRay releases are not necessarily labeled as uncensored in their release names, the rule should be interpreted as detecting an explicit uncensored-related marker rather than proving whether every release is censored or uncensored.
 

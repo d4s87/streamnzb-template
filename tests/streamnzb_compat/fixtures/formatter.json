@@ -267,6 +267,297 @@
       ]
     },
     {
+      "name": "Peacock service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Peacock", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴘᴇᴀᴄᴏᴄᴋ"
+      ],
+      "counts": {
+        "♛ ᴘᴇᴀᴄᴏᴄᴋ": 1
+      }
+    },
+    {
+      "name": "Paramount+ service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Paramount+", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴘᴀʀᴀᴍᴏᴜɴᴛ+"
+      ],
+      "counts": {
+        "♛ ᴘᴀʀᴀᴍᴏᴜɴᴛ+": 1
+      }
+    },
+    {
+      "name": "Criterion Channel service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Criterion Channel", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴄʀɪᴛᴇʀɪᴏɴ ᴄʜᴀɴɴᴇʟ"
+      ],
+      "counts": {
+        "♛ ᴄʀɪᴛᴇʀɪᴏɴ ᴄʜᴀɴɴᴇʟ": 1
+      }
+    },
+    {
+      "name": "Roku service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Roku", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ʀᴏᴋᴜ"
+      ],
+      "counts": {
+        "♛ ʀᴏᴋᴜ": 1
+      }
+    },
+    {
+      "name": "Syfy service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Syfy", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ꜱʏꜰʏ"
+      ],
+      "counts": {
+        "♛ ꜱʏꜰʏ": 1
+      }
+    },
+    {
+      "name": "DC Universe service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "DC Universe", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴅᴄ ᴜɴɪᴠᴇʀꜱᴇ"
+      ],
+      "counts": {
+        "♛ ᴅᴄ ᴜɴɪᴠᴇʀꜱᴇ": 1
+      }
+    },
+    {
+      "name": "Coupang service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Coupang", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴄᴏᴜᴘᴀɴɢ"
+      ],
+      "counts": {
+        "♛ ᴄᴏᴜᴘᴀɴɢ": 1
+      }
+    },
+    {
+      "name": "DMM TV service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "DMM TV", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴅᴍᴍ ᴛᴠ"
+      ],
+      "counts": {
+        "♛ ᴅᴍᴍ ᴛᴠ": 1
+      }
+    },
+    {
+      "name": "FOD service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "FOD", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ꜰᴏᴅ"
+      ],
+      "counts": {
+        "♛ ꜰᴏᴅ": 1
+      }
+    },
+    {
+      "name": "Hotstar service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Hotstar", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ʜᴏᴛꜱᴛᴀʀ"
+      ],
+      "counts": {
+        "♛ ʜᴏᴛꜱᴛᴀʀ": 1
+      }
+    },
+    {
+      "name": "KOCOWA service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "KOCOWA", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴋᴏᴄᴏᴡᴀ"
+      ],
+      "counts": {
+        "♛ ᴋᴏᴄᴏᴡᴀ": 1
+      }
+    },
+    {
+      "name": "U-NEXT service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "U-NEXT", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴜ-ɴᴇxᴛ"
+      ],
+      "counts": {
+        "♛ ᴜ-ɴᴇxᴛ": 1
+      }
+    },
+    {
+      "name": "Viki service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Viki", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴠɪᴋɪ"
+      ],
+      "counts": {
+        "♛ ᴠɪᴋɪ": 1
+      }
+    },
+    {
+      "name": "Wavve service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Wavve", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴡᴀᴠᴠᴇ"
+      ],
+      "counts": {
+        "♛ ᴡᴀᴠᴠᴇ": 1
+      }
+    },
+    {
+      "name": "WeTV service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "WeTV", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴡᴇᴛᴠ"
+      ],
+      "counts": {
+        "♛ ᴡᴇᴛᴠ": 1
+      }
+    },
+    {
+      "name": "Youku service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Youku", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ʏᴏᴜᴋᴜ"
+      ],
+      "counts": {
+        "♛ ʏᴏᴜᴋᴜ": 1
+      }
+    },
+    {
+      "name": "Network still wins over new non-Anime fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "Peacock", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ᴘᴇᴀᴄᴏᴄᴋ"
+      ]
+    },
+    {
+      "name": "Existing Anime fallback still wins over new non-Anime fallback",
+      "context": {
+        "MatchedRules": [
+          { "Name": "CR", "Score": 0 },
+          { "Name": "Peacock", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴄʀ"
+      ],
+      "excludes": [
+        "♛ ᴘᴇᴀᴄᴏᴄᴋ"
+      ]
+    },
+    {
+      "name": "Two new non-Anime services matched resolve deterministically",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Peacock", "Score": 0 },
+          { "Name": "Paramount+", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴘᴇᴀᴄᴏᴄᴋ"
+      ],
+      "excludes": [
+        "♛ ᴘᴀʀᴀᴍᴏᴜɴᴛ+"
+      ]
+    },
+    {
+      "name": "Peacock is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Peacock", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ᴘᴇᴀᴄᴏᴄᴋ": 1
+      }
+    },
+    {
+      "name": "No source control remains blank with only a non-service rule matched",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Reject 3D", "Score": 0 }
+        ]
+      },
+      "excludes": [
+        "♛"
+      ]
+    },
+    {
       "name": "Rich Anime WEB Network-first final render",
       "context": {
         "Service": "StreamNZB",

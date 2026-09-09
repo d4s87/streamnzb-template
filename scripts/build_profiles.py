@@ -35,6 +35,30 @@ EXPECTED_PRESENTATION_RULES = {
     "B-Global",
     "Bilibili",
     "HIDIVE",
+    # Non-Anime streaming-service formatter fallback badges (audited
+    # 2026-09-09): zero-point, presentation-only, scoped `not isAnime`,
+    # covering only the 16 services proven to have no Jhin v0.6.2 native
+    # `.Network` coverage and no PCRE-lookaround-dependent Vidhin regex.
+    # Do not add any of the 11 deferred/ambiguous services (bare Max,
+    # Movies Anywhere/MA, Google Play, iTunes, Showtime, Stan, Fandango,
+    # Comedy Central, TVING, Viu, iQIYI) to this set without a dedicated
+    # RE2 boolean-translation + fixture pass first.
+    "Peacock",
+    "Paramount+",
+    "Criterion Channel",
+    "Roku",
+    "Syfy",
+    "DC Universe",
+    "Coupang",
+    "DMM TV",
+    "FOD",
+    "Hotstar",
+    "KOCOWA",
+    "U-NEXT",
+    "Viki",
+    "Wavve",
+    "WeTV",
+    "Youku",
 }
 
 # High-impact audio normalization contract (post scoring-ceiling audit):
@@ -248,9 +272,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 128:
+    if len(entries) != 144:
         raise ValueError(
-            f"expected 128 source rules, found {len(entries)}"
+            f"expected 144 source rules, found {len(entries)}"
         )
 
     names = []
@@ -295,7 +319,7 @@ def validate_registry(payload: dict):
 
     expected_counts = {
     "core": 123,
-    "presentation": 4,
+    "presentation": 20,
     "device:samsung-qn90a": 1,
 }
 
@@ -805,7 +829,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 128,
+            "expected_rules": 144,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -814,7 +838,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 127,
+            "expected_rules": 143,
         },
     }
 

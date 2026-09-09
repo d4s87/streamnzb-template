@@ -811,6 +811,134 @@
       }
     },
     {
+      "owner": "presentation",
+      "rule": {
+        "name": "Peacock",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:PCOK|Peacock)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Paramount+",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:PMTP|Paramount[ ._-]?Plus)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Criterion Channel",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])CRiT(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Roku",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])ROKU(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Syfy",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])SYFY(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "DC Universe",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:DCU|DC[ ._-]?Universe)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Coupang",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])CPNG(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "DMM TV",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])DMM-TV(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "FOD",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])FOD(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Hotstar",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])HTSR(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "KOCOWA",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:KCW|KOCOWA)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "U-NEXT",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])U-NEXT(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Viki",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])Viki(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Wavve",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])WAVVE(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "WeTV",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])WETV(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Youku",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])YOUKU(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
       "owner": "core",
       "rule": {
         "name": "Seadex Best",

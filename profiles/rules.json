@@ -719,7 +719,15 @@
       "rule": {
         "action": "reject",
         "name": "Unknown resolution",
-        "when": "resolution == \"\"\nand not library\nand not seadex.best\nand not seadex.alternative\nand quality == \"\"\nand not matched(\"Trusted Release Groups\")\nand count(\n    resolution != \"\"\n    and quality != \"\"\n) > 6"
+        "when": "resolution == \"\"\nand not isAnime\nand not library\nand quality == \"\"\nand not matched(\"Trusted Release Groups\")\nand count(\n    resolution != \"\"\n    and quality != \"\"\n) > 6"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Anime Unknown Resolution",
+        "when": "resolution == \"\"\nand isAnime\nand not library\nand not seadex.best\nand not seadex.alternative\nand quality == \"\"\nand not matched(\"Trusted Release Groups\")\nand count(\n    resolution != \"\"\n    and quality != \"\"\n) > 6"
       }
     },
     {

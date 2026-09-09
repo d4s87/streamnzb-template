@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 144 {
+	if len(neutralRules) != 145 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 144",
+			"neutral profile contains %d rules; want 145",
 			len(neutralRules),
 		)
 	}
@@ -2699,6 +2699,48 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 		)
 	}
 
+	if strings.Contains(unknownRule.When, "seadex") {
+		t.Fatalf(
+			"Unknown resolution (non-Anime) must not reference seadex.*, when=%q",
+			unknownRule.When,
+		)
+	}
+
+	if !strings.Contains(unknownRule.When, "not isAnime") {
+		t.Fatalf(
+			"Unknown resolution (non-Anime) must be scoped \"not isAnime\", when=%q",
+			unknownRule.When,
+		)
+	}
+
+	animeUnknownRule := findProductionRule(
+		t,
+		productionRules,
+		"Anime Unknown Resolution",
+	)
+
+	if animeUnknownRule.EffectiveAction() != config.RuleActionReject {
+		t.Fatalf(
+			"Anime Unknown Resolution action=%q, want reject",
+			animeUnknownRule.EffectiveAction(),
+		)
+	}
+
+	if !strings.Contains(animeUnknownRule.When, "seadex.best") ||
+		!strings.Contains(animeUnknownRule.When, "seadex.alternative") {
+		t.Fatalf(
+			"Anime Unknown Resolution must preserve seadex.best/seadex.alternative protection, when=%q",
+			animeUnknownRule.When,
+		)
+	}
+
+	if !strings.Contains(animeUnknownRule.When, "isAnime") {
+		t.Fatalf(
+			"Anime Unknown Resolution must be scoped \"isAnime\", when=%q",
+			animeUnknownRule.When,
+		)
+	}
+
 	data, err := os.ReadFile(
 		"../../generated/vidhin-defines.json",
 	)
@@ -2819,13 +2861,21 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 	}
 
 	type policyCase struct {
-		name               string
-		target             string
-		kind               string
-		anime              bool
-		alternatives       int
-		library            bool
-		seadex             *rules.SeadexContext
+		name         string
+		target       string
+		kind         string
+		anime        bool
+		alternatives int
+		library      bool
+		seadex       *rules.SeadexContext
+		// ruleName is which of the two split rules this case exercises:
+		// "Unknown resolution" for non-Anime (no seadex dependency at all),
+		// "Anime Unknown Resolution" for Anime (retains seadex protection
+		// and fail-open behavior). Movie/Series requests never populate
+		// req.Seadex in real production (KitsuID is empty for every
+		// non-Kitsu-addressed id space), so their cases use seadex: nil to
+		// match reality rather than an unreachable checked-no-match state.
+		ruleName           string
 		wantRejected       bool
 		wantSeaDexFailOpen bool
 	}
@@ -2838,11 +2888,16 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 
 	cases := []policyCase{
 		{
-			name:         "dense weak Movie unknown is rejected",
+			// Real production: Movie/Series requests never populate
+			// req.Seadex (KitsuID is empty outside the kitsu: id space), so
+			// this must use seadex: nil, not an unreachable checked state,
+			// to actually exercise what a live Movie request looks like.
+			name:         "dense weak Movie unknown is rejected (real nil Seadex)",
 			target:       "Example.Movie.2026-GRP",
 			kind:         ranking.KindMovie,
 			alternatives: 7,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 			wantRejected: true,
 		},
 		{
@@ -2850,14 +2905,16 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			target:       "Example.Movie.2026-GRP",
 			kind:         ranking.KindMovie,
 			alternatives: 6,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 		{
 			name:         "known quality protects unknown resolution",
 			target:       "Example.Movie.2026.WEB-DL.x264-GRP",
 			kind:         ranking.KindMovie,
 			alternatives: 7,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 		{
 			name: "Movie tier group protects weak metadata",
@@ -2867,7 +2924,8 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			),
 			kind:         ranking.KindMovie,
 			alternatives: 7,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 		{
 			name: "Show tier group protects weak metadata",
@@ -2877,9 +2935,21 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			),
 			kind:         ranking.KindSeries,
 			alternatives: 7,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 		{
+			name:         "dense weak Series unknown is rejected (real nil Seadex)",
+			target:       "Example.Show.S01E01-GRP",
+			kind:         ranking.KindSeries,
+			alternatives: 7,
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
+			wantRejected: true,
+		},
+		{
+			// Realistic for Anime: SeaDex is looked up (Kitsu-addressed),
+			// answered, and has no entry for the title.
 			name: "Anime tier group protects weak metadata",
 			target: fmt.Sprintf(
 				"Example.Anime.S01E01-%s",
@@ -2889,6 +2959,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			anime:        true,
 			alternatives: 7,
 			seadex:       seadexCheckedNoMatch(),
+			ruleName:     "Anime Unknown Resolution",
 		},
 		{
 			name: "Anime Movie tier group protects weak metadata",
@@ -2900,6 +2971,17 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			anime:        true,
 			alternatives: 7,
 			seadex:       seadexCheckedNoMatch(),
+			ruleName:     "Anime Unknown Resolution",
+		},
+		{
+			name:         "dense weak Anime unknown is rejected (checked, no match)",
+			target:       "Example.Anime.S01E01-GRP",
+			kind:         ranking.KindAnimeShow,
+			anime:        true,
+			alternatives: 7,
+			seadex:       seadexCheckedNoMatch(),
+			ruleName:     "Anime Unknown Resolution",
+			wantRejected: true,
 		},
 		{
 			name:         "Library protects weak unknown",
@@ -2907,7 +2989,8 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			kind:         ranking.KindMovie,
 			alternatives: 7,
 			library:      true,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 		{
 			name:         "SeaDex Best protects weak unknown",
@@ -2921,6 +3004,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 					"bestgrp": true,
 				},
 			},
+			ruleName: "Anime Unknown Resolution",
 		},
 		{
 			name:         "SeaDex Alternative protects weak unknown",
@@ -2934,13 +3018,22 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 					"altgrp": true,
 				},
 			},
+			ruleName: "Anime Unknown Resolution",
 		},
 		{
-			name:               "missing SeaDex lookup fails open",
-			target:             "Example.Movie.2026-GRP",
-			kind:               ranking.KindMovie,
+			// The real fail-open case: an Anime request whose SeaDex lookup
+			// never ran at all (no Kitsu/AniList mapping, client unreachable,
+			// etc.) must not be rejected. Moved here from a Movie case in
+			// the pre-split test, which asserted a skip reason ("needs a
+			// SeaDex lookup") that no live Movie request can ever produce
+			// now that the non-Anime rule carries no seadex reference.
+			name:               "missing SeaDex lookup fails open (Anime, no mapping)",
+			target:             "Example.Anime.S01E01-GRP",
+			kind:               ranking.KindAnimeShow,
+			anime:              true,
 			alternatives:       7,
 			seadex:             nil,
+			ruleName:           "Anime Unknown Resolution",
 			wantSeaDexFailOpen: true,
 		},
 		{
@@ -2948,7 +3041,8 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			target:       "Example.Movie.2026.1080p.x264-GRP",
 			kind:         ranking.KindMovie,
 			alternatives: 7,
-			seadex:       seadexCheckedNoMatch(),
+			seadex:       nil,
+			ruleName:     "Unknown resolution",
 		},
 	}
 
@@ -3008,7 +3102,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			for _, rejection := range target.Rejections {
 				if strings.Contains(
 					rejection,
-					"Unknown resolution",
+					tc.ruleName,
 				) {
 					hasUnknownRejection = true
 					break
@@ -3017,11 +3111,12 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 
 			if hasUnknownRejection != tc.wantRejected {
 				t.Fatalf(
-					"Unknown resolution rejection=%v, want=%v\n"+
+					"%s rejection=%v, want=%v\n"+
 						"target=%q\n"+
 						"fetch=%v\n"+
 						"rejections=%v\n"+
 						"skipped=%v",
+					tc.ruleName,
 					hasUnknownRejection,
 					tc.wantRejected,
 					tc.target,
@@ -3033,7 +3128,8 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 
 			if tc.wantRejected && target.Fetch {
 				t.Fatalf(
-					"target remained fetchable despite Unknown resolution rejection",
+					"target remained fetchable despite %s rejection",
+					tc.ruleName,
 				)
 			}
 
@@ -3054,7 +3150,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			for _, skipped := range target.SkippedRules {
 				if !strings.Contains(
 					skipped,
-					"Unknown resolution",
+					tc.ruleName,
 				) {
 					continue
 				}

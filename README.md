@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **145** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **146** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **144** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **145** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **144 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **145 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -773,7 +773,9 @@ GitHub's raw-file CDN may take a few minutes to reflect a newly published update
 
 The profile uses an adaptive **Intelligent Unknown Resolution** rule instead of unconditionally rejecting every result whose resolution could not be parsed. Unknown-resolution results remain available when the result set is scarce, and weak unknowns are rejected only when more than six alternatives have both a known resolution and known quality.
 
-The rule deliberately protects useful incomplete results. An unknown-resolution result is retained when it still has a recognized quality, matches a trusted Movie, Show, Anime Movie, or Anime Show release-group tier, is a **Library** result, or is a **SeaDex Best / Alternative** recommendation. Trusted tiers are resolved through the generated `Trusted Release Groups` Define, so changes to synchronized tier membership automatically flow into this protection without maintaining a second hard-coded tier list in the profile. If SeaDex lookup data is unavailable for the request, the rule fails open rather than rejecting the result.
+The rule deliberately protects useful incomplete results. An unknown-resolution result is retained when it still has a recognized quality, matches a trusted Movie, Show, Anime Movie, or Anime Show release-group tier, or is a **Library** result. Trusted tiers are resolved through the generated `Trusted Release Groups` Define, so changes to synchronized tier membership automatically flow into this protection without maintaining a second hard-coded tier list in the profile.
+
+Anime is handled by a separate sibling rule, **Anime Unknown Resolution**, so its SeaDex dependency never touches Movie/Show evaluation — SeaDex data only exists for Kitsu-addressed Anime requests, so a Movie/Series rule referencing it would never see any data to protect with. A **SeaDex Best / Alternative** Anime recommendation is exempt from the Anime rule's rejection; if the request carries no SeaDex data at all (no lookup ran), the Anime rule fails open rather than rejecting the result.
 
 This policy applies only to **Unknown Resolution**. A result with a known resolution but Unknown Quality is not rejected by this rule. Under the pinned StreamNZB engine, resolution contributes explicit ranking points rather than acting as a separate sort key: each step up the resolution ladder is worth 20,000 points, and unparsed resolution (`ResUnknown`) is deliberately priced at the same rung as 720p rather than at the bottom, while 1080p, 1440p, and 2160p each sit one or more 20,000-point rungs above it. The profile does not add a separate score penalty on top of that because none is needed for tier safety; the adaptive rule's job is narrower than compensating for a bottom-ranked Unknown — it prunes vague, unclassified metadata specifically when the result set already has plenty of better-identified alternatives to prefer instead.
 

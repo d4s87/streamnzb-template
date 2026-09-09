@@ -1581,21 +1581,18 @@ def validate_availability_scoring_policy(
         )
 
 
-def validate_unknown_resolution_policy(
+def _validate_unknown_resolution_rule(
     rules: list[dict],
-    defines: dict[str, dict],
-) -> None:
+    name: str,
+    required_fragments: tuple[str, ...],
+    forbidden_fragments: tuple[str, ...],
+) -> str:
     """
-    Unknown resolution is not inherently bad.
-
-    Weak results are rejected only when more than six
-    well-identified alternatives exist. Library, SeaDex,
-    known-quality and recognized release-group results
-    remain protected. Unknown Quality by itself is not
-    rejected.
+    Shared structural checks for one half of the Unknown Resolution split
+    (non-Anime "Unknown resolution" / Anime-scoped "Anime Unknown
+    Resolution"). Returns the rule's `when` text for the caller's
+    tier/helper checks.
     """
-
-    name = "Unknown resolution"
 
     matches = [
         rule
@@ -1633,18 +1630,6 @@ def validate_unknown_resolution_policy(
             f"{name} has no valid condition"
         )
 
-    required_fragments = (
-        'resolution == ""',
-        "not library",
-        "not seadex.best",
-        "not seadex.alternative",
-        'quality == ""',
-        "count(",
-        'resolution != ""',
-        'quality != ""',
-        ") > 6",
-    )
-
     missing = [
         fragment
         for fragment in required_fragments
@@ -1657,6 +1642,18 @@ def validate_unknown_resolution_policy(
             + ", ".join(repr(x) for x in missing)
         )
 
+    present = [
+        fragment
+        for fragment in forbidden_fragments
+        if fragment in when
+    ]
+
+    if present:
+        raise AssertionError(
+            f"{name} must not contain fragment(s): "
+            + ", ".join(repr(x) for x in present)
+        )
+
     if when.count("count(") != 1:
         raise AssertionError(
             f"{name} must contain exactly one "
@@ -1667,6 +1664,56 @@ def validate_unknown_resolution_policy(
         raise AssertionError(
             f"{name} must use exactly one > 6 threshold"
         )
+
+    return when
+
+
+def validate_unknown_resolution_policy(
+    rules: list[dict],
+    defines: dict[str, dict],
+) -> None:
+    """
+    Unknown resolution is not inherently bad.
+
+    Weak results are rejected only when more than six
+    well-identified alternatives exist. Library,
+    known-quality and recognized release-group results
+    remain protected. Unknown Quality by itself is not
+    rejected.
+
+    The policy is split by content kind: Movie/Series/
+    Anime Movie/Anime Show share the same non-seadex
+    protections, but only the Anime-scoped sibling reads
+    seadex.* - SeaDex data is never populated for a real
+    Movie/Series request (KitsuID is empty outside the
+    kitsu: id space), so a non-Anime rule referencing it
+    would be permanently skipped rather than protective.
+    """
+
+    base_fragments = (
+        'resolution == ""',
+        "not library",
+        'quality == ""',
+        "count(",
+        'resolution != ""',
+        'quality != ""',
+        ") > 6",
+    )
+
+    non_anime_when = _validate_unknown_resolution_rule(
+        rules,
+        "Unknown resolution",
+        base_fragments + ("not isAnime",),
+        ("seadex.best", "seadex.alternative"),
+    )
+
+    anime_when = _validate_unknown_resolution_rule(
+        rules,
+        "Anime Unknown Resolution",
+        base_fragments
+        + ("isAnime", "not seadex.best", "not seadex.alternative"),
+        ("not isAnime",),
+    )
 
     tier_pattern = re.compile(
         r"^(?:"
@@ -1749,33 +1796,39 @@ def validate_unknown_resolution_policy(
             f"missing={missing}, extra={extra}"
         )
 
-    if 'matched("Trusted Release Groups")' not in when:
-        raise AssertionError(
-            f"{name} must protect recognized tier groups through "
-            f"{helper_name!r}"
-        )
-
-    direct_tier_refs = [
-        define_name
-        for define_name in tier_defines
-        if f'matched("{define_name}")' in when
-    ]
-
-    if direct_tier_refs:
-        raise AssertionError(
-            f"{name} must not directly enumerate tier Defines: "
-            + ", ".join(direct_tier_refs)
-        )
-
-    # Known Resolution + Unknown Quality must never fall
-    # into this rule. The resolution predicate is the
-    # outer gate; quality alone is not grounds to reject.
-    if not when.lstrip().startswith(
-        'resolution == ""'
+    # Both split rules independently protect recognized tier groups
+    # through the shared "Trusted Release Groups" helper Define.
+    for name, when in (
+        ("Unknown resolution", non_anime_when),
+        ("Anime Unknown Resolution", anime_when),
     ):
-        raise AssertionError(
-            f"{name} must gate on Unknown Resolution first"
-        )
+        if 'matched("Trusted Release Groups")' not in when:
+            raise AssertionError(
+                f"{name} must protect recognized tier groups through "
+                f"{helper_name!r}"
+            )
+
+        direct_tier_refs = [
+            define_name
+            for define_name in tier_defines
+            if f'matched("{define_name}")' in when
+        ]
+
+        if direct_tier_refs:
+            raise AssertionError(
+                f"{name} must not directly enumerate tier Defines: "
+                + ", ".join(direct_tier_refs)
+            )
+
+        # Known Resolution + Unknown Quality must never fall
+        # into this rule. The resolution predicate is the
+        # outer gate; quality alone is not grounds to reject.
+        if not when.lstrip().startswith(
+            'resolution == ""'
+        ):
+            raise AssertionError(
+                f"{name} must gate on Unknown Resolution first"
+            )
 
 
 def validate_regressions(defines: dict[str, dict]) -> None:
@@ -1876,9 +1929,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 145:
+if len(rules) != 146:
     raise AssertionError(
-        f"Expected 145 profile rules, found {len(rules)}"
+        f"Expected 146 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

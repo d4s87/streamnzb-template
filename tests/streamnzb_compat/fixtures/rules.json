@@ -545,7 +545,7 @@
     },
     {
       "name": "Adaptive HD x265",
-      "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)",
+      "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand not matched(\"Trusted Release Groups\")\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)",
       "points": 0,
       "aggregateCases": [
         {
@@ -1636,6 +1636,91 @@
               "expected": {
                 "rejected": false
               }
+            }
+          ]
+        },
+        {
+          "name": "Trusted Release Group protects HEVC despite seven AVC alternatives",
+          "candidates": [
+            {
+              "name": "1080p HEVC trusted-tier candidate",
+              "release": "Movie.2025.1080p.WEB-DL.HEVC-NTb",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 1",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC1",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 2",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC2",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 3",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC3",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 4",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC4",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 5",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC5",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 6",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC6",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p AVC alternative 7",
+              "release": "Movie.2025.1080p.WEB-DL.x264-AVC7",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
             }
           ]
         }
@@ -4694,6 +4779,175 @@
           "expected": {
             "match": false
           }
+        }
+      ]
+    },
+    {
+      "name": "Adaptive low-quality filtering",
+      "productionRule": "Adaptive low-quality filtering",
+      "when": "not isAnime\nand not library\nand (\n    \"hdrip\" in traits\n    or \"dvdrip\" in traits\n    or \"hdtv\" in traits\n)\nand count(\n    (\n        resolution == \"2160p\"\n        or resolution == \"1440p\"\n        or resolution == \"1080p\"\n        or resolution == \"720p\"\n    )\n    and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n    )\n) > 6",
+      "action": "reject",
+      "points": 0,
+      "aggregateCases": [
+        {
+          "name": "HDTV retained with six recognized alternatives",
+          "candidates": [
+            {
+              "name": "HDTV candidate",
+              "release": "Movie.2025.HDTV.x264-GRP",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 1",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT1",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 2",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT2",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 3",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT3",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 4",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT4",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 5",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT5",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 6",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT6",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            }
+          ]
+        },
+        {
+          "name": "HDTV rejected with seven recognized alternatives",
+          "candidates": [
+            {
+              "name": "HDTV candidate",
+              "release": "Movie.2025.HDTV.x264-GRP",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": true
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 1",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT1",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 2",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT2",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 3",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT3",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 4",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT4",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 5",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT5",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 6",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT6",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            },
+            {
+              "name": "1080p WEB-DL alternative 7",
+              "release": "Movie.2025.1080p.WEB-DL.x264-ALT7",
+              "kind": "movie",
+              "anime": false,
+              "expected": {
+                "rejected": false
+              },
+              "indexerDataKnown": true
+            }
+          ]
         }
       ]
     }

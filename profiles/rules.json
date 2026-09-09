@@ -1002,7 +1002,15 @@
       "rule": {
         "action": "reject",
         "name": "Adaptive low-quality filtering",
-        "when": "not library\nand (\n    \"hdrip\" in traits\n    or \"dvdrip\" in traits\n    or \"hdtv\" in traits\n)\nand count(\n    (\n        resolution == \"2160p\"\n        or resolution == \"1440p\"\n        or resolution == \"1080p\"\n        or resolution == \"720p\"\n    )\n    and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n    )\n) > 6"
+        "when": "not isAnime\nand not library\nand (\n    \"hdrip\" in traits\n    or \"dvdrip\" in traits\n    or \"hdtv\" in traits\n)\nand count(\n    (\n        resolution == \"2160p\"\n        or resolution == \"1440p\"\n        or resolution == \"1080p\"\n        or resolution == \"720p\"\n    )\n    and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n    )\n) > 6"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "reject",
+        "name": "Anime Adaptive Low-Quality Filtering",
+        "when": "isAnime\nand not library\nand not (seadex.best or seadex.alternative)\nand (\n    \"hdrip\" in traits\n    or \"dvdrip\" in traits\n    or \"hdtv\" in traits\n)\nand count(\n    (\n        resolution == \"2160p\"\n        or resolution == \"1440p\"\n        or resolution == \"1080p\"\n        or resolution == \"720p\"\n    )\n    and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n    )\n) > 6"
       }
     },
     {
@@ -1111,7 +1119,7 @@
       "rule": {
         "action": "reject",
         "name": "Adaptive HD x265",
-        "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)"
+        "when": "not isAnime\nand parsed.codec == \"hevc\"\nand not (\"remux\" in traits)\nand not any(hdr, # == \"HDR\" or # == \"HDR10+\" or # == \"DV\")\nand not library\nand not matched(\"Trusted Release Groups\")\nand (\n  (\n    resolution == \"1080p\"\n    and count(\n      resolution == \"1080p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"remux\" in traits\n        or \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n  or\n  (\n    resolution == \"720p\"\n    and count(\n      resolution == \"720p\"\n      and parsed.codec == \"avc\"\n      and (\n        \"bluray\" in traits\n        or \"webdl\" in traits\n      )\n    ) > 6\n  )\n)"
       }
     },
     {

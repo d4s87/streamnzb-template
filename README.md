@@ -106,7 +106,7 @@ For the recommended linked import:
 
 **[Raw Samsung profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile.txt)**
 
-This artifact currently contains **144** rules and remains generated from the canonical ordered rule registry.
+This artifact currently contains **145** rules and remains generated from the canonical ordered rule registry.
 
 ### Hardware-Neutral Profile
 
@@ -118,11 +118,11 @@ For the recommended linked import:
 
 **[Raw neutral profile](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/profile-neutral.txt)**
 
-The neutral artifact contains **143** rules. It is the Samsung profile minus exactly one device-specific rule:
+The neutral artifact contains **144** rules. It is the Samsung profile minus exactly one device-specific rule:
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **143 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **144 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -781,9 +781,15 @@ This policy applies only to **Unknown Resolution**. A result with a known resolu
 
 The profile uses an availability-aware **Adaptive HD x265** Reject rule for non-Anime SDR HD releases. Instead of unconditionally penalizing HEVC/x265, a 720p or 1080p HEVC candidate is rejected only when more than six suitable same-resolution AVC alternatives are available.
 
-The rule deliberately keeps HEVC when alternatives are scarce. It also exempts **2160p**, **HDR/HDR10+/Dolby Vision**, **Anime**, **Library results**, and **HEVC Remuxes**. AV1 is unaffected.
+The rule deliberately keeps HEVC when alternatives are scarce. It also exempts **2160p**, **HDR/HDR10+/Dolby Vision**, **Anime**, **Library results**, **trusted Movie/Show release-group tiers** (resolved through the generated `Trusted Release Groups` Define, mirroring Intelligent Unknown Resolution's own trusted-tier protection above), and **HEVC Remuxes**. AV1 is unaffected.
 
 For the alternative count, 1080p considers same-resolution AVC Remux, BluRay, and WEB-DL releases; 720p considers same-resolution AVC BluRay and WEB-DL releases. This adapts the usual HD x265 quality preference to streaming, where preserving a usable result is more important than applying an unconditional codec penalty.
+
+### Adaptive low-quality filtering
+
+The profile rejects HDRip/DVDRip/HDTV-sourced releases adaptively rather than unconditionally: a weak-source result is rejected only when more than six recognized-resolution, recognized-source (Remux/BluRay/WEB-DL) alternatives are available, and it is kept as a fallback in scarcer result sets. **Library** results are always exempt.
+
+Anime is handled by a separate sibling rule, **Anime Adaptive Low-Quality Filtering**, so its SeaDex dependency never touches Movie/Show evaluation. A **SeaDex Best / Alternative** Anime recommendation is exempt from this penalty; if the request carries no SeaDex data at all (no lookup ran), the Anime rule fails open rather than rejecting the result, the same fail-open behavior Intelligent Unknown Resolution uses.
 
 ### Adaptive 1080p Remux preference
 

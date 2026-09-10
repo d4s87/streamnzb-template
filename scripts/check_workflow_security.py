@@ -6,6 +6,7 @@ import sys
 
 WORKFLOWS = Path('.github/workflows')
 PRIVILEGED_TRIGGERS = ('pull_request_target:', 'workflow_run:')
+FLOATING_ACTION_REFS = {'main', 'master', 'latest', 'develop', 'development'}
 
 
 def audit(path: Path) -> list[str]:
@@ -30,6 +31,17 @@ def audit(path: Path) -> list[str]:
 
     if re.search(r'\bsecrets:\s*inherit\b', text):
         errors.append('uses secrets: inherit')
+
+    for match in re.finditer(r'^\s*-?\s*uses:\s*([^\s#]+)', text, flags=re.MULTILINE):
+        action = match.group(1)
+        if action.startswith('./') or action.startswith('docker://'):
+            continue
+        if '@' not in action:
+            errors.append(f'action reference is not versioned: {action}')
+            continue
+        _, ref = action.rsplit('@', 1)
+        if ref.lower() in FLOATING_ACTION_REFS:
+            errors.append(f'action uses floating ref @{ref}: {action}')
 
     return errors
 

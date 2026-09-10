@@ -4004,7 +4004,7 @@
     {
       "name": "Retag Soft Penalty",
       "productionRule": "Retag Soft Penalty",
-      "when": "releaseName matches \"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])\"",
+      "when": "matched(\"Retag Markers\")",
       "points": -1,
       "cases": [
         {
@@ -4107,6 +4107,33 @@
           }
         },
         {
+          "name": "VAV retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX.VAV",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "ORARBG retag",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-ORARBG",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": true
+          }
+        },
+        {
+          "name": "Anime redistributed ORARBG",
+          "release": "[SubsPlease] Frieren - 01 (1080p) [ABCDEF12]-ORARBG",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": true
+          }
+        },
+        {
           "name": "clean FLUX",
           "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX",
           "kind": "movie",
@@ -4181,6 +4208,24 @@
         {
           "name": "HEB embedded false positive",
           "release": "Example.Movie.2024.1080p.WEB-DL-FLUX.hebrew",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "VAV embedded false positive",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-FLUX.VAVX",
+          "kind": "movie",
+          "anime": false,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "ORARBG extended false positive",
+          "release": "Example.Movie.2024.1080p.WEB-DL.DDP5.1.H.264-ORARBGX",
           "kind": "movie",
           "anime": false,
           "expected": {

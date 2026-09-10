@@ -1,20 +1,12 @@
 # Vidhin sync report
 
-## Movies Generated Dynamic HDR Groups
+## Retag Markers
 
-**Added release-group tokens**
-- `+ BiTOR`
-- `+ BR-GuyZo`
-- `+ DepraveD`
-- `+ Flights`
-- `+ GuyZo`
-- `+ SasukeducK`
-- `+ tarunk9c`
-- `+ VD0N`
-- `+ VECTOR`
-- `+ VisionXpert`
+**Raw regex added**
+
+- Source: `Retags (Radarr)`, `Retags (Sonarr)`
 
 ---
-Tracked StreamNZB Defines: **56**
+Tracked StreamNZB Defines: **57**
 
 > `profile.txt` is not modified. Generated Defines require review.

@@ -122,7 +122,7 @@ The neutral artifact contains **145** rules. It is the Samsung profile minus exa
 
 - `DV without HDR fallback`
 
-`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **145 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
+`Neutralize Dolby Vision` is part of the shared Portable Core together with native HDR, HDR10+ and parsed 10-bit compensation. The shared Core now also normalizes Jhin's high-impact Atmos, Dolby Digital Plus, TrueHD, and DTS Lossless ranks, and AVC/HEVC/AV1 video codec ranks, so audio and codec metadata remain bounded preferences rather than overriding release-group/source authority. The shared Core also carries two independent retag soft penalties: the original `Retag Soft Penalty` for known redistribution-site markers (`.heb`, EZTV, RARBG, RARTV, TGx, `.VAV`, ORARBG — Vidhin-synced via the `Retag Markers` Define), and `Literal RETAG Soft Penalty` for a standalone scene `RETAG` token — a different semantic signal kept as its own rule rather than folded into the first. All **145 shared rules** are identical and retain the same relative order in both variants. `Reject 3D` is part of the hardware-neutral Core policy and therefore remains present in both profiles.
 
 Profiles imported by URL remain linked to this repository. Use **Refresh** in StreamNZB to check for updates. Changes are shown in a diff before being applied, and local-only rules are preserved.
 
@@ -138,7 +138,7 @@ Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 57 published Define rules. Fifty-six are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, Movie Generated Dynamic HDR, and Anime Dubs Only classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
+The library currently provides 58 published Define rules. Fifty-seven are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, Movie Generated Dynamic HDR, Anime Dubs Only, and Retag Markers classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -577,6 +577,13 @@ carrying recognized redistribution / retag markers:
 - `[rarbg]`
 - `[rartv]`
 - `[TGx]`
+- `.VAV`
+- `ORARBG`
+
+The marker list is synchronized from Vidhin's `Retags (Radarr)`/
+`Retags (Sonarr)` classifications via the generated `Retag Markers` Define
+(unioning both sources), rather than hand-maintained, so future upstream
+marker additions are picked up automatically instead of silently drifting.
 
 This is intentionally a metadata tie-breaker rather than a quality
 judgment or filter. Retagged releases remain fully usable and are never

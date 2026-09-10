@@ -570,11 +570,7 @@ def validate_video_codec_neutralization_scoping(entries):
 # deliberately so each stays independently testable/evolvable.
 EXPECTED_REDISTRIBUTION_RETAG_RULE = {
     "name": "Retag Soft Penalty",
-    "when": (
-        "releaseName matches "
-        '"(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]'
-        '|\\[(?:rarbg|rartv|TGx)\\])"'
-    ),
+    "when": 'matched("Retag Markers")',
     "points": -1,
 }
 
@@ -643,10 +639,19 @@ def validate_retag_rules(entries):
                 f"  found:    {rule.get('when')!r}"
             )
 
-        if "releaseName matches" not in rule.get("when", ""):
-            raise ValueError(
-                f"{name!r} must remain a releaseName-based condition"
-            )
+        when = rule.get("when", "")
+
+        if name == EXPECTED_LITERAL_RETAG_RULE["name"]:
+            if "releaseName matches" not in when:
+                raise ValueError(
+                    f"{name!r} must remain a releaseName-based condition"
+                )
+        elif name == EXPECTED_REDISTRIBUTION_RETAG_RULE["name"]:
+            if 'matched("Retag Markers")' != when:
+                raise ValueError(
+                    f"{name!r} must remain sourced from the Vidhin-synced "
+                    '"Retag Markers" Define, not a hand-written condition'
+                )
 
 
 # Edition audit contract: Jhin's scalar Edition field grants a generic

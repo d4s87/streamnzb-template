@@ -542,6 +542,15 @@
       "scope": null,
       "field": "releaseName",
       "mode": "dubs_only"
+    },
+    "Retag Markers": {
+      "sources": [
+        "Retags (Radarr)",
+        "Retags (Sonarr)"
+      ],
+      "scope": null,
+      "field": "releaseName",
+      "mode": "raw_regex"
     }
   }
 }

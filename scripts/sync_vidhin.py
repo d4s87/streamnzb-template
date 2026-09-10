@@ -480,6 +480,68 @@ def validate_generated_dynamic_hdr_source(upstream):
 
         generated_dynamic_hdr_tokens(pattern)
 
+
+RETAG_REQUIRED_MARKERS = {
+    "Retags (Radarr)": (
+        "[.]heb", "eztvx?", "rarbg", "rartv", "TGx", "[.]VAV", "ORARBG",
+    ),
+    "Retags (Sonarr)": (
+        "[.]heb", "eztvx?", "rarbg", "rartv", "TGx",
+    ),
+}
+
+
+def validate_retag_source(upstream):
+    """
+    Guard against an unnoticed upstream shape or vocabulary change to
+    Vidhin's Retags (Radarr)/(Sonarr) redistribution-marker classifications
+    before resolve() ever runs -- the same early, focused-error discipline
+    as validate_generated_dynamic_hdr_source().
+
+    "Retag Soft Penalty" is universal (not Movie/Show-split) and unions both
+    sources, so a marker present in either -- including the Radarr-only
+    .VAV/ORARBG pair that motivated syncing this classification in the first
+    place -- must keep resolving. Silently losing a marker here would
+    reintroduce exactly the drift this sync replaces a hand-maintained
+    condition to prevent.
+    """
+    seen = set()
+
+    for rec in rows(upstream):
+        name = n(rec)
+
+        if name not in RETAG_REQUIRED_MARKERS:
+            continue
+
+        seen.add(name)
+        pattern = p(rec)
+
+        if not isinstance(pattern, str):
+            raise RuntimeError(
+                f"Vidhin {name!r} record has no usable pattern."
+            )
+
+        missing = [
+            marker
+            for marker in RETAG_REQUIRED_MARKERS[name]
+            if marker not in pattern
+        ]
+
+        if missing:
+            raise ValueError(
+                f"Vidhin {name!r} is missing expected marker(s) "
+                f"{missing!r}; manual review required before syncing."
+            )
+
+    missing_sources = set(RETAG_REQUIRED_MARKERS) - seen
+
+    if missing_sources:
+        raise RuntimeError(
+            "Vidhin Retag source(s) not found upstream: "
+            + ", ".join(sorted(missing_sources))
+        )
+
+
 def resolve(mapping,upstream):
     by={}
     for rec in rows(upstream):
@@ -1411,6 +1473,7 @@ def main():
     upstream=jload(a.upstream_file) if a.upstream_file else fetch(mapping["upstream_url"])
     validate_anime_upstream_structure(upstream)
     validate_generated_dynamic_hdr_source(upstream)
+    validate_retag_source(upstream)
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
     validate_movie_show_tier_collisions(cur)

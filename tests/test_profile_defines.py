@@ -1003,11 +1003,21 @@ def validate_repack_proper_preferences(rules):
 
 def validate_retag_soft_penalty(
     rules: list[dict],
+    defines: dict[str, dict],
 ) -> None:
-    """Validate the global Retag metadata tie-breaker."""
+    """
+    Validate the global Retag metadata tie-breaker.
+
+    "Retag Soft Penalty" is now sourced from the Vidhin-synced "Retag
+    Markers" Define (unioning "Retags (Radarr)"/"Retags (Sonarr)") instead
+    of a hand-written condition, so Radarr/Sonarr drift fails closed at
+    sync time rather than silently falling behind upstream the way the
+    original hand-maintained condition did.
+    """
 
     name = 'Retag Soft Penalty'
-    expected_when = 'releaseName matches "(?i)(?:[.]heb\\b|\\[eztvx?(?:[ ._-]?(?:io|re|to))?\\]|\\[(?:rarbg|rartv|TGx)\\])"'
+    define_name = "Retag Markers"
+    expected_when = f'matched("{define_name}")'
 
     matches = [
         rule
@@ -1047,15 +1057,36 @@ def validate_retag_soft_penalty(
             "define an explicit content scope"
         )
 
-    if 'matched("' in rule["when"] or "matched('" in rule["when"]:
-        raise AssertionError(
-            f"{name} must use releaseName matching directly "
-            "without Define dependencies"
-        )
-
     if "seadex" in rule["when"].lower():
         raise AssertionError(
             f"{name} must not contain SeaDex-specific predicates"
+        )
+
+    if define_name not in defines:
+        raise AssertionError(
+            f"{name} depends on Define {define_name!r}, which is missing "
+            "from the published Define Library"
+        )
+
+    define_entry = defines[define_name]
+
+    if define_entry.get("scope"):
+        raise AssertionError(
+            f"{define_name!r} must remain global and must not "
+            "define an explicit content scope"
+        )
+
+    condition = define_entry.get("condition", "")
+
+    required_markers = (
+        "[.]heb", "eztvx?", "rarbg", "rartv", "TGx", "[.]VAV", "ORARBG",
+    )
+    missing = [m for m in required_markers if m not in condition]
+
+    if missing:
+        raise AssertionError(
+            f"{define_name!r} is missing expected marker(s) {missing!r}; "
+            f"condition: {condition!r}"
         )
 
 
@@ -1936,9 +1967,9 @@ if len(rules) != 146:
 
 defines = parse_define_library(defines_text)
 
-if len(defines) != 57:
+if len(defines) != 58:
     raise AssertionError(
-        f"Expected 57 published Defines, found {len(defines)}"
+        f"Expected 58 published Defines, found {len(defines)}"
     )
 
 validate_profile_rule_names(rules)
@@ -2018,7 +2049,7 @@ validate_adaptive_hd_x265(rules)
 validate_1080p_remux_preference(rules)
 validate_season_pack_limits(rules)
 validate_repack_proper_preferences(rules)
-validate_retag_soft_penalty(rules)
+validate_retag_soft_penalty(rules, defines)
 validate_audio_preferences(rules)
 validate_availability_scoring_policy(rules)
 validate_anime_version_preferences(rules)

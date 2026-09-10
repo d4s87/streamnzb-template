@@ -1290,3 +1290,114 @@ for marker in ("v0", "v1", "v2", "v3", "v4"):
         raise AssertionError(
             f"exact {marker.upper()!r} release-group token was not detected"
         )
+
+# ---------------------------------------------------------------------------
+# Retag Markers: Radarr/Sonarr union and upstream-drift guard
+#
+# "Retag Soft Penalty" (profiles/rules.json) used to hand-maintain its own
+# copy of these redistribution markers, which silently fell behind when
+# Vidhin's own "Retags (Radarr)" classification gained ".VAV"/"ORARBG" that
+# the hand-written condition never picked up. Syncing both Radarr and Sonarr
+# sources into one universal "Retag Markers" Define, unioned via "sources",
+# closes that drift permanently: any future upstream marker change now
+# either flows through automatically or fails the sync closed for review.
+
+retags_radarr = (
+    r"/[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]"
+    r"|[.]VAV\b|\b(ORARBG)\b/i"
+)
+retags_sonarr = (
+    r"/[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]/i"
+)
+
+retags_upstream = [
+    {"name": "Retags (Radarr)", "pattern": retags_radarr},
+    {"name": "Retags (Sonarr)", "pattern": retags_sonarr},
+]
+
+# Correct upstream shape passes the pre-validator unchanged.
+m.validate_retag_source(retags_upstream)
+
+retag_mapping = {
+    "schema_version": 3,
+    "upstream_url": mapping["upstream_url"],
+    "targets": {
+        "Retag Markers": {
+            "sources": ["Retags (Radarr)", "Retags (Sonarr)"],
+            "scope": None,
+            "field": "releaseName",
+            "mode": "raw_regex",
+        },
+    },
+}
+
+retag_current = m.resolve(retag_mapping, retags_upstream)
+retag_condition = m.render_raw_regex_condition(
+    retag_current["Retag Markers"]
+)
+
+# Union semantics: both source patterns are present as independent
+# alternatives (an "or" join), not just one or the other.
+assert 'releaseName matches "(?i)' in retag_condition
+assert retag_condition.count("releaseName matches") == 2
+assert "[.]VAV\\b" in retag_condition
+assert "ORARBG" in retag_condition
+assert "[.]heb\\b" in retag_condition
+assert "rarbg" in retag_condition
+assert "rartv" in retag_condition
+assert "TGx" in retag_condition
+
+# Missing-source drift (a source renamed/removed upstream) must fail closed.
+try:
+    m.validate_retag_source([retags_upstream[1]])
+except RuntimeError as exc:
+    assert "Retags (Radarr)" in str(exc)
+else:
+    raise AssertionError(
+        "missing Retags (Radarr) source was not detected"
+    )
+
+# Marker drift: ".VAV" quietly disappearing from the Radarr pattern must
+# fail closed, even though the rest of the pattern is untouched.
+vav_drift = [
+    {
+        "name": "Retags (Radarr)",
+        "pattern": (
+            r"/[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]"
+            r"|\b(ORARBG)\b/i"
+        ),
+    },
+    retags_upstream[1],
+]
+
+try:
+    m.validate_retag_source(vav_drift)
+except ValueError as exc:
+    assert "[.]VAV" in str(exc)
+else:
+    raise AssertionError(
+        "Retags (Radarr) losing '.VAV' was not detected"
+    )
+
+# Marker drift: "ORARBG" quietly disappearing must also fail closed.
+orarbg_drift = [
+    {
+        "name": "Retags (Radarr)",
+        "pattern": (
+            r"/[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]"
+            r"|[.]VAV\b/i"
+        ),
+    },
+    retags_upstream[1],
+]
+
+try:
+    m.validate_retag_source(orarbg_drift)
+except ValueError as exc:
+    assert "ORARBG" in str(exc)
+else:
+    raise AssertionError(
+        "Retags (Radarr) losing 'ORARBG' was not detected"
+    )
+
+print("Retag Markers union/drift tests passed.")

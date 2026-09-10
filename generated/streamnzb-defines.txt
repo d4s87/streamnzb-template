@@ -47,6 +47,7 @@ Movies UHD BluRay T3 Groups [movie]: define if group matches "(?i)^(BHDStudio|ha
 Movies WEB T1 Groups [movie]: define if group matches "(?i)^(ABBIE|AJP69|APEX|BLUTONiUM|BYNDR|CMRG|CRFW|CRUD|FLUX|GNOME|HONE|KiNGS|Kitsune|MADSKY|NOSiViD|NTb|NTG|PAXA|PEXA|RAWR|SiC|TEPES|TheFarm|TOMMY|XEPA|ZoroSenpai)$"
 Movies WEB T2 Groups [movie]: define if group matches "(?i)^(4KBEC|CEBEX|dB|Flights|MiU|MZABI|PHOENiX|playWEB|SbR|SMURF|XEBEC)$"
 Movies WEB T3 Groups [movie]: define if group matches "(?i)^(BLOOM|Dooky|GNOMiSSiON|HHWEB|NINJACENTRAL|NPMS|ROCCaT|SiGMA|SLiGNOME|SwAgLaNdEr)$"
+Retag Markers: define if releaseName matches "(?i)[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]|[.]VAV\b|\b(ORARBG)\b" or releaseName matches "(?i)[.]heb\b|\[eztvx?[ ._-]?(io|re|to)?\]|\[(rarbg|rartv|TGx)\]"
 Shows Bad Dual Groups [series]: define if group matches "(?i)\b(alfaHD.*|BAT|BiOMA|BlackBit|BNd|C\.A\.A|C76|Cory|CYPHER|EniaHD|EXTREME|FF|FOXX|G4RiS|GUEIRA|LCD|MLH|N3G4N|OldT|PD|PTHome|RiPER|RK|SiGLA|Tars|tokar86a|TURG|vnlls|WTV|XiQUEXiQUE|Yatogam1|YusukeFLA|ZigZag|ZNM)\b"
 Shows BluRay T1 Groups [series]: define if releaseName matches "(?i)(?:^|[-._ ])(?:Chotab|CtrlHD|DON|EbP|NTb|PTer)$"
 Shows BluRay T2 Groups [series]: define if releaseName matches "(?i)(?:^|[-._ ])(?:SA89|sbR)$"

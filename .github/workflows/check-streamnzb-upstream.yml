@@ -55,6 +55,14 @@ jobs:
           set -o pipefail
           ./scripts/test_streamnzb_compat.sh 2>&1 | tee streamnzb-upstream-compat.log
 
+      - name: Upload compatibility diagnostics
+        if: steps.compat.outcome == 'failure'
+        uses: actions/upload-artifact@v6
+        with:
+          name: streamnzb-upstream-compat-${{ steps.upstream.outputs.tag }}
+          path: streamnzb-upstream-compat.log
+          retention-days: 14
+
       - name: Open or update compatibility issue
         if: steps.compat.outcome == 'failure'
         env:

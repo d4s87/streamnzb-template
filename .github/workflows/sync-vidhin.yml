@@ -27,10 +27,14 @@ jobs:
           python-version: "3.13"
 
       - name: Test generator against accepted baseline
-        run: python tests/test_vidhin_sync.py
+        run: |
+          set -o pipefail
+          python tests/test_vidhin_sync.py 2>&1 | tee vidhin-sync.log
 
       - name: Track mapped Vidhin rules
-        run: python scripts/sync_vidhin.py
+        run: |
+          set -o pipefail
+          python scripts/sync_vidhin.py 2>&1 | tee -a vidhin-sync.log
 
       - name: Ignore metadata-only sync changes
         run: |
@@ -109,3 +113,16 @@ jobs:
           labels: |
             automation
             streamnzb
+
+      - name: Upload Vidhin sync diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: vidhin-sync-diagnostics-${{ github.run_id }}
+          path: |
+            vidhin-sync.log
+            generated/vidhin-sync-report.md
+            generated/vidhin-defines.json
+            generated/streamnzb-defines.txt
+          if-no-files-found: ignore
+          retention-days: 14

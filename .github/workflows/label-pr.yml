@@ -32,6 +32,10 @@ jobs:
             [docs]="0075ca|Documentation changes"
             [automation]="6f42c1|Repository automation changes"
             [github-actions]="1d76db|GitHub Actions dependency and workflow changes"
+            [major]="b60205|Breaking release change"
+            [minor]="0e8a16|Backward-compatible feature or behavior change"
+            [patch]="5319e7|Backward-compatible fix or maintenance change"
+            [skip-changelog]="cfd3d7|Exclude this PR from generated release notes"
           )
 
           for name in "${!labels[@]}"; do

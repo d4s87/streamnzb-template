@@ -1,0 +1,52 @@
+name: Label pull requests
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    name: Apply path labels
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure managed labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          declare -A labels=(
+            [profiles]="5319e7|Profile and scoring policy changes"
+            [formatter]="d4c5f9|Formatter changes"
+            [vidhin]="fbca04|Vidhin synchronization and Define changes"
+            [tests]="0e8a16|Test and validation changes"
+            [docs]="0075ca|Documentation changes"
+            [automation]="6f42c1|Repository automation changes"
+            [github-actions]="1d76db|GitHub Actions dependency and workflow changes"
+          )
+
+          for name in "${!labels[@]}"; do
+            IFS='|' read -r color description <<< "${labels[$name]}"
+            if ! gh api "repos/$REPOSITORY/labels/$name" >/dev/null 2>&1; then
+              gh api --method POST "repos/$REPOSITORY/labels" \
+                -f name="$name" \
+                -f color="$color" \
+                -f description="$description" >/dev/null
+            fi
+          done
+
+      - name: Label pull request from changed paths
+        uses: actions/labeler@v6
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true

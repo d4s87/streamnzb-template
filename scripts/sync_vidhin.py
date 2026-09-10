@@ -92,8 +92,12 @@ def clean_token(t):
 
 def semantic_tokens(pattern):
     la=lookaheads(pattern)
-    if not la: return []
-    classifier=la[-1]
+    # Most standard-mode upstream patterns are compound lookahead regexes
+    # (a quality-context assertion plus a final group-list assertion); the
+    # last lookahead is the group classifier. A pattern with no lookahead at
+    # all is a bare group alternation with nothing else to disambiguate, so
+    # the whole pattern is itself the classifier.
+    classifier=la[-1] if la else pattern
     out=set()
     # Every innermost alternation/list in the final classifier can contain release groups.
     for body in innermost_groups(classifier):

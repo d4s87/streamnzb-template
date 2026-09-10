@@ -1,12 +1,21 @@
 # Vidhin sync report
 
-## Retag Markers
+## Atmos Exclude Groups
 
-**Raw regex added**
+**Added release-group tokens**
+- `+ HQMUX`
+- `+ W4NK3R`
 
-- Source: `Retags (Radarr)`, `Retags (Sonarr)`
+## TrueHD Exclude Groups
+
+**Added release-group tokens**
+- `+ 3L`
+- `+ CtrlHD`
+- `+ DON`
+- `+ HQMUX`
+- `+ W4NK3R`
 
 ---
-Tracked StreamNZB Defines: **57**
+Tracked StreamNZB Defines: **59**
 
 > `profile.txt` is not modified. Generated Defines require review.

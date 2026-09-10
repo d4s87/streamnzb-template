@@ -138,7 +138,7 @@ Import the linked library before using the profile:
 
 **[Raw Define Library](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/generated/streamnzb-defines.txt)**
 
-The library currently provides 58 published Define rules. Fifty-seven are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, Movie Generated Dynamic HDR, Anime Dubs Only, and Retag Markers classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
+The library currently provides 60 published Define rules. Fifty-nine are synchronized Vidhin-backed Movie, Show and Anime classifications, including LQ, separate Movie/Show Bad Dual, separate Movie/Show Obfuscated, Movie Generated Dynamic HDR, Anime Dubs Only, Retag Markers, and Atmos/TrueHD Exclude Groups classifications. The additional local `Trusted Release Groups` Define is generated from all 47 Movie, Show, Anime Movie, and Anime Show tier Defines and gives profile rules one stable reference to the complete trusted-tier set without duplicating that membership in the profile.
 
 Anime classifications follow the full Vidhin hierarchy:
 - Anime WEB: T1–T6
@@ -266,6 +266,8 @@ Effective results for Movies and Shows:
 - Dolby Digital Plus: `+150` native, neutralized to `0`, non-Anime preference restores an effective `+25`
 
 **Anime results are always exactly `0`** for all four codecs above — Anime's `80`-point minimum adjacent tier gap has no room to safely absorb a positive audio preference of any size.
+
+The TrueHD and Atmos residuals above are withheld for a small list of release groups Vidhin identifies as known to falsely tag one or both in their release names, since Jhin's trait detection is a pure filename-regex match with no way to verify the claim: `Prefer Atmos` and `Prefer TrueHD` each carry an added `not matched(...)` clause against a dedicated Vidhin-synced `Atmos Exclude Groups`/`TrueHD Exclude Groups` Define. This is a scoring gate, not a group-wide penalty — an excluded group's ordinary release, and its claim of the *other* attribute it is not listed for, are both unaffected; only `Neutralize Atmos`/`Neutralize TrueHD` (which cancel Jhin's native score for every group regardless) still apply.
 
 DTS lossy and AAC remain fully untouched (native `+100` / `+100`) for Movies and Shows, whose `200`-point tier gaps comfortably absorb them. For Anime, both are separately neutralized to `0` as well, because the audit found that even a single untouched codec at its native value was enough on its own to threaten Anime's tier gap.
 

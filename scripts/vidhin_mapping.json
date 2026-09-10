@@ -551,6 +551,20 @@
       "scope": null,
       "field": "releaseName",
       "mode": "raw_regex"
+    },
+    "Atmos Exclude Groups": {
+      "sources": [
+        "Atmos Exclude Groups"
+      ],
+      "scope": null,
+      "field": "group"
+    },
+    "TrueHD Exclude Groups": {
+      "sources": [
+        "TrueHD Exclude Groups"
+      ],
+      "scope": null,
+      "field": "group"
     }
   }
 }

@@ -360,16 +360,17 @@ func TestNonAnimeServiceBadgeScoringInvariance(t *testing.T) {
 }
 
 // TestNonAnimeServiceBadgeDefineLibraryUnaffected asserts this feature added
-// no Define. The Define Library count itself has since grown to 58 (57
-// Vidhin-backed + 1 local helper) via the later, unrelated Retag Markers
-// sync — this test only proves this feature's own zero-Define contribution,
-// not an absolute count frozen at this feature's original landing.
+// no Define. The Define Library count itself has since grown to 60 (59
+// Vidhin-backed + 1 local helper) via later, unrelated syncs (Retag Markers,
+// then Atmos/TrueHD Exclude Groups) — this test only proves this feature's
+// own zero-Define contribution, not an absolute count frozen at this
+// feature's original landing.
 func TestNonAnimeServiceBadgeDefineLibraryUnaffected(t *testing.T) {
 	defineLibrary := loadDefineLibrary(t)
 
-	if len(defineLibrary) != 58 {
+	if len(defineLibrary) != 60 {
 		t.Fatalf(
-			"generated Define Library has %d entries, want 58 -- this feature "+
+			"generated Define Library has %d entries, want 60 -- this feature "+
 				"must not add any Define",
 			len(defineLibrary),
 		)

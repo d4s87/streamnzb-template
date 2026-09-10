@@ -113,7 +113,7 @@
       "rule": {
         "name": "Prefer Atmos",
         "points": 25,
-        "when": "not isAnime and \"atmos\" in traits"
+        "when": "not isAnime and \"atmos\" in traits and not matched(\"Atmos Exclude Groups\")"
       }
     },
     {
@@ -1034,7 +1034,7 @@
       "rule": {
         "name": "Prefer TrueHD",
         "points": 50,
-        "when": "not isAnime and \"truehd\" in traits"
+        "when": "not isAnime and \"truehd\" in traits and not matched(\"TrueHD Exclude Groups\")"
       }
     },
     {

@@ -4365,6 +4365,15 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 		t.Fatalf("decode generated Vidhin baseline: %v", err)
 	}
 
+	// Skip Atmos/TrueHD Exclude Groups members: this test probes ordinary,
+	// non-excluded tier membership, and some of these tiers also contain
+	// an excluded group that would otherwise sort first (e.g. "3L" in
+	// Movies Remux T1 Groups) and silently withhold the very residual
+	// this test asserts. See TestAtmosTrueHDExcludeGroupsRegression for
+	// the excluded-group behavior itself.
+	atmosTrueHDExcluded := map[string]bool{
+		"W4NK3R": true, "HQMUX": true, "3L": true, "CtrlHD": true, "DON": true,
+	}
 	defineToken := func(name string) string {
 		t.Helper()
 
@@ -4375,7 +4384,13 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 
 		tokens := append([]string(nil), entry.Tokens...)
 		slices.Sort(tokens)
-		return tokens[0]
+		for _, tok := range tokens {
+			if !atmosTrueHDExcluded[tok] {
+				return tok
+			}
+		}
+		t.Fatalf("no non-excluded token found in %q", name)
+		return ""
 	}
 
 	remuxT1 := defineToken("Movies Remux T1 Groups")
@@ -4653,6 +4668,201 @@ func TestAnimeAudioNeutrality(t *testing.T) {
 				"Anime %s effective delta=%+d; want 0 (clean=%d)",
 				tc.name, got, clean,
 			)
+		}
+	}
+}
+
+// TestAtmosTrueHDExcludeGroupsRegression proves the Atmos/TrueHD Exclude
+// Groups fix. Vidhin identifies release groups known to falsely tag Atmos
+// and/or TrueHD in their release names (W4NK3R, HQMUX: both; 3L, CtrlHD,
+// DON: TrueHD only). Before this fix, "Prefer Atmos"/"Prefer TrueHD"
+// granted the full +25/+50 residual to those claims identically to a
+// trusted, non-excluded group's claim -- the real engine could not tell
+// them apart. "Neutralize Atmos"/"Neutralize TrueHD" still cancel Jhin's
+// native score for every group, claimed or not; only the residual
+// preference bonus is withheld for a listed group's own excluded
+// attribute. This is a scoring gate, not a group-wide penalty: an
+// excluded group's ordinary (unclaimed) release, and its claim of an
+// attribute it is NOT listed for (e.g. 3L + Atmos), are both completely
+// unaffected.
+func TestAtmosTrueHDExcludeGroupsRegression(t *testing.T) {
+	defineLibrary := loadDefineLibrary(t)
+	defines := loadCeilingDefines(t)
+
+	// These tiers themselves contain some of the excluded groups under
+	// test (e.g. CtrlHD/DON/W4NK3R are Movies UHD BluRay T1 Groups
+	// members), so the "non-excluded control" for each tier must
+	// explicitly skip every excluded-list group rather than taking an
+	// arbitrary first token, or the control would silently become another
+	// excluded group itself.
+	excludedGroups := map[string]bool{
+		"W4NK3R": true, "HQMUX": true, "3L": true, "CtrlHD": true, "DON": true,
+	}
+	controlFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		for _, tok := range toks {
+			if !excludedGroups[tok] {
+				return tok
+			}
+		}
+		t.Fatalf("no non-excluded control token found in %q", defineName)
+		return ""
+	}
+
+	// Real Movies/Shows UHD BluRay T1/T2 Remux T1 controls not on either
+	// exclude list, at the exact same tiers as the excluded groups below.
+	uhdT1Control := controlFor("Movies UHD BluRay T1 Groups")
+	uhdT2Control := controlFor("Movies UHD BluRay T2 Groups")
+	remuxT1Control := controlFor("Movies Remux T1 Groups")
+
+	cases := []struct {
+		name  string
+		kind  string
+		title string
+	}{
+		// HQMUX: listed on BOTH Atmos and TrueHD Exclude Groups, Movies UHD BluRay T2.
+		{"HQMUX clean", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC-HQMUX"},
+		{"HQMUX Atmos", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC.Atmos-HQMUX"},
+		{"HQMUX TrueHD", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.7.1-HQMUX"},
+		{"HQMUX TrueHD+Atmos", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.Atmos.7.1-HQMUX"},
+
+		// UHD T2 control (not excluded), same tier as HQMUX, same claims.
+		{"UHD-T2 control clean", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC-%s", uhdT2Control)},
+		{"UHD-T2 control Atmos", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC.Atmos-%s", uhdT2Control)},
+		{"UHD-T2 control TrueHD", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.7.1-%s", uhdT2Control)},
+		{"UHD-T2 control TrueHD+Atmos", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.Atmos.7.1-%s", uhdT2Control)},
+
+		// 3L: listed on TrueHD Exclude Groups ONLY (not Atmos), Movies Remux T1.
+		{"3L clean", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC-3L"},
+		{"3L TrueHD", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.TrueHD.7.1-3L"},
+		{"3L Atmos", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.Atmos-3L"},
+
+		// Remux T1 control (not excluded), same tier as 3L, same claims.
+		{"Remux-T1 control clean", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC-%s", remuxT1Control)},
+		{"Remux-T1 control TrueHD", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.REMUX.HEVC.TrueHD.7.1-%s", remuxT1Control)},
+
+		// CtrlHD: TrueHD Exclude Groups only, overlaps Movie UHD BluRay T1 AND Shows BluRay T1 -- proves Movie+Series scope.
+		{"CtrlHD Movie clean", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC-CtrlHD"},
+		{"CtrlHD Movie TrueHD", ranking.KindMovie, "Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.7.1-CtrlHD"},
+		{"CtrlHD Show clean", ranking.KindSeries, "Example.Show.S01E01.2026.1080p.BluRay.x264-CtrlHD"},
+		{"CtrlHD Show TrueHD", ranking.KindSeries, "Example.Show.S01E01.2026.1080p.BluRay.x264.TrueHD.5.1-CtrlHD"},
+
+		// UHD T1 control (not excluded), same tier as CtrlHD/DON/W4NK3R Movie side.
+		{"UHD-T1 control clean", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC-%s", uhdT1Control)},
+		{"UHD-T1 control TrueHD", ranking.KindMovie, fmt.Sprintf("Example.Movie.2026.2160p.UHD.BluRay.HEVC.TrueHD.7.1-%s", uhdT1Control)},
+
+		// Anime: same literal group tokens as the excluded lists, kind=Anime.
+		// "not isAnime" already gates Prefer Atmos/Prefer TrueHD before the
+		// new matched() clause is ever reached, so Anime behavior must be
+		// completely unaffected by this fix.
+		{"Anime HQMUX clean", ranking.KindAnimeShow, "Example.Anime.S01E01.1080p.BluRay.x264-HQMUX"},
+		{"Anime HQMUX Atmos", ranking.KindAnimeShow, "Example.Anime.S01E01.1080p.BluRay.x264.Atmos-HQMUX"},
+		{"Anime HQMUX TrueHD", ranking.KindAnimeShow, "Example.Anime.S01E01.1080p.BluRay.x264.TrueHD.5.1-HQMUX"},
+	}
+
+	scoreProfile := func(name string, rules []config.RuleConfig) map[string]int {
+		t.Helper()
+
+		profile, err := ranking.Compile(
+			config.FilterProfileConfig{Name: name, Preset: "4k", Rules: rules},
+			defineLibrary...,
+		)
+		if err != nil {
+			t.Fatalf("compile %s profile: %v", name, err)
+		}
+
+		scores := make(map[string]int, len(cases))
+		for _, tc := range cases {
+			request := ranking.Request{Kind: tc.kind, Title: "Example"}
+			if tc.kind == ranking.KindSeries || tc.kind == ranking.KindAnimeShow {
+				request.Season, request.Episode = 1, 1
+			}
+			if tc.kind == ranking.KindAnimeShow || tc.kind == ranking.KindAnimeMovie {
+				request.IsAnime = true
+			}
+
+			kept, rejected := profile.ApplyWithRejected(
+				request,
+				[]triage.Candidate{{Release: &release.Release{Title: tc.title}}},
+				jhinrank.RankOptions{},
+			)
+			if len(rejected) != 0 || len(kept) != 1 {
+				t.Fatalf("%s/%s: kept=%d rejected=%+v", name, tc.name, len(kept), rejected)
+			}
+			scores[tc.name] = kept[0].Torrent.Rank
+		}
+		return scores
+	}
+
+	neutral := scoreProfile("Neutral", loadNeutralRules(t))
+	samsung := scoreProfile("Samsung", loadProductionRules(t))
+
+	for name, neutralScore := range neutral {
+		if samsung[name] != neutralScore {
+			t.Fatalf("%s differs between profiles: neutral=%d samsung=%d", name, neutralScore, samsung[name])
+		}
+	}
+
+	// 1 & 3: HQMUX is on BOTH exclude lists -- both claims must be fully
+	// withheld, individually and combined.
+	for _, name := range []string{"HQMUX Atmos", "HQMUX TrueHD", "HQMUX TrueHD+Atmos"} {
+		if got := neutral[name] - neutral["HQMUX clean"]; got != 0 {
+			t.Errorf("%s effective delta=%+d; want 0 (excluded from both lists)", name, got)
+		}
+	}
+
+	// 5: HQMUX's own unclaimed release must score identically to a
+	// non-excluded peer at the same tier -- the gate must not touch the
+	// group's baseline score.
+	if neutral["HQMUX clean"] != neutral["UHD-T2 control clean"] {
+		t.Errorf("HQMUX clean=%d != UHD-T2 control clean=%d; exclude-group gate must not affect the unclaimed baseline",
+			neutral["HQMUX clean"], neutral["UHD-T2 control clean"])
+	}
+
+	// 4: non-excluded control at the same tier keeps the full existing
+	// +25/+50/+75 preference, unchanged by this fix.
+	controlDeltas := []struct{ with, base string; want int }{
+		{"UHD-T2 control Atmos", "UHD-T2 control clean", 25},
+		{"UHD-T2 control TrueHD", "UHD-T2 control clean", 50},
+		{"UHD-T2 control TrueHD+Atmos", "UHD-T2 control clean", 75},
+		{"Remux-T1 control TrueHD", "Remux-T1 control clean", 50},
+		{"UHD-T1 control TrueHD", "UHD-T1 control clean", 50},
+	}
+	for _, d := range controlDeltas {
+		if got := neutral[d.with] - neutral[d.base]; got != d.want {
+			t.Errorf("%s effective delta=%+d; want %+d", d.with, got, d.want)
+		}
+	}
+
+	// 2: 3L is TrueHD-excluded only -- TrueHD claim withheld, but its
+	// Atmos claim (not on the Atmos Exclude Groups list) must still score
+	// the full +25, proving the gate is attribute-specific, not a blanket
+	// group suppression.
+	if got := neutral["3L TrueHD"] - neutral["3L clean"]; got != 0 {
+		t.Errorf("3L TrueHD effective delta=%+d; want 0 (TrueHD-excluded)", got)
+	}
+	if got := neutral["3L Atmos"] - neutral["3L clean"]; got != 25 {
+		t.Errorf("3L Atmos effective delta=%+d; want +25 (not Atmos-excluded)", got)
+	}
+
+	// 6: CtrlHD's TrueHD claim is withheld identically for Movie and
+	// Series scope.
+	if got := neutral["CtrlHD Movie TrueHD"] - neutral["CtrlHD Movie clean"]; got != 0 {
+		t.Errorf("CtrlHD Movie TrueHD effective delta=%+d; want 0", got)
+	}
+	if got := neutral["CtrlHD Show TrueHD"] - neutral["CtrlHD Show clean"]; got != 0 {
+		t.Errorf("CtrlHD Show TrueHD effective delta=%+d; want 0", got)
+	}
+
+	// 7: Anime is untouched -- "not isAnime" already excludes it from
+	// Prefer Atmos/Prefer TrueHD, regardless of the new matched() clause,
+	// even using the exact same excluded-group literal token.
+	for _, name := range []string{"Anime HQMUX Atmos", "Anime HQMUX TrueHD"} {
+		if got := neutral[name] - neutral["Anime HQMUX clean"]; got != 0 {
+			t.Errorf("%s effective delta=%+d; want 0 (Anime unaffected)", name, got)
 		}
 	}
 }

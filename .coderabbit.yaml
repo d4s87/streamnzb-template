@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    ignore_usernames:
+      - "dependabot[bot]"
+      - "github-actions[bot]"
+
+  path_filters:
+    - "!generated/**"
+    - "!formatter.txt"
+    - "!formatter-debug.txt"
+    - "!.streamnzb-compat/**"
+
+  path_instructions:
+    - path: ".github/workflows/**"
+      instructions: |
+        Focus on GitHub Actions correctness and security. Check event trust boundaries,
+        token permissions, secret exposure, privileged triggers, concurrency behavior,
+        shell quoting, and whether automation can unintentionally modify main or publish
+        releases. Do not suggest making advisory maintenance checks block normal PR CI.
+
+    - path: "scripts/**/*.py"
+      instructions: |
+        Focus on correctness, deterministic output, error handling, compatibility with
+        repository automation, and regressions affecting StreamNZB profiles, formatter,
+        Vidhin synchronization, or Discord payload generation.
+
+    - path: "tests/**/*.py"
+      instructions: |
+        Check that tests cover meaningful behavior and failure modes rather than merely
+        mirroring implementation details. Flag gaps that could allow profile, Define,
+        formatter, Vidhin, or automation regressions through CI.
+
+    - path: "**/*.sh"
+      instructions: |
+        Review shell code for safe quoting, exit-code propagation, pipe failures,
+        temporary-file handling, deterministic CI behavior, and accidental secret or
+        credential exposure.
+
+    - path: "tests/streamnzb_compat/**/*.go"
+      instructions: |
+        Focus on StreamNZB compatibility semantics, regression coverage, deterministic
+        tests, and whether changes could create false compatibility passes or failures.

@@ -1,0 +1,45 @@
+profiles:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'profile*.txt'
+          - 'profiles/**'
+
+formatter:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'formatter*.txt'
+          - 'scripts/*formatter*.py'
+          - 'tests/*formatter*.py'
+
+vidhin:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'generated/vidhin-*'
+          - 'generated/streamnzb-defines.txt'
+          - 'scripts/*vidhin*.py'
+          - 'tests/*vidhin*.py'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'README.md'
+          - 'CHANGELOG.md'
+          - '**/*.md'
+
+automation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - 'scripts/*discord*.py'
+          - 'scripts/send_discord_webhook.sh'
+
+github-actions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/workflows/**'
+          - '.github/dependabot.yml'

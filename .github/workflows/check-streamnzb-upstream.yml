@@ -1,0 +1,103 @@
+name: Check latest StreamNZB compatibility
+
+on:
+  schedule:
+    - cron: "30 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: check-latest-streamnzb-compatibility
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Test latest published StreamNZB release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.6"
+          cache-dependency-path: tests/streamnzb_compat/go.sum
+
+      - name: Resolve latest StreamNZB release
+        id: upstream
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$(gh api repos/Gaisberg/streamnzb/releases/latest --jq .tag_name)"
+          if [[ -z "$tag" || "$tag" == "null" ]]; then
+            echo "ERROR: could not resolve latest StreamNZB release tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Latest published StreamNZB release: $tag"
+
+      - name: Run compatibility suite against latest release
+        id: compat
+        continue-on-error: true
+        env:
+          STREAMNZB_REF: ${{ steps.upstream.outputs.tag }}
+        run: |
+          set -o pipefail
+          ./scripts/test_streamnzb_compat.sh 2>&1 | tee streamnzb-upstream-compat.log
+
+      - name: Open or update compatibility issue
+        if: steps.compat.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Upstream StreamNZB compatibility failure"
+          issue_number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq '.[] | select(.title == "Upstream StreamNZB compatibility failure") | .number' | head -n1)"
+
+          tail -n 120 streamnzb-upstream-compat.log > streamnzb-upstream-compat-tail.log
+          {
+            echo "The template currently fails its compatibility suite against the latest published StreamNZB release."
+            echo
+            echo "- Upstream release: \`$TAG\`"
+            echo "- Workflow run: $RUN_URL"
+            echo
+            echo "### Recent compatibility output"
+            echo
+            echo '```text'
+            cat streamnzb-upstream-compat-tail.log
+            echo '```'
+          } > issue-body.md
+
+          if [[ -n "$issue_number" ]]; then
+            gh issue edit "$issue_number" --title "$title" --body-file issue-body.md
+          else
+            gh issue create --title "$title" --body-file issue-body.md
+          fi
+
+      - name: Close resolved compatibility issue
+        if: steps.compat.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          title="Upstream StreamNZB compatibility failure"
+          issue_number="$(gh issue list --state open --search "\"$title\" in:title" --json number,title --jq '.[] | select(.title == "Upstream StreamNZB compatibility failure") | .number' | head -n1)"
+
+          if [[ -n "$issue_number" ]]; then
+            gh issue close "$issue_number" --comment "Compatibility is restored against the latest published StreamNZB release: \`$TAG\`."
+          fi
+
+      - name: Fail workflow when latest release is incompatible
+        if: steps.compat.outcome == 'failure'
+        run: exit 1

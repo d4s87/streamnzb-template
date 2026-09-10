@@ -1,0 +1,50 @@
+name: Validate pull request metadata
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate PR title, body, and branch
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate metadata conventions
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          title_re='^(feat|fix|chore|docs|test|ci|refactor|perf): .+'
+          branch_re='^(feat|fix|chore|docs|test|ci|refactor|perf|automation)/[a-z0-9][a-z0-9-]*$'
+
+          if [[ ! "$PR_TITLE" =~ $title_re ]]; then
+            echo "ERROR: PR title must match 'type: concise description'." >&2
+            echo "Allowed types: feat, fix, chore, docs, test, ci, refactor, perf." >&2
+            exit 1
+          fi
+
+          if [[ ! "$PR_BRANCH" =~ $branch_re ]]; then
+            echo "ERROR: branch must match 'type/short-description'." >&2
+            echo "Allowed prefixes: feat, fix, chore, docs, test, ci, refactor, perf, automation." >&2
+            exit 1
+          fi
+
+          body="${PR_BODY:-}"
+          body="$(printf '%s' "$body" | tr -d '[:space:]')"
+          if [[ -z "$body" ]]; then
+            echo "ERROR: PR description must not be empty." >&2
+            exit 1
+          fi

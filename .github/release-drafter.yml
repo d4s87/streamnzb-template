@@ -1,0 +1,48 @@
+name-template: 'DraCuLa StreamNZB Template $RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+
+categories:
+  - title: 'Profiles and scoring'
+    labels:
+      - 'profiles'
+  - title: 'Formatter'
+    labels:
+      - 'formatter'
+  - title: 'Vidhin and Define Library'
+    labels:
+      - 'vidhin'
+  - title: 'Validation and tests'
+    labels:
+      - 'tests'
+  - title: 'Documentation'
+    labels:
+      - 'docs'
+  - title: 'Automation and maintenance'
+    labels:
+      - 'automation'
+      - 'github-actions'
+
+exclude-labels:
+  - 'skip-changelog'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS

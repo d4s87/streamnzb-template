@@ -3,7 +3,7 @@
 set -u
 
 STREAMNZB_REPO="https://github.com/Gaisberg/streamnzb.git"
-STREAMNZB_REF="575bde653d3e2b45accb9d3bec86e82f376df652"
+STREAMNZB_REF="${STREAMNZB_REF:-575bde653d3e2b45accb9d3bec86e82f376df652}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CHECKOUT="${ROOT}/.streamnzb-compat"
@@ -32,7 +32,7 @@ if [[ ! -d "${CHECKOUT}/.git" ]]; then
     fi
 fi
 
-echo "==> Fetching pinned StreamNZB revision"
+echo "==> Fetching StreamNZB revision"
 
 git -C "${CHECKOUT}" \
     fetch \
@@ -53,7 +53,7 @@ git -C "${CHECKOUT}" \
     checkout \
     --quiet \
     --detach \
-    "${STREAMNZB_REF}"
+    FETCH_HEAD
 
 CHECKOUT_RC=$?
 
@@ -75,13 +75,6 @@ if [[ "${REF_RC}" -ne 0 ]]; then
         "ERROR: could not read StreamNZB checkout revision" \
         >&2
     exit "${REF_RC}"
-fi
-
-if [[ "${ACTUAL_REF}" != "${STREAMNZB_REF}" ]]; then
-    echo \
-        "ERROR: expected StreamNZB ${STREAMNZB_REF}, got ${ACTUAL_REF}" \
-        >&2
-    exit 1
 fi
 
 echo "==> Using StreamNZB ${ACTUAL_REF}"

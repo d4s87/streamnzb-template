@@ -1967,9 +1967,9 @@ if len(rules) != 146:
 
 defines = parse_define_library(defines_text)
 
-if len(defines) != 60:
+if len(defines) != 62:
     raise AssertionError(
-        f"Expected 60 published Defines, found {len(defines)}"
+        f"Expected 62 published Defines, found {len(defines)}"
     )
 
 validate_profile_rule_names(rules)

@@ -95,6 +95,13 @@ func TestLQReleaseTitleClassification(t *testing.T) {
 			{"jennaortega as terminal group (excluded)", "Example.Movie.2026.1080p.WEB-DL.H264-jennaortega", false},
 			{"jennaortegaUHD as terminal group (excluded)", "Example.Movie.2026.1080p.WEB-DL.H264-jennaortegaUHD", false},
 
+			// jennaortega fused-suffix false-positive controls: the
+			// upstream outer alternation's trailing \b applies to every
+			// branch including this one, so a fused suffix must not
+			// match either.
+			{"jennaortegaX fused (no boundary)", "jennaortegaX.Example.Movie.2026.1080p.WEB-DL.H264-SomeGroup", false},
+			{"jennaortegaUHDX fused (no boundary)", "jennaortegaUHDX.Example.Movie.2026.1080p.WEB-DL.H264-SomeGroup", false},
+
 			// Deliberately excluded upstream branches must stay unmatched
 			// by this Define, in every gating context upstream describes.
 			{"EVO (excluded, WEB-DL)", "Example.Movie.2026.1080p.WEB-DL.H264-EVO", false},

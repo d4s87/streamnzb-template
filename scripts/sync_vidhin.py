@@ -972,7 +972,7 @@ def render_lq_release_title_condition(entry):
             )
         if lt.get("special_jennaortega"):
             conditions.append(
-                'releaseName matches "(?i)(?:^|[^-])jennaortega(?:UHD)?"'
+                'releaseName matches "(?i)(?:^|[^-])jennaortega(?:UHD)?\\b"'
             )
     if not conditions:
         raise ValueError(

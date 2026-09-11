@@ -42,6 +42,7 @@ The library performs classification; the profile decides how those classificatio
 
 Important examples:
 
+- Movie and Show LQ classification receives a strong negative score whether it is sourced from a matched release group or from a release-title-derived signal; both classification paths feed the same penalty and the same adaptive low-score filtering policy below, not a separate scoring magnitude or filter.
 - Anime LQ receives a strong negative score, with SeaDex Best / Alternative exemptions.
 - Movie and Show Bad Dual classifications receive strong penalties.
 - Obfuscated classifications receive only a small soft penalty so a release remains usable as a fallback.

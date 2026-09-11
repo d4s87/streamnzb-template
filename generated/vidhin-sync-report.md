@@ -1,21 +1,14 @@
 # Vidhin sync report
 
-## Atmos Exclude Groups
+## Movies LQ Release Title
 
-**Added release-group tokens**
-- `+ HQMUX`
-- `+ W4NK3R`
+Raw upstream regex changed, but the extracted release-group set did not.
 
-## TrueHD Exclude Groups
+## Shows LQ Release Title
 
-**Added release-group tokens**
-- `+ 3L`
-- `+ CtrlHD`
-- `+ DON`
-- `+ HQMUX`
-- `+ W4NK3R`
+Raw upstream regex changed, but the extracted release-group set did not.
 
 ---
-Tracked StreamNZB Defines: **59**
+Tracked StreamNZB Defines: **61**
 
 > `profile.txt` is not modified. Generated Defines require review.

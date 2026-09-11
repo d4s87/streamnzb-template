@@ -378,6 +378,120 @@ def obfuscated_regex_pattern(pattern, source):
     return "(?i)" + body
 
 
+# Vidhin's "LQ (Release Title) (Radarr)"/"(Sonarr)" mix plain release-group/
+# title tokens with several PCRE/JS lookaround branches: a web-source
+# exemption for EVO/PiRaTeS, an "MA WEB-DL" exemption for HHWEB, a remux
+# exemption for unkn0wn, and (Sonarr) a BiTOR+2160p combo. Those branches
+# are either RE2-incompatible in a way that has no provably-exact
+# boolean-equivalent translation (the exemption only holds given the
+# real-world "group is the terminal filename token" convention, not as a
+# regex-algebra identity), or represent an open DraCuLa policy question
+# (HHWEB already carries a positive WEB T3 trust-tier score; EVO/PiRaTeS
+# are already unconditionally penalized and the upstream exemption would
+# narrow that) -- see the roadmap audit for the full analysis. Only the
+# uncontested plain-token subset is consumed here.
+#
+# Every top-level branch, including the deliberately-excluded ones, and
+# the full inner term list of the plain-token alternation, is pinned
+# byte-for-byte against the audited upstream shape below. Any upstream
+# change -- a new/removed/reworded branch, a reordered or altered term --
+# fails the sync instead of silently changing what DraCuLa classifies.
+LQ_RELEASE_TITLE_EXPECTED = {
+    "LQ (Release Title) (Radarr)": {
+        "branches": [
+            r"\b(1XBET|BEN[ ._-]THE[ ._-]MEN|Feranki1980|GalaxyRG|(?<!-)jennaortega(UHD)?|R&H|READ(\s|\.)+NOTE|SWTYBLZ|TeeWee|TEKNO3D|Will1869)\b",
+            r"(-D3US|D3US-)",
+            r"(?<!\bweb[ ._-]?(dl|rip)?\b.*)-(EVO)\b",
+            r"(?<!\bweb[ ._-]?(dl|rip)?\b.*)-(PiRaTeS)\b",
+            r"^(?!.*\bMA\b.*\bWEB-?DL\b).*\b(HHWEB)\b",
+            r"(?<!\b(remux).*?)\b(unkn0wn)\b",
+        ],
+        "word_list_terms": [
+            "1XBET", "BEN[ ._-]THE[ ._-]MEN", "Feranki1980", "GalaxyRG",
+            "(?<!-)jennaortega(UHD)?", "R&H", r"READ(\s|\.)+NOTE",
+            "SWTYBLZ", "TeeWee", "TEKNO3D", "Will1869",
+        ],
+        "approved_plain_terms": [
+            "1XBET", "BEN[ ._-]THE[ ._-]MEN", "R&H", r"READ(\s|\.)+NOTE",
+            "SWTYBLZ", "TeeWee", "Will1869",
+        ],
+        "special_jennaortega": True,
+        "approved_raw_branches": [1],
+    },
+    "LQ (Release Title) (Sonarr)": {
+        "branches": [
+            r"\b(BEN[ ._-]THE[ ._-]MEN|CREATiVE24|Feranki1980|R&H|TeeWee)\b",
+            r"(?=.*?(\b2160p\b))(?=.*?(\bBiTOR\b))",
+        ],
+        "word_list_terms": [
+            "BEN[ ._-]THE[ ._-]MEN", "CREATiVE24", "Feranki1980", "R&H", "TeeWee",
+        ],
+        "approved_plain_terms": [
+            "BEN[ ._-]THE[ ._-]MEN", "CREATiVE24", "R&H", "TeeWee",
+        ],
+        "special_jennaortega": False,
+        "approved_raw_branches": [],
+    },
+}
+
+
+def lq_release_title_terms(pattern, source):
+    """
+    Extract DraCuLa's approved-safe subset of a Vidhin "LQ (Release Title)"
+    classification. See LQ_RELEASE_TITLE_EXPECTED for what is and is not
+    consumed and why.
+    """
+    if source not in LQ_RELEASE_TITLE_EXPECTED:
+        raise ValueError(
+            f"Unsupported LQ (Release Title) source: {source!r}"
+        )
+
+    cfg = LQ_RELEASE_TITLE_EXPECTED[source]
+    body, flags = js_regex_parts(pattern)
+
+    if flags != "i":
+        raise ValueError(
+            f"{source} upstream regex must remain exactly "
+            f"case-insensitive (/i): {pattern}"
+        )
+
+    branches = split_top_level(body)
+
+    if branches != cfg["branches"]:
+        raise ValueError(
+            f"{source} upstream regex structure changed; expected "
+            f"exactly {len(cfg['branches'])} known branch(es). Manual "
+            f"review required before syncing.\n"
+            f"got:  {branches}\n"
+            f"want: {cfg['branches']}"
+        )
+
+    word_branch = branches[0]
+    open_idx = word_branch.find("(")
+    close_idx = matching_paren(word_branch, open_idx)
+
+    if close_idx is None:
+        raise ValueError(
+            f"{source}: unbalanced word-list branch: {word_branch}"
+        )
+
+    inner_terms = split_top_level(word_branch[open_idx + 1:close_idx])
+
+    if inner_terms != cfg["word_list_terms"]:
+        raise ValueError(
+            f"{source} word-list branch changed; manual review "
+            f"required.\n"
+            f"got:  {inner_terms}\n"
+            f"want: {cfg['word_list_terms']}"
+        )
+
+    return {
+        "plain_terms": list(cfg["approved_plain_terms"]),
+        "special_jennaortega": cfg["special_jennaortega"],
+        "raw_terms": [branches[i] for i in cfg["approved_raw_branches"]],
+    }
+
+
 def target_cfgs(mapping):
     tg=mapping.get("targets")
     if not isinstance(tg,dict): raise KeyError("mapping.targets missing")
@@ -594,6 +708,13 @@ def resolve(mapping,upstream):
                             pat,
                             src,
                         ),
+                    })
+                elif mode=="lq_release_title":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        "tokens":[],
+                        "lq_release_title":lq_release_title_terms(pat,src),
                     })
                 else:
                     recs.append({
@@ -830,6 +951,33 @@ def render_lq_condition(entry):
     for fallback in entry.get("release_name_fallbacks",[]):
         esc=re.escape(fallback).replace(r"\.","\\.")
         conditions.append(f'releaseName matches "(?i)(?:^|[-._ ]){esc}$"')
+    return " or ".join(conditions)
+
+def render_lq_release_title_condition(entry):
+    """
+    Render DraCuLa's approved-safe subset of a Vidhin "LQ (Release Title)"
+    classification against releaseName. See LQ_RELEASE_TITLE_EXPECTED.
+    """
+    conditions=[]
+    for rec in entry.get("records",[]):
+        lt=rec.get("lq_release_title")
+        if not lt: continue
+        plain=lt.get("plain_terms",[])
+        if plain:
+            body="|".join(plain).replace('"','\\"')
+            conditions.append('releaseName matches "(?i)\\b(?:'+body+')\\b"')
+        for raw in lt.get("raw_terms",[]):
+            conditions.append(
+                'releaseName matches "(?i)'+raw.replace('"','\\"')+'"'
+            )
+        if lt.get("special_jennaortega"):
+            conditions.append(
+                'releaseName matches "(?i)(?:^|[^-])jennaortega(?:UHD)?\\b"'
+            )
+    if not conditions:
+        raise ValueError(
+            "lq_release_title Define contains no usable conditions"
+        )
     return " or ".join(conditions)
 
 def render_raw_release_name_condition(entry):
@@ -1078,6 +1226,8 @@ def render(current,mapping):
         e=current[name]
         if e.get("mode")=="lq":
             cond=render_lq_condition(e)
+        elif e.get("mode")=="lq_release_title":
+            cond=render_lq_release_title_condition(e)
         elif e.get("mode")=="dubs_only":
             cond=render_dubs_only_condition(e)
         elif e.get("mode")=="raw_release_name":

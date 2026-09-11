@@ -519,6 +519,22 @@
         "Feranki1980"
       ]
     },
+    "Movies LQ Release Title": {
+      "sources": [
+        "LQ (Release Title) (Radarr)"
+      ],
+      "scope": "movie",
+      "field": "releaseName",
+      "mode": "lq_release_title"
+    },
+    "Shows LQ Release Title": {
+      "sources": [
+        "LQ (Release Title) (Sonarr)"
+      ],
+      "scope": "series",
+      "field": "releaseName",
+      "mode": "lq_release_title"
+    },
     "Movies Obfuscated": {
       "sources": [
         "Obfuscated (Radarr)"

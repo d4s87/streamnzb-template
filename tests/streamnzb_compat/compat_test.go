@@ -3351,8 +3351,10 @@ func TestAdaptiveLowScoreProductionPolicy(t *testing.T) {
 	const expectedWhen = `not library
 and (
   matched("Movies LQ Groups")
+  or matched("Movies LQ Release Title")
   or matched("Movies Bad Dual Groups")
   or matched("Shows LQ Groups")
+  or matched("Shows LQ Release Title")
   or matched("Shows Bad Dual Groups")
 )
 and count(finalScore >= current.finalScore + 5000) >= 6`

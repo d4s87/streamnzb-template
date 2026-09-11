@@ -1075,7 +1075,7 @@
         "name": "Movies LQ Penalty",
         "points": -10000,
         "scope": "movie",
-        "when": "matched(\"Movies LQ Groups\")"
+        "when": "matched(\"Movies LQ Groups\") or matched(\"Movies LQ Release Title\")"
       }
     },
     {
@@ -1084,7 +1084,7 @@
         "name": "Shows LQ Penalty",
         "points": -10000,
         "scope": "series",
-        "when": "matched(\"Shows LQ Groups\")"
+        "when": "matched(\"Shows LQ Groups\") or matched(\"Shows LQ Release Title\")"
       }
     },
     {
@@ -1247,7 +1247,7 @@
       "rule": {
         "name": "Adaptive Low-Score Filtering",
         "action": "prune",
-        "when": "not library\nand (\n  matched(\"Movies LQ Groups\")\n  or matched(\"Movies Bad Dual Groups\")\n  or matched(\"Shows LQ Groups\")\n  or matched(\"Shows Bad Dual Groups\")\n)\nand count(finalScore >= current.finalScore + 5000) >= 6"
+        "when": "not library\nand (\n  matched(\"Movies LQ Groups\")\n  or matched(\"Movies LQ Release Title\")\n  or matched(\"Movies Bad Dual Groups\")\n  or matched(\"Shows LQ Groups\")\n  or matched(\"Shows LQ Release Title\")\n  or matched(\"Shows Bad Dual Groups\")\n)\nand count(finalScore >= current.finalScore + 5000) >= 6"
       }
     }
   ]

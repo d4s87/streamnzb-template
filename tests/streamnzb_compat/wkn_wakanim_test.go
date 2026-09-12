@@ -169,8 +169,8 @@ func TestWKNScoringInvariance(t *testing.T) {
 	}
 
 	clean := "Example.Anime.S01E01.1080p.WEB-DL.H264-SomeGroup"
-	withWKN := "Example.Anime.S01E01.1080p.WEB-DL.WKN-SomeGroup"
-	withWakanim := "Example.Anime.S01E01.1080p.WEB-DL.Wakanim-SomeGroup"
+	withWKN := "Example.Anime.S01E01.1080p.WEB-DL.H264.WKN-SomeGroup"
+	withWakanim := "Example.Anime.S01E01.1080p.WEB-DL.H264.Wakanim-SomeGroup"
 	withNetworkAndWKN := "Example.Anime.S01E01.1080p.WEB-DL.Crunchyroll.WKN-SomeGroup"
 
 	cleanRank, cleanMatched, _, cleanKept, cleanRejected := rankOf(clean)

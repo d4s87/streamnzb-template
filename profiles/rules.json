@@ -821,6 +821,14 @@
     {
       "owner": "presentation",
       "rule": {
+        "name": "WKN",
+        "points": 0,
+        "when": "isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:WKN|Wakanim)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
         "name": "Peacock",
         "points": 0,
         "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:PCOK|Peacock)(?:$|[. _\\[\\]-])\""

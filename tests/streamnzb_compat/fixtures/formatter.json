@@ -260,6 +260,55 @@
       }
     },
     {
+      "name": "WKN service fallback",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "WKN",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴡᴋɴ"
+      ],
+      "counts": {
+        "♛ ᴡᴋɴ": 1
+      }
+    },
+    {
+      "name": "Network wins over WKN fallback",
+      "context": {
+        "Network": "Crunchyroll",
+        "MatchedRules": [
+          {
+            "Name": "WKN",
+            "Score": 0
+          }
+        ]
+      },
+      "contains": [
+        "♛ ᴄʀᴜɴᴄʜʏʀᴏʟʟ"
+      ],
+      "excludes": [
+        "♛ ᴡᴋɴ"
+      ]
+    },
+    {
+      "name": "WKN is not duplicated",
+      "context": {
+        "MatchedRules": [
+          {
+            "Name": "WKN",
+            "Score": 0
+          }
+        ]
+      },
+      "counts": {
+        "ᴡᴋɴ": 1
+      }
+    },
+    {
       "name": "No source without Network or service",
       "context": {},
       "excludes": [

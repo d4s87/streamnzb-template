@@ -35,6 +35,7 @@ EXPECTED_PRESENTATION_RULES = {
     "B-Global",
     "Bilibili",
     "HIDIVE",
+    "WKN",
     # Non-Anime streaming-service formatter fallback badges (audited
     # 2026-09-09): zero-point, presentation-only, scoped `not isAnime`,
     # covering only the 16 services proven to have no Jhin v0.6.2 native
@@ -272,9 +273,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 146:
+    if len(entries) != 147:
         raise ValueError(
-            f"expected 146 source rules, found {len(entries)}"
+            f"expected 147 source rules, found {len(entries)}"
         )
 
     names = []
@@ -319,7 +320,7 @@ def validate_registry(payload: dict):
 
     expected_counts = {
     "core": 125,
-    "presentation": 20,
+    "presentation": 21,
     "device:samsung-qn90a": 1,
 }
 
@@ -834,7 +835,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 146,
+            "expected_rules": 147,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -843,7 +844,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 145,
+            "expected_rules": 146,
         },
     }
 

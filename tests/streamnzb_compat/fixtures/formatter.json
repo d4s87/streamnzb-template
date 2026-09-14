@@ -1300,6 +1300,150 @@
       }
     },
     {
+      "name": "Single recognized subtitle language renders one flag with no overflow",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷"
+      ],
+      "excludes": [
+        "+"
+      ]
+    },
+    {
+      "name": "Exactly three recognized subtitle languages render with no overflow",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "de",
+          "es"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪 🇪🇸"
+      ],
+      "excludes": [
+        "+"
+      ]
+    },
+    {
+      "name": "Four recognized subtitle languages cap at three plus overflow count",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "de",
+          "es",
+          "it"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +1"
+      ],
+      "excludes": [
+        "🇮🇹"
+      ],
+      "counts": {
+        "+1": 1
+      }
+    },
+    {
+      "name": "Twelve recognized subtitle languages cap at three plus overflow count",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "de",
+          "es",
+          "it",
+          "pt",
+          "nl",
+          "sv",
+          "no",
+          "pl",
+          "cs",
+          "hu",
+          "ro"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9"
+      ],
+      "excludes": [
+        "🇮🇹",
+        "🇵🇹",
+        "🇳🇱",
+        "🇸🇪",
+        "🇳🇴",
+        "🇵🇱",
+        "🇨🇿",
+        "🇭🇺",
+        "🇷🇴"
+      ],
+      "counts": {
+        "+9": 1
+      }
+    },
+    {
+      "name": "Mixed recognized and unknown subtitle codes: unknowns neither shown nor counted",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "tr",
+          "de",
+          "es",
+          "xx",
+          "it"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +1"
+      ],
+      "excludes": [
+        "🇮🇹",
+        "tr",
+        "xx",
+        "+2"
+      ]
+    },
+    {
+      "name": "Audio languages plus many subtitle languages keep the combined line correctly delimited",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true,
+        "Subtitles": [
+          "fr",
+          "de",
+          "es",
+          "it",
+          "pt",
+          "nl",
+          "sv",
+          "no",
+          "pl",
+          "cs",
+          "hu",
+          "ro"
+        ]
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9"
+      ],
+      "counts": {
+        "⛿": 1,
+        "+9": 1
+      }
+    },
+    {
       "name": "Same-release failover indicator",
       "context": {
         "Indexer": "DrunkenSlug",

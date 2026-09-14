@@ -6,7 +6,7 @@ This document contains the technical compatibility and validation details for Dr
 
 Current published compatibility baseline:
 
-- StreamNZB 6.0.0 (commit `0a778e814b520754adcfa32c6648ea007f4a0d12`)
+- StreamNZB 6.1.0 (commit `2ff93449e59a6597f25fd008e3440920772578c3`)
 - Jhin 0.7.1
 - StreamNZB profile payload schema v2
 

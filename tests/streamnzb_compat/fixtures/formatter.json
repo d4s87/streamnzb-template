@@ -1134,6 +1134,172 @@
       }
     },
     {
+      "name": "Languages with empty Subtitles and Subbed false renders no sub marker",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": false,
+        "Subtitles": []
+      },
+      "contains": [
+        "⛿ EN · JA"
+      ],
+      "excludes": [
+        "sᴜʙ"
+      ]
+    },
+    {
+      "name": "Languages with Subbed true and empty Subtitles renders sub marker only",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true,
+        "Subtitles": []
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ"
+      ],
+      "excludes": [
+        "🇫🇷",
+        "🇩🇪"
+      ]
+    },
+    {
+      "name": "Languages with Subbed true and known Subtitles renders sub marker with flags",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true,
+        "Subtitles": [
+          "fr",
+          "de"
+        ]
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ 🇫🇷 🇩🇪"
+      ],
+      "counts": {
+        "sᴜʙ": 1
+      }
+    },
+    {
+      "name": "No Languages, Subbed true, empty Subtitles renders sub marker only",
+      "context": {
+        "Subbed": true,
+        "Subtitles": []
+      },
+      "contains": [
+        "⛿ sᴜʙ"
+      ],
+      "excludes": [
+        "🇫🇷",
+        "🇩🇪"
+      ]
+    },
+    {
+      "name": "No Languages, Subbed false, known Subtitles renders sub marker with flags",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "de"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪"
+      ],
+      "counts": {
+        "⛿": 1
+      }
+    },
+    {
+      "name": "Single language, Subbed false, known Subtitles still renders sub marker with flag",
+      "context": {
+        "Languages": [
+          "en"
+        ],
+        "Subbed": false,
+        "Subtitles": [
+          "fr"
+        ]
+      },
+      "contains": [
+        "⛿ EN · sᴜʙ 🇫🇷"
+      ],
+      "counts": {
+        "⛿": 1
+      }
+    },
+    {
+      "name": "Duplicate subtitle language from multiple metadata sources renders once",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "EN",
+          "en"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇬🇧"
+      ],
+      "counts": {
+        "🇬🇧": 1
+      }
+    },
+    {
+      "name": "Subtitle language flags preserve StreamNZB-provided ordering",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "de",
+          "fr"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇩🇪 🇫🇷"
+      ],
+      "excludes": [
+        "🇫🇷 🇩🇪"
+      ]
+    },
+    {
+      "name": "Unknown subtitle code alone with Subbed false renders no subtitle section",
+      "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "tr"
+        ]
+      },
+      "excludes": [
+        "⛿",
+        "sᴜʙ"
+      ]
+    },
+    {
+      "name": "Unknown subtitle code alone with Subbed true renders sub marker only",
+      "context": {
+        "Subbed": true,
+        "Subtitles": [
+          "tr"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ"
+      ],
+      "excludes": [
+        "tr"
+      ],
+      "counts": {
+        "⛿": 1
+      }
+    },
+    {
       "name": "Same-release failover indicator",
       "context": {
         "Indexer": "DrunkenSlug",

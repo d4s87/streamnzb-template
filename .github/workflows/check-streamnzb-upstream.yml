@@ -28,7 +28,7 @@ jobs:
           python-version: "3.13"
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: "1.25.6"
           cache-dependency-path: tests/streamnzb_compat/go.sum
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload compatibility diagnostics
         if: steps.compat.outcome == 'failure'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: streamnzb-upstream-compat-${{ steps.upstream.outputs.tag }}
           path: streamnzb-upstream-compat.log

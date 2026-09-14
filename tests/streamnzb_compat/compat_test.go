@@ -212,9 +212,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 146 {
+	if len(neutralRules) != 150 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 146",
+			"neutral profile contains %d rules; want 150",
 			len(neutralRules),
 		)
 	}
@@ -794,6 +794,15 @@ func TestEpisodeParsingCompatibility(t *testing.T) {
 		season  int
 		episode int
 		want    int
+		// seasonless routes this check through SeasonlessEpisodeMatchRank
+		// instead of EpisodeMatchRank, for a target that names no season at
+		// all (an anime absolute number, an unmapped Kitsu entry). season is
+		// ignored when this is set. StreamNZB v6.0.0 made season literal
+		// end-to-end (Gaisberg/streamnzb#275): season 0 is the Specials
+		// season now, matched only by S00 releases, no longer a seasonless
+		// sentinel — so a seasonless target must use this path, never
+		// EpisodeMatchRank(0, ...).
+		seasonless bool
 	}
 
 	tests := []struct {
@@ -860,8 +869,24 @@ func TestEpisodeParsingCompatibility(t *testing.T) {
 			release:      "[Group] Anime Title 001-012 [1080p]",
 			wantEpisodes: []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 			ranks: []rankCheck{
-				{season: 0, episode: 1, want: 3},
-				{season: 0, episode: 12, want: 3},
+				{episode: 1, seasonless: true, want: 3},
+				{episode: 12, seasonless: true, want: 3},
+			},
+		},
+		{
+			// Distinct from the seasonless case above: literal Season 0 is
+			// Stremio's Specials season under StreamNZB v6.0.0
+			// (Gaisberg/streamnzb#275), matched only by an actual S00
+			// release through the ordinary EpisodeMatchRank(0, episode)
+			// path — never through SeasonlessEpisodeMatchRank. Keeping this
+			// as its own fixture stops the two from ever being conflated
+			// again.
+			name:         "literal Season 0 Specials",
+			release:      "Show.S00E01.1080p.WEB-DL-GROUP",
+			wantSeasons:  []int{0},
+			wantEpisodes: []int{1},
+			ranks: []rankCheck{
+				{season: 0, episode: 1, want: 4},
 			},
 		},
 		{
@@ -962,19 +987,34 @@ func TestEpisodeParsingCompatibility(t *testing.T) {
 			}
 
 			for _, check := range tc.ranks {
-				got := parsed.EpisodeMatchRank(
-					check.season,
-					check.episode,
-				)
+				var got int
+				var label string
+
+				if check.seasonless {
+					got = parsed.SeasonlessEpisodeMatchRank(check.episode)
+					label = fmt.Sprintf(
+						"SeasonlessEpisodeMatchRank(%d)",
+						check.episode,
+					)
+				} else {
+					got = parsed.EpisodeMatchRank(
+						check.season,
+						check.episode,
+					)
+					label = fmt.Sprintf(
+						"EpisodeMatchRank(%d, %d)",
+						check.season,
+						check.episode,
+					)
+				}
 
 				if got != check.want {
 					t.Errorf(
-						"EpisodeMatchRank(%d, %d) = %d, want %d\n"+
+						"%s = %d, want %d\n"+
 							"release: %s\n"+
 							"seasons: %v\n"+
 							"episodes: %v",
-						check.season,
-						check.episode,
+						label,
 						got,
 						check.want,
 						tc.release,

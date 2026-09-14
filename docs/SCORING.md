@@ -81,9 +81,9 @@ A non-Anime, non-Library 1080p Remux can receive a small +50 preference when ava
 
 DraCuLa treats dynamic-range and bit-depth metadata primarily as compatibility/classification information rather than quality authority.
 
-The pinned Jhin engine applies native positive ranks to Dolby Vision, HDR10+, HDR and parsed 10-bit metadata. The shared Core compensates those native values so they cannot dominate the release-group hierarchy.
+The pinned Jhin engine applies native positive ranks to Dolby Vision, HDR10+, HDR, HLG and parsed 10-bit metadata. The shared Core compensates those native values so they cannot dominate the release-group hierarchy.
 
-After neutralization, non-Anime HDR10+ receives one small explicit +25 preference. HDR, HDR10, Dolby Vision, parsed 10-bit and Anime HDR10+ remain score-neutral.
+After neutralization, non-Anime HDR10+ receives one small explicit +25 preference. HDR, HDR10, HLG, Dolby Vision, parsed 10-bit and Anime HDR10+ remain score-neutral. HLG's native score (+1500, introduced by Jhin v0.7.1) is fully cancelled with no residual — a compatibility-preservation fix, not a new preference.
 
 The Samsung profile additionally rejects Dolby Vision releases without HDR fallback. The hardware-neutral profile does not perform that device-specific rejection.
 
@@ -102,11 +102,13 @@ For Anime, those four codecs are score-neutral because the 80-point minimum tier
 
 Selected Vidhin-backed exclusion groups suppress residual Atmos/TrueHD bonuses for release groups known to falsely tag those attributes. The neutralization itself still applies.
 
+DTS:X and DTS-ES are their own distinct Jhin v0.7.1 traits, not aliases of DTS Lossless/DTS Lossy — the existing `dts_lossless`-keyed rules do not match them. Both are universally neutralized with no residual, for every content kind including Anime: DTS:X's native +2000 causes outright tier inversions; DTS-ES's native +100 is small, but a non-Anime residual was real-engine-tested and rejected as fragile (it would consume nearly all of the tightest existing tier gap). This mirrors the Dolby Digital pattern above — a compatibility-preservation fix, not a new preference.
+
 ## Video codec normalization
 
-StreamNZB's streaming preset applies native ranking to AVC, HEVC and AV1. DraCuLa neutralizes all three video codecs to exactly zero for every content kind so codec choice cannot overturn release-group tiers.
+StreamNZB's streaming preset applies native ranking to AVC, HEVC, AV1 and VC-1. DraCuLa neutralizes all four video codecs to exactly zero for every content kind so codec choice cannot overturn release-group tiers.
 
-There is no residual HEVC or AV1 preference.
+There is no residual HEVC, AV1 or VC-1 preference. VC-1 (native +100, introduced by Jhin v0.7.1) was real-engine-tested with a non-Anime residual and found unsafe for the same reason as DTS-ES: it would consume nearly all of the tightest existing tier gap (Movie Remux, adjacent tiers).
 
 ## Corrected releases
 
@@ -154,6 +156,8 @@ IMAX Enhanced behavior is pinned against StreamNZB/Jhin compatibility tests so c
 ## Tier-authority validation
 
 `TestAdjacentTierCeilingMatrix` is the main real-engine guard for release-group tier authority. For each production tier family it decorates the lower tier with currently reachable ordinary bonuses and asserts that the real StreamNZB engine still ranks a clean candidate one tier higher above it.
+
+`TestPinMoveAdjacentTierMatrix`, `TestPinMoveCombinedAttributeStress` and `TestPinMoveAnimeNeutrality` extend the same guarantee to the four StreamNZB v6.0.0/Jhin v0.7.1 native attributes above (HLG, DTS:X, VC-1, DTS-ES), individually and in realistic combination, across every production tier family. `TestNewNativeAttributeNeutralizerContract` is the focused, tier-independent proof that each of the four neutralizes to exactly zero net contribution for both Anime and non-Anime.
 
 The repository also maintains focused regressions for codec neutrality, edition behavior, formatter output and compatibility-sensitive parser/rule behavior.
 

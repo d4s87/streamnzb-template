@@ -127,10 +127,35 @@ FORBIDDEN_AUDIO_RULE_NAMES = {
 # HDR10+/lossless-audio physical-media combo) leaves no room for any bounded
 # residual preference, so all three are neutralized to exactly 0 universally
 # with no Anime/non-Anime split and no residual "Prefer" counterpart.
+#
+# VC-1 (StreamNZB v6.0.0 / Jhin v0.7.1 pin-move compensation, native +100,
+# `parsed.codec == "vc1"`) joins this set rather than getting its own
+# contract: it is `Codec`, the same single exclusive parser field as
+# AVC/HEVC/AV1, and the real-engine pin-move audit found the same
+# "no safe residual" result — a non-Anime residual was tested and rejected
+# as fragile (consumes the entire pre-existing Movie Remux T2/T1 headroom).
 EXPECTED_VIDEO_CODEC_NEUTRALIZERS = {
     "Neutralize AVC": (-300, "avc"),
     "Neutralize HEVC": (-700, "hevc"),
     "Neutralize AV1": (-700, "av1"),
+    "Neutralize VC-1": (-100, "vc1"),
+}
+
+# StreamNZB v6.0.0 / Jhin v0.7.1 pin-move compensation (2026-09-15 audit):
+# three more native scores the new Jhin version assigns that DraCuLa did not
+# previously need to compensate. HLG populates the same `hdr` list HDR/
+# HDR10+/Dolby Vision do (`any(hdr, # == "HLG")`); DTS:X and DTS-ES are their
+# own distinct `traits` entries, not aliases of `dts_lossless`/`dts_lossy`.
+# The real-engine matrix found universal, zero-residual neutralization is
+# the smallest safe design for all three: HLG (+1500 native) and DTS:X
+# (+2000 native) invert tiers outright; a DTS-ES non-Anime residual was
+# tested and rejected the same way as VC-1's (fragile, same headroom).
+# VC-1 itself is neutralized alongside AVC/HEVC/AV1 above, not here, since
+# it shares that group's `parsed.codec` predicate shape.
+EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS = {
+    "Neutralize HLG": (-1500, 'any(hdr, # == "HLG")'),
+    "Neutralize DTS X": (-2000, '"dts_x" in traits'),
+    "Neutralize DTS-ES": (-100, '"dts_es" in traits'),
 }
 
 
@@ -273,9 +298,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 147:
+    if len(entries) != 151:
         raise ValueError(
-            f"expected 147 source rules, found {len(entries)}"
+            f"expected 151 source rules, found {len(entries)}"
         )
 
     names = []
@@ -319,7 +344,7 @@ def validate_registry(payload: dict):
         raise ValueError("source contains duplicate rule names")
 
     expected_counts = {
-    "core": 125,
+    "core": 129,
     "presentation": 21,
     "device:samsung-qn90a": 1,
 }
@@ -370,6 +395,7 @@ def validate_registry(payload: dict):
     validate_audio_neutralization_scoping(entries)
     validate_dolby_digital_ordering(entries)
     validate_video_codec_neutralization_scoping(entries)
+    validate_new_native_attribute_neutralizers(entries)
     validate_retag_rules(entries)
     validate_edition_neutralization_scoping(entries)
 
@@ -551,6 +577,7 @@ def validate_video_codec_neutralization_scoping(entries):
         "Prefer AVC",
         "Prefer HEVC",
         "Prefer AV1",
+        "Prefer VC-1",
     }
 
     unexpected_residuals = forbidden_residuals & all_names
@@ -558,6 +585,84 @@ def validate_video_codec_neutralization_scoping(entries):
     if unexpected_residuals:
         raise ValueError(
             "unexpected video-codec residual preference rule(s) found "
+            "without a deliberate reviewed change: "
+            + ", ".join(sorted(unexpected_residuals))
+        )
+
+
+def validate_new_native_attribute_neutralizers(entries):
+    by_name = {}
+
+    for entry in entries:
+        name = entry["rule"]["name"]
+
+        if name not in EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS:
+            continue
+
+        if name in by_name:
+            raise ValueError(
+                f"{name!r} must appear exactly once, found more than one"
+            )
+
+        by_name[name] = entry["rule"]
+
+    missing = set(EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS) - set(by_name)
+
+    if missing:
+        raise ValueError(
+            "expected StreamNZB v6.0.0/Jhin v0.7.1 neutralization rule(s) "
+            "missing: " + ", ".join(sorted(missing))
+        )
+
+    for name, (
+        expected_points,
+        expected_when,
+    ) in EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS.items():
+        rule = by_name[name]
+        when = rule["when"]
+        points = rule["points"]
+
+        if points != expected_points:
+            raise ValueError(
+                f"{name!r} points drifted: "
+                f"expected {expected_points}, found {points}"
+            )
+
+        if "isAnime" in when:
+            raise ValueError(
+                f"{name!r} must remain universal (no Anime/non-Anime "
+                f"condition); when clause: {when!r}"
+            )
+
+        if "kind" in when:
+            raise ValueError(
+                f"{name!r} must remain universal (no content-kind "
+                f"condition); when clause: {when!r}"
+            )
+
+        if when != expected_when:
+            raise ValueError(
+                f"{name!r} when clause drifted: expected {expected_when!r}, "
+                f"found {when!r}"
+            )
+
+    all_names = {
+        entry["rule"]["name"]
+        for entry in entries
+    }
+
+    forbidden_residuals = {
+        "Prefer HLG",
+        "Prefer DTS X",
+        "Prefer DTS-ES",
+    }
+
+    unexpected_residuals = forbidden_residuals & all_names
+
+    if unexpected_residuals:
+        raise ValueError(
+            "unexpected residual preference rule(s) found for a "
+            "StreamNZB v6.0.0/Jhin v0.7.1 compensation-only neutralizer "
             "without a deliberate reviewed change: "
             + ", ".join(sorted(unexpected_residuals))
         )
@@ -835,7 +940,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 147,
+            "expected_rules": 151,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -844,7 +949,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 146,
+            "expected_rules": 150,
         },
     }
 

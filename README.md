@@ -126,8 +126,9 @@ Examples of the language/subtitle line:
 - `⛿ EN · JA · sᴜʙ 🇫🇷 🇩🇪`
 - `⛿ sᴜʙ`
 - `⛿ sᴜʙ 🇫🇷 🇩🇪`
+- `⛿ EN · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9`
 
-The `sᴜʙ` marker is the single subtitle indicator: it now also appears when StreamNZB's merged `FormatContext.Subtitles` contains at least one recognized language, even if the release itself isn't tagged `.Subbed` — known subtitle-language flags are its immediate presentation, not a separate badge. This is a presentation inference from explicit subtitle metadata; StreamNZB's own `.Subbed` field is never mutated or derived from it. The formatter only displays metadata StreamNZB/Jhin exposes; it does not invent subtitle-language identities that are not available in the formatter context, and an unmapped/unknown code is silently skipped rather than shown raw.
+The `sᴜʙ` marker is the single subtitle indicator: it now also appears when StreamNZB's merged `FormatContext.Subtitles` contains at least one recognized language, even if the release itself isn't tagged `.Subbed` — known subtitle-language flags are its immediate presentation, not a separate badge. This is a presentation inference from explicit subtitle metadata; StreamNZB's own `.Subbed` field is never mutated or derived from it. The formatter only displays metadata StreamNZB/Jhin exposes; it does not invent subtitle-language identities that are not available in the formatter context, and an unmapped/unknown code is silently skipped rather than shown raw. The formatter shows at most three subtitle-language flags; any additional recognized languages are summarized as `+N` rather than growing the line unbounded.
 
 ### Debug formatter
 

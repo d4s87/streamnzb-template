@@ -261,7 +261,10 @@ func TestPinMoveAdjacentTierMatrix(t *testing.T) {
 						lowerTitle := f.build(lowerSource, lowerGroup, extras)
 						lowerScore, ok := pinMoveScore(t, profile, f.kind, lowerTitle, &fullAvail)
 						if !ok {
-							continue
+							t.Fatalf(
+								"%s T%d [%s/%s] rejected/ambiguous: %s",
+								f.label, lowerTier, a.label, mode, lowerTitle,
+							)
 						}
 						if lowerScore >= higherScore {
 							t.Errorf(
@@ -335,7 +338,10 @@ func TestPinMoveCombinedAttributeStress(t *testing.T) {
 					lowerTitle := f.build(lowerSource, lowerGroup, extras)
 					lowerScore, ok := pinMoveScore(t, profile, f.kind, lowerTitle, &fullAvail)
 					if !ok {
-						continue
+						t.Fatalf(
+							"%s T%d [%s] rejected/ambiguous: %s",
+							f.label, lowerTier, c.label, lowerTitle,
+						)
 					}
 					if lowerScore >= higherScore {
 						t.Errorf(

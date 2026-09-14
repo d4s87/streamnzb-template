@@ -640,6 +640,12 @@ def validate_new_native_attribute_neutralizers(entries):
                 f"condition); when clause: {when!r}"
             )
 
+        if "scope" in rule:
+            raise ValueError(
+                f"{name!r} must remain unscoped (universal); "
+                f"found scope {rule['scope']!r}"
+            )
+
         if when != expected_when:
             raise ValueError(
                 f"{name!r} when clause drifted: expected {expected_when!r}, "

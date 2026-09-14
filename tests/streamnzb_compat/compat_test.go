@@ -871,6 +871,11 @@ func TestEpisodeParsingCompatibility(t *testing.T) {
 			ranks: []rankCheck{
 				{episode: 1, seasonless: true, want: 3},
 				{episode: 12, seasonless: true, want: 3},
+				// Inverse: this release carries no literal season, so the
+				// literal-Season-0/Specials path must not match it either —
+				// proves the two paths stay mutually exclusive, not just
+				// that the seasonless path independently works.
+				{season: 0, episode: 1, want: 0},
 			},
 		},
 		{
@@ -887,6 +892,9 @@ func TestEpisodeParsingCompatibility(t *testing.T) {
 			wantEpisodes: []int{1},
 			ranks: []rankCheck{
 				{season: 0, episode: 1, want: 4},
+				// Inverse: this release explicitly names season 0, not "no
+				// season" — a seasonless target must not match it either.
+				{episode: 1, seasonless: true, want: 0},
 			},
 		},
 		{

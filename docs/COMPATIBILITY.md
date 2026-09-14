@@ -6,9 +6,13 @@ This document contains the technical compatibility and validation details for Dr
 
 Current published compatibility baseline:
 
-- StreamNZB 5.18.0
-- Jhin 0.6.2
+- StreamNZB 6.1.0 (commit `2ff93449e59a6597f25fd008e3440920772578c3`)
+- Jhin 0.7.1
 - StreamNZB profile payload schema v2
+
+StreamNZB v6.0.0 also carries an upstream season-handling fix (`Gaisberg/streamnzb#275`): season is literal end-to-end, so season `0` addresses only the Specials season and no longer doubles as a "no season named" sentinel. Anime absolute-episode/seasonless matching goes through `SeasonlessEpisodeMatchRank`/`TargetMatchRank(Seasonless: true)`; literal Season 0/Specials matching is a separate, still-covered path through `EpisodeMatchRank(0, episode)` — the two are exercised as independent fixtures so they cannot be conflated again.
+
+StreamNZB v6.0.0 also merges indexer-reported language metadata into the rule environment's `languages`/`subtitles` (previously name-parsed only). No current DraCuLa rule consumes either field, so this is a compatibility note, not a behavior change.
 
 The repository keeps this baseline pinned in deterministic compatibility tests while also running a scheduled check against the latest upstream StreamNZB release to provide early warning of regressions.
 
@@ -78,13 +82,16 @@ This deliberately avoids relying on a hardcoded maximum-stack constant. A previo
 
 Additional focused regressions cover:
 
-- video-codec neutrality;
-- audio normalization;
+- video-codec neutrality (including VC-1, native to Jhin v0.7.1);
+- audio normalization (including DTS:X and DTS-ES, native to Jhin v0.7.1);
+- HLG dynamic-range neutrality (native to Jhin v0.7.1);
 - canonical edition behavior;
 - size scoring;
 - adaptive filtering thresholds;
 - Define Library synchronization;
 - generated profile reproducibility.
+
+`TestPinMoveAdjacentTierMatrix` and `TestPinMoveCombinedAttributeStress` extend the tier-ceiling guarantee to HLG/DTS:X/VC-1/DTS-ES individually and in realistic combination; `TestPinMoveAnimeNeutrality` confirms none of the four introduce a new Anime preference.
 
 ## Generated profiles
 

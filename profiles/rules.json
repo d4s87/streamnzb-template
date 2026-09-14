@@ -63,6 +63,14 @@
     {
       "owner": "core",
       "rule": {
+        "name": "Neutralize HLG",
+        "points": -1500,
+        "when": "any(hdr, # == \"HLG\")"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Neutralize 10bit",
         "points": -100,
         "when": "parsed.bitDepth == 10"
@@ -98,6 +106,14 @@
         "name": "Neutralize AV1",
         "points": -700,
         "when": "parsed.codec == \"av1\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize VC-1",
+        "points": -100,
+        "when": "parsed.codec == \"vc1\""
       }
     },
     {
@@ -1059,6 +1075,22 @@
         "name": "Prefer DTS Lossless",
         "points": 50,
         "when": "not isAnime and \"dts_lossless\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize DTS X",
+        "points": -2000,
+        "when": "\"dts_x\" in traits"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "name": "Neutralize DTS-ES",
+        "points": -100,
+        "when": "\"dts_es\" in traits"
       }
     },
     {

@@ -1,8 +1,12 @@
 # Changelog
 
-## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/v5.2...HEAD)
+## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/6.0.0...HEAD)
 
 Changes in this section are under development and are not part of the latest stable release.
+
+## [6.0.0](https://github.com/d4s87/streamnzb-template/compare/v5.2...6.0.0) (2026-09-14)
+
+6.0.0 moves DraCuLa to the StreamNZB 6.1.0 / Jhin 0.7.1 compatibility generation, fully compensating four new native scores (HLG, DTS:X, VC-1, DTS-ES) so ranking stays under DraCuLa's own policy rather than upstream defaults. It also closes three real scoring-integrity regressions inherited from the prior Jhin baseline (native video-codec, Edition, and Dolby Digital/Dolby Digital Plus ranking), adds a new Generated Dynamic HDR Penalty and exact-safe title-derived LQ coverage, restores SeaDex/trusted-tier protection gaps found by a dedicated adaptive-rule interaction audit, and extends the formatter with 17 new service badges (16 non-Anime + WKN/Wakanim) and subtitle-language flags integrated into the existing `sᴜʙ` marker — all backed by a substantially expanded real-pinned-engine regression suite.
 
 ### Features
 

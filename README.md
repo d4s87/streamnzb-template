@@ -117,15 +117,16 @@ The normal formatter is published here:
 **[formatter.txt](https://github.com/d4s87/streamnzb-template/blob/main/formatter.txt)**  
 **[Raw formatter](https://raw.githubusercontent.com/d4s87/streamnzb-template/main/formatter.txt)**
 
-It displays StreamNZB/Jhin metadata such as language information, subtitle presence, release status, availability and same-release variants in a compact presentation.
+It displays StreamNZB/Jhin metadata such as language information, subtitle presence, subtitle languages, release status, availability and same-release variants in a compact presentation.
 
 Examples of the language/subtitle line:
 
 - `⛿ EN · JA`
 - `⛿ EN · JA · sᴜʙ`
 - `⛿ sᴜʙ`
+- `⛿ EN · JA · sᴜʙ 💬 🇫🇷`
 
-The formatter only displays metadata StreamNZB/Jhin exposes; it does not invent subtitle-language identities that are not available in the formatter context.
+The `💬` subtitle-language flags come from StreamNZB's merged `FormatContext.Subtitles` and render independently of `.Subbed` — never gated on it, merged with it, or derived from it. The formatter only displays metadata StreamNZB/Jhin exposes; it does not invent subtitle-language identities that are not available in the formatter context, and an unmapped/unknown code is silently skipped rather than shown raw.
 
 ### Debug formatter
 

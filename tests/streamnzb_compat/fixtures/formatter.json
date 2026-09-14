@@ -1134,19 +1134,62 @@
       }
     },
     {
-      "name": "Empty Subtitles renders no subtitle badge",
+      "name": "Languages with empty Subtitles and Subbed false renders no sub marker",
       "context": {
         "Languages": [
-          "en"
+          "en",
+          "ja"
         ],
+        "Subbed": false,
         "Subtitles": []
       },
+      "contains": [
+        "⛿ EN · JA"
+      ],
       "excludes": [
-        "💬"
+        "sᴜʙ"
       ]
     },
     {
-      "name": "Subbed true with empty Subtitles keeps Subbed presentation only",
+      "name": "Languages with Subbed true and empty Subtitles renders sub marker only",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true,
+        "Subtitles": []
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ"
+      ],
+      "excludes": [
+        "🇫🇷",
+        "🇩🇪"
+      ]
+    },
+    {
+      "name": "Languages with Subbed true and known Subtitles renders sub marker with flags",
+      "context": {
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true,
+        "Subtitles": [
+          "fr",
+          "de"
+        ]
+      },
+      "contains": [
+        "⛿ EN · JA · sᴜʙ 🇫🇷 🇩🇪"
+      ],
+      "counts": {
+        "sᴜʙ": 1
+      }
+    },
+    {
+      "name": "No Languages, Subbed true, empty Subtitles renders sub marker only",
       "context": {
         "Subbed": true,
         "Subtitles": []
@@ -1155,98 +1198,105 @@
         "⛿ sᴜʙ"
       ],
       "excludes": [
-        "💬"
+        "🇫🇷",
+        "🇩🇪"
       ]
     },
     {
-      "name": "Subbed false with non-empty Subtitles still shows subtitle languages",
+      "name": "No Languages, Subbed false, known Subtitles renders sub marker with flags",
       "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "fr",
+          "de"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇫🇷 🇩🇪"
+      ],
+      "counts": {
+        "⛿": 1
+      }
+    },
+    {
+      "name": "Single language, Subbed false, known Subtitles still renders sub marker with flag",
+      "context": {
+        "Languages": [
+          "en"
+        ],
         "Subbed": false,
         "Subtitles": [
           "fr"
         ]
       },
       "contains": [
-        "💬 🇫🇷"
-      ],
-      "excludes": [
-        "⛿"
-      ]
-    },
-    {
-      "name": "Single known subtitle language",
-      "context": {
-        "Subtitles": [
-          "ja"
-        ]
-      },
-      "contains": [
-        "💬 🇯🇵"
+        "⛿ EN · sᴜʙ 🇫🇷"
       ],
       "counts": {
-        "💬": 1
+        "⛿": 1
       }
-    },
-    {
-      "name": "Multiple known subtitle languages keep deterministic order",
-      "context": {
-        "Subtitles": [
-          "fr",
-          "en"
-        ]
-      },
-      "contains": [
-        "💬 🇫🇷 🇬🇧"
-      ],
-      "excludes": [
-        "💬 🇬🇧 🇫🇷"
-      ]
     },
     {
       "name": "Duplicate subtitle language from multiple metadata sources renders once",
       "context": {
+        "Subbed": false,
         "Subtitles": [
           "EN",
           "en"
         ]
       },
       "contains": [
-        "💬 🇬🇧"
+        "⛿ sᴜʙ 🇬🇧"
       ],
       "counts": {
         "🇬🇧": 1
       }
     },
     {
-      "name": "Unknown subtitle language code is never rendered raw",
+      "name": "Subtitle language flags preserve StreamNZB-provided ordering",
       "context": {
+        "Subbed": false,
+        "Subtitles": [
+          "de",
+          "fr"
+        ]
+      },
+      "contains": [
+        "⛿ sᴜʙ 🇩🇪 🇫🇷"
+      ],
+      "excludes": [
+        "🇫🇷 🇩🇪"
+      ]
+    },
+    {
+      "name": "Unknown subtitle code alone with Subbed false renders no subtitle section",
+      "context": {
+        "Subbed": false,
         "Subtitles": [
           "tr"
         ]
       },
       "excludes": [
-        "💬"
+        "⛿",
+        "sᴜʙ"
       ]
     },
     {
-      "name": "Languages and Subtitles render as independent elements on the same line",
+      "name": "Unknown subtitle code alone with Subbed true renders sub marker only",
       "context": {
-        "Languages": [
-          "en",
-          "ja"
-        ],
         "Subbed": true,
         "Subtitles": [
-          "fr"
+          "tr"
         ]
       },
       "contains": [
-        "⛿ EN · JA · sᴜʙ",
-        "💬 🇫🇷"
+        "⛿ sᴜʙ"
+      ],
+      "excludes": [
+        "tr"
       ],
       "counts": {
-        "⛿": 1,
-        "💬": 1
+        "⛿": 1
       }
     },
     {

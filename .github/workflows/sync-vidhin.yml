@@ -116,7 +116,7 @@ jobs:
 
       - name: Upload Vidhin sync diagnostics
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vidhin-sync-diagnostics-${{ github.run_id }}
           path: |

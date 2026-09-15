@@ -404,4 +404,47 @@ assert policy.ok, f"version-suggestion-policy must still be evaluated independen
 
 print("PASS: prep-pr's stale-main freshness check fails independently of version-suggestion-policy (neither masks the other)")
 
+
+# ---------------------------------------------------------------------------
+# CodeRabbit follow-up: _policy_adapter above assigns the SAME label to
+# every commit in the range, so it can't distinguish "the whole delta was
+# scanned" from "only the first (or last) commit was inspected". Prove the
+# full range actually matters: mix labels across the 5 real commits (only
+# the MIDDLE one carries the higher-impact label) and confirm the
+# recomputed suggestion -- and therefore version-suggestion-policy's
+# verdict -- reflects that middle commit, not just an endpoint.
+# ---------------------------------------------------------------------------
+
+def _fake_mixed_prs_by_sha():
+    patch_pr = {"number": 101, "title": "patch pr", "labels": ["patch"], "merged_at": "x", "merge_commit_sha": "y"}
+    minor_pr = {"number": 102, "title": "minor pr", "labels": ["minor"], "merged_at": "x", "merge_commit_sha": "y"}
+    # REAL_RANGE_COMMIT_SHAS[2] is neither the first nor the last commit in
+    # the range -- a "only check commits[0]" or "only check commits[-1]"
+    # bug would both miss it and wrongly conclude "patch".
+    return {
+        sha: [minor_pr if sha == REAL_RANGE_COMMIT_SHAS[2] else patch_pr]
+        for sha in REAL_RANGE_COMMIT_SHAS
+    }
+
+
+mixed_adapter = cr.FakeGithubAdapter(main_sha=MAIN_SHA, prs_by_sha=_fake_mixed_prs_by_sha())
+
+# A requested patch bump must now be rejected as smaller than the mixed
+# range's true suggestion (minor, driven by the one middle commit).
+report = _run_prep_pr_with_fake_changelog(
+    "6.0.1", mixed_adapter, _note_for("6.0.1"), _provenance_for("6.0.1", MAIN_SHA)
+)
+f = _finding(report, "version-suggestion-policy")
+assert not f.ok and f.severity == "error", f.render()
+assert "smaller" in f.detail and "minor" in f.detail
+
+# The matching minor request must pass against that same mixed range.
+report = _run_prep_pr_with_fake_changelog(
+    "6.1.0", mixed_adapter, _note_for("6.1.0"), _provenance_for("6.1.0", MAIN_SHA)
+)
+f = _finding(report, "version-suggestion-policy")
+assert f.ok, f.render()
+
+print("PASS: prep-pr's recomputed suggestion reflects the entire commit range, not just its first or last commit")
+
 print("PASS: check_release_phase2 tests")

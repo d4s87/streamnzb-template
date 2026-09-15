@@ -151,9 +151,18 @@ def _run_prep_pr(version, github, note_text, provenance, offline=False):
         changelog_path = Path(tmpdir) / "CHANGELOG.md"
         changelog_path.write_text(FAKE_CHANGELOG_TEXT, encoding="utf-8")
 
+        # A real fake README.md, parsed by the real parse_readme_version()
+        # regex (routed at tmpdir) rather than a constant stub -- this way
+        # the prep-pr scenario still exercises the actual anchor-matching
+        # logic (fails closed on zero/multiple anchors) instead of bypassing
+        # it entirely.
+        (Path(tmpdir) / "README.md").write_text(
+            f"**Current version: {FAKE_README_VERSION}**  \n", encoding="utf-8"
+        )
+
         cr.RELEASE_DIR = tmp_release_dir
         cr.CHANGELOG_PATH = changelog_path
-        cr.parse_readme_version = lambda *a, **k: FAKE_README_VERSION
+        cr.parse_readme_version = lambda *a, **k: original_parse_readme_version(root=Path(tmpdir))
         try:
             return cr.run_prep_pr(version, github, offline)
         finally:

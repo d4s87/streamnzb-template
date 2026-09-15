@@ -127,9 +127,11 @@ print("PASS: the App token requests Contents: write only, no Pull requests: writ
 # ---------------------------------------------------------------------------
 
 for input_name, env_name in (("version", "RAW_VERSION"), ("expected_sha", "RAW_SHA")):
-    raw_occurrences = [
-        line for line in publish_text.splitlines() if f"${{{{ inputs.{input_name} }}}}" in line
-    ]
+    # Whitespace-insensitive: a direct `${{inputs.version}}` (no spaces)
+    # would evade a literal `${{ inputs.version }}` substring match while
+    # still being the same live GitHub Actions expression.
+    input_ref_re = re.compile(r"\$\{\{\s*inputs\." + re.escape(input_name) + r"\s*\}\}")
+    raw_occurrences = [line for line in publish_text.splitlines() if input_ref_re.search(line)]
     assert len(raw_occurrences) == 1, (
         f"expected exactly one direct reference to inputs.{input_name} (the env: assignment), "
         f"found {len(raw_occurrences)}: {raw_occurrences}"

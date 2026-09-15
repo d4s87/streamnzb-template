@@ -61,8 +61,8 @@ jobs:
 
       - name: Confirm dispatched from the default branch
         run: |
-          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
-            echo "ERROR: Publish Release must be dispatched from main; got ${{ github.ref }}" >&2
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "ERROR: Publish Release must be dispatched from main; got $GITHUB_REF" >&2
             exit 1
           fi
 

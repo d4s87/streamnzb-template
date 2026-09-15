@@ -98,7 +98,7 @@ assert published_body == tracked_minus_title, (
 )
 
 print(f"PASS: run_verify_published({RELEASE_VERSION}, {RELEASE_SHA}) passes end-to-end against live GitHub state, "
-      "modulo the two documented, already-published, informational divergences")
+      "modulo the three documented, already-published, informational divergences")
 
 
 # ---------------------------------------------------------------------------

@@ -301,6 +301,71 @@ else:
 print("PASS: create_and_verify_tag fails if the created ref resolves to an annotated tag object instead of a direct commit")
 
 
+class _FlakyTagReadAdapter(cr.FakeGithubAdapter):
+    """Simulates GitHub's real eventual-consistency window: the very first
+    tag_ref() read immediately after creation returns None (as a genuine
+    transient 404 would), and only a later read observes the ref.
+    create_and_verify_tag must retry a bounded number of times rather than
+    treating a single missing read as a hard failure (CodeRabbit finding
+    on PR #34)."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._created = False
+        self._post_create_reads = 0
+
+    def create_tag_ref(self, tag, sha):
+        self._created = True
+        return super().create_tag_ref(tag, sha)
+
+    def tag_ref(self, tag):
+        if self._created:
+            self._post_create_reads += 1
+            if self._post_create_reads == 1:
+                return None
+        return super().tag_ref(tag)
+
+
+flaky_sleep_calls = []
+flaky_adapter = _FlakyTagReadAdapter()
+result = cr.create_and_verify_tag(
+    flaky_adapter, "9.9.9", CANDIDATE_SHA, sleep_fn=lambda s: flaky_sleep_calls.append(s)
+)
+assert result == {"sha": CANDIDATE_SHA, "type": "commit"}
+assert len(flaky_sleep_calls) == 1  # retried exactly once before succeeding
+
+print("PASS: create_and_verify_tag retries a bounded number of times through a transient post-create 404 and still succeeds")
+
+
+class _AlwaysMissingTagAdapter(cr.FakeGithubAdapter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._created = False
+
+    def create_tag_ref(self, tag, sha):
+        self._created = True
+        return super().create_tag_ref(tag, sha)
+
+    def tag_ref(self, tag):
+        if self._created:
+            return None
+        return super().tag_ref(tag)
+
+
+always_missing_sleep_calls = []
+try:
+    cr.create_and_verify_tag(
+        _AlwaysMissingTagAdapter(), "9.9.9", CANDIDATE_SHA, sleep_fn=lambda s: always_missing_sleep_calls.append(s)
+    )
+except cr.CheckError as exc:
+    assert "verification attempts" in str(exc)
+else:
+    raise AssertionError("a tag that never becomes visible must still fail, not retry forever")
+assert len(always_missing_sleep_calls) == 2  # bounded: 3 read attempts, 2 sleeps between them
+
+print("PASS: create_and_verify_tag's retry is bounded -- a tag that never becomes visible still fails closed, not an infinite retry")
+
+
 # ---------------------------------------------------------------------------
 # Release write/publish sequencing (Section 7/8) via _assert_release_fields
 # and write_and_publish_release.
@@ -490,6 +555,7 @@ def _run_publish(version, expected_sha, github, note_text=GOOD_NOTE, provenance=
 
 def _happy_adapter():
     return cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
         tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
         compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "ahead", "ahead_by": 1, "behind_by": 0, "base_commit_sha": PREV_TAG_SHA}},
         workflow_runs={"notify-release-discord.yml": [
@@ -508,6 +574,24 @@ assert happy_gh.created_releases[0]["draft"] is True
 assert happy_gh.updated_releases[-1][1] == {"draft": False}
 
 print("PASS: run_publish succeeds end to end -- draft created, tag created+verified, release staged+published+verified, compare verified, notification correlated")
+
+# Defense-in-depth re-check (CodeRabbit finding on PR #34): if main has
+# moved past expected_sha since the read-only candidate preflight ran
+# (a narrow but real window once the privileged token is minted),
+# run_publish must abort before any mutation -- not just trust that the
+# earlier preflight step is still valid.
+main_drifted_adapter = _happy_adapter()
+main_drifted_adapter._main_sha = "f" * 40
+try:
+    _run_publish("9.9.9", CANDIDATE_SHA, main_drifted_adapter)
+except cr.CheckError as exc:
+    assert "main has moved" in str(exc)
+else:
+    raise AssertionError("run_publish must abort if live main no longer equals expected_sha")
+assert main_drifted_adapter.created_tag_refs == []
+assert main_drifted_adapter.created_releases == []
+
+print("PASS: run_publish re-checks live main == expected_sha before any mutation, aborting closed if main has moved since the candidate preflight")
 
 # GitHub/API errors fail closed before any irreversible mutation: a
 # duplicate-draft collision must abort before tag creation.
@@ -547,6 +631,7 @@ class _FailPublishAdapter(cr.FakeGithubAdapter):
 
 
 fail_publish_adapter = _FailPublishAdapter(
+    main_sha=CANDIDATE_SHA,
     tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
     compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "ahead", "ahead_by": 1, "behind_by": 0, "base_commit_sha": PREV_TAG_SHA}},
 )
@@ -588,6 +673,7 @@ class _DriftAfterPublishAdapter(cr.FakeGithubAdapter):
 
 
 drift_publish_adapter = _DriftAfterPublishAdapter(
+    main_sha=CANDIDATE_SHA,
     tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
     compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "ahead", "ahead_by": 1, "behind_by": 0, "base_commit_sha": PREV_TAG_SHA}},
     workflow_runs={"notify-release-discord.yml": [

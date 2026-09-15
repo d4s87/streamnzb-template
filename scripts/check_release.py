@@ -2072,12 +2072,20 @@ def select_or_create_draft(github, version, expected_sha, title, body):
     return created["id"], True
 
 
-def create_and_verify_tag(github, version, expected_sha):
+def create_and_verify_tag(github, version, expected_sha, sleep_fn=time.sleep, max_read_attempts=3, retry_interval_seconds=2):
     """Tag-first publication (Section 6): create the lightweight tag via
     the Git References API, then immediately re-fetch and verify it -- the
     ref must resolve to object type 'commit' at exactly expected_sha. This
     is the point of no return: any CheckError raised here or after must
-    never trigger automatic tag move/delete/recreate."""
+    never trigger automatic tag move/delete/recreate.
+
+    The post-create read is retried a small, bounded number of times: a
+    real GitHub ref can briefly 404 while it propagates immediately after
+    creation (GhCliAdapter.tag_ref() maps that 404 to None), which is a
+    read-consistency race, not a creation failure -- treating it as a hard
+    stop here would trigger an unnecessary "human inspection required" for
+    a tag that was actually created successfully. This is still a single,
+    bounded verification step, not a resume of a failed operation."""
     existing = github.tag_ref(version)
     if existing is not None:
         raise CheckError(
@@ -2085,9 +2093,18 @@ def create_and_verify_tag(github, version, expected_sha):
             f"type={existing['type']!r}) -- STOP, refusing to move/recreate it"
         )
     github.create_tag_ref(version, expected_sha)
-    refreshed = github.tag_ref(version)
+    refreshed = None
+    for attempt in range(max_read_attempts):
+        refreshed = github.tag_ref(version)
+        if refreshed is not None:
+            break
+        if attempt < max_read_attempts - 1:
+            sleep_fn(retry_interval_seconds)
     if refreshed is None:
-        raise CheckError(f"tag {version!r} not found immediately after creation -- STOP, human inspection required")
+        raise CheckError(
+            f"tag {version!r} not found after {max_read_attempts} verification attempts "
+            "following creation -- STOP, human inspection required"
+        )
     if refreshed["type"] != "commit":
         raise CheckError(
             f"tag {version!r} resolved to object type {refreshed['type']!r} after creation, "
@@ -2205,16 +2222,34 @@ def run_publish(version, expected_sha, github, sleep_fn=time.sleep):
     expected_sha = validate_sha(expected_sha)
 
     provenance_path = RELEASE_DIR / f"{version}.json"
-    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
-    previous_version = provenance["previous_version"]
     note_path = RELEASE_DIR / f"{version}.md"
-    body = note_path.read_text(encoding="utf-8").strip()
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+        previous_version = provenance["previous_version"]
+    except (OSError, json.JSONDecodeError, KeyError) as exc:
+        raise CheckError(
+            f"cannot read previous_version from {provenance_path}: {exc} -- aborting before any mutation"
+        ) from exc
+    try:
+        body = note_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise CheckError(
+            f"cannot read the authoritative release body {note_path}: {exc} -- aborting before any mutation"
+        ) from exc
     title = RELEASE_TITLE_TEMPLATE.format(version=version)
 
-    # Defense-in-depth re-check -- the read-only `candidate` preflight
-    # (target-release-absent) already covered this before any privileged
-    # token existed, but never trust that a separate process step actually
-    # ran; refuse to mutate anything if a published release already exists.
+    # Defense-in-depth re-checks -- the read-only `candidate` preflight
+    # (main-equals-candidate, target-release-absent) already covered both
+    # of these before any privileged token existed, but never trust that a
+    # separate process step actually ran, and never trust that main hasn't
+    # moved in the (narrow but nonzero) window since that preflight ran.
+    # Both checks are still pre-tag: safe to fix and rerun.
+    live_main = github.main_sha()
+    if live_main != expected_sha:
+        raise CheckError(
+            f"live main is {live_main!r}, expected candidate {expected_sha!r} -- main has moved "
+            "since the candidate preflight ran; aborting before any mutation"
+        )
     if github.release(version) is not None:
         raise CheckError(
             f"a published release for {version!r} already exists -- aborting before any mutation"
@@ -2228,7 +2263,7 @@ def run_publish(version, expected_sha, github, sleep_fn=time.sleep):
         report.add_pass("draft-selected", f"reusing existing exact-matching draft release id={release_id}")
 
     # Point of no return.
-    create_and_verify_tag(github, version, expected_sha)
+    create_and_verify_tag(github, version, expected_sha, sleep_fn=sleep_fn)
     report.add_pass("tag-created-and-verified", f"refs/tags/{version} -> commit {expected_sha}")
 
     try:

@@ -107,7 +107,7 @@ print("PASS: `candidate` mode preflight runs, under the default read-only token,
 # ---------------------------------------------------------------------------
 
 app_token_step_match = re.search(
-    r"uses:\s*actions/create-github-app-token@[^\n]+\n((?:\s{2,}.+\n)+)", publish_text
+    r"uses:\s*actions/create-github-app-token@[^\n]+\n((?:[ \t]{2,}.+\n)+)", publish_text
 )
 assert app_token_step_match, "publish-release.yml missing a parseable create-github-app-token step"
 app_token_step = app_token_step_match.group(1)

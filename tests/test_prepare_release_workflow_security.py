@@ -146,7 +146,7 @@ print("PASS: App credentials are checked via env:+bash before minting, never via
 # ---------------------------------------------------------------------------
 
 app_token_step_match = re.search(
-    r"uses:\s*actions/create-github-app-token@v3\n((?:\s{2,}.+\n)+)", prepare_text
+    r"uses:\s*actions/create-github-app-token@v3\n((?:[ \t]{2,}.+\n)+)", prepare_text
 )
 assert app_token_step_match, "prepare-release.yml missing a parseable create-github-app-token step"
 app_token_step = app_token_step_match.group(1)

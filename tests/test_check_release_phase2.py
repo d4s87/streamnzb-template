@@ -447,4 +447,107 @@ assert f.ok, f.render()
 
 print("PASS: prep-pr's recomputed suggestion reflects the entire commit range, not just its first or last commit")
 
+
+# ---------------------------------------------------------------------------
+# run_prepare's release-drafter-drafts-diagnostic must never report a
+# numeric draft count. GitHub's List Releases endpoint omits draft
+# releases for callers without push access, and Prepare's preflight
+# intentionally runs under a read-only GITHUB_TOKEN -- a live 2026-09-15
+# Prepare run against this repo demonstrated the exact failure mode: a
+# real 6.1.0 draft (id 389039961) existed, but the old code reported
+# "0 draft releases" because the read-only credential's API response
+# came back empty, not because none existed. The fix removes the live
+# matching_draft_releases() call from run_prepare entirely and always
+# emits a fixed visibility-limitation warning instead. Uses the real
+# 6.0.1 -> current-main commit range (both real, known SHAs already on
+# `main`) so compute_release_delta's local git commands work unmodified.
+# ---------------------------------------------------------------------------
+
+PREPARE_MAIN_SHA = "1f4ecc79221c146f29695910cd36b6da07bfa7a8"  # real current main (PR #30 merge)
+PREPARE_PREVIOUS_SHA = "8fea02c16c204988af3a1acf08dd303ada9f0414"  # real 6.0.1 tag commit
+
+EXPECTED_DRAFT_DIAGNOSTIC = (
+    "Release Drafter draft inventory is not authoritative in Prepare preflight: the "
+    "read-only GITHUB_TOKEN may omit draft releases. Draft selection/hygiene remains a "
+    "Phase 3 responsibility."
+)
+
+
+class _NoDraftCallAdapter(cr.FakeGithubAdapter):
+    """Proves run_prepare's fixed diagnostic never calls
+    matching_draft_releases() -- any call is a regression back to the old,
+    credential-dependent numeric-count behavior this fix removes."""
+
+    def matching_draft_releases(self, tag_name):
+        raise AssertionError(
+            "run_prepare must not call matching_draft_releases(): its result is not "
+            "authoritative under Prepare's read-only preflight GITHUB_TOKEN"
+        )
+
+
+def _prepare_adapter(releases=None, tags=None, branches=None, open_prs_by_branch=None):
+    return _NoDraftCallAdapter(
+        main_sha=PREPARE_MAIN_SHA,
+        releases=releases if releases is not None else {
+            "6.0.1": {
+                "tag_name": "6.0.1",
+                "target_commitish": PREPARE_PREVIOUS_SHA,
+                "draft": False,
+                "prerelease": False,
+                "published_at": "2026-09-15T09:13:37Z",
+                "body": "",
+            }
+        },
+        tags=tags or {},
+        branches=branches or {},
+        open_prs_by_branch=open_prs_by_branch or {},
+    )
+
+
+# a. Happy path: the diagnostic is a fixed, non-numeric, always-present
+# warning that never blocks preparation, and matching_draft_releases() is
+# never called (the adapter raises if it is).
+report = cr.run_prepare("6.1.0", _prepare_adapter(), offline=False)
+f = _finding(report, "release-drafter-drafts-diagnostic")
+assert f.severity == "warning" and not f.ok, f.render()
+assert f.detail == EXPECTED_DRAFT_DIAGNOSTIC, f.render()
+assert report.passed, report.render()
+
+print("PASS: run_prepare's release-drafter-drafts-diagnostic is a fixed visibility warning (never a numeric claim), never blocks preparation, and never calls matching_draft_releases()")
+
+# b. Published-release collision remains a hard failure, independent of
+# the draft-diagnostic fix -- releases/tags/{tag} stays the authoritative
+# check for an actually-published 6.1.0 release.
+report = cr.run_prepare(
+    "6.1.0",
+    _prepare_adapter(releases={
+        "6.0.1": {
+            "tag_name": "6.0.1", "target_commitish": PREPARE_PREVIOUS_SHA,
+            "draft": False, "prerelease": False, "published_at": "x", "body": "",
+        },
+        "6.1.0": {
+            "tag_name": "6.1.0", "target_commitish": PREPARE_MAIN_SHA,
+            "draft": False, "prerelease": False, "published_at": "x", "body": "",
+        },
+    }),
+    offline=False,
+)
+f = _finding(report, "published-release-collision")
+assert not f.ok and f.severity == "error", f.render()
+assert not report.passed
+
+print("PASS: run_prepare still hard-fails published-release-collision")
+
+# c. Tag collision remains a hard failure.
+report = cr.run_prepare(
+    "6.1.0",
+    _prepare_adapter(tags={"6.1.0": {"sha": "deadbeef", "type": "commit"}}),
+    offline=False,
+)
+f = _finding(report, "tag-absent-remote")
+assert not f.ok and f.severity == "error", f.render()
+assert not report.passed
+
+print("PASS: run_prepare still hard-fails tag-absent-remote")
+
 print("PASS: check_release_phase2 tests")

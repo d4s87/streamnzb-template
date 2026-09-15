@@ -223,6 +223,23 @@ class GithubAdapter:
         None if the tag doesn't exist."""
         raise NotImplementedError
 
+    def branch_ref(self, branch):
+        """-> the SHA a remote branch head points at, or None if the
+        branch doesn't exist on GitHub."""
+        raise NotImplementedError
+
+    def open_pull_requests_for_branch(self, branch):
+        """-> list of {number, title} for open PRs whose head is `branch`
+        in this same repository."""
+        raise NotImplementedError
+
+    def matching_draft_releases(self, tag_name):
+        """-> list of {id, name, created_at} for every DRAFT release whose
+        nominal tag_name equals `tag_name` -- Release Drafter can and does
+        accumulate duplicates; this is diagnostic only, never a collision
+        check (see run_prepare)."""
+        raise NotImplementedError
+
     def associated_prs(self, sha):
         """-> list of {number, title, labels, merged_at, merge_commit_sha}
         for PRs GitHub associates with this commit, regardless of merge
@@ -313,6 +330,25 @@ class GhCliAdapter(GithubAdapter):
             return None
         return {"sha": raw["object"]["sha"], "type": raw["object"]["type"]}
 
+    def branch_ref(self, branch):
+        raw = self._api(f"repos/{self.repo}/git/refs/heads/{branch}", allow_404=True)
+        if raw is None:
+            return None
+        return raw["object"]["sha"]
+
+    def open_pull_requests_for_branch(self, branch):
+        owner = self.repo.split("/", 1)[0]
+        raw = self._api(f"repos/{self.repo}/pulls?state=open&head={owner}:{branch}")
+        return [{"number": pr["number"], "title": pr["title"]} for pr in raw]
+
+    def matching_draft_releases(self, tag_name):
+        releases = self._api(f"repos/{self.repo}/releases")
+        return [
+            {"id": r["id"], "name": r.get("name") or "", "created_at": r.get("created_at")}
+            for r in releases
+            if r["draft"] and r["tag_name"] == tag_name
+        ]
+
     def associated_prs(self, sha):
         prs = self._api(f"repos/{self.repo}/commits/{sha}/pulls")
         return [
@@ -358,6 +394,9 @@ class FakeGithubAdapter(GithubAdapter):
         prs_by_sha=None,
         check_conclusions_by_sha=None,
         workflow_runs=None,
+        branches=None,
+        open_prs_by_branch=None,
+        draft_releases_by_tag=None,
     ):
         self._main_sha = main_sha
         self._releases = releases or {}
@@ -365,6 +404,9 @@ class FakeGithubAdapter(GithubAdapter):
         self._prs_by_sha = prs_by_sha or {}
         self._check_conclusions_by_sha = check_conclusions_by_sha or {}
         self._workflow_runs = workflow_runs or {}
+        self._branches = branches or {}
+        self._open_prs_by_branch = open_prs_by_branch or {}
+        self._draft_releases_by_tag = draft_releases_by_tag or {}
 
     def main_sha(self):
         return self._main_sha
@@ -384,6 +426,15 @@ class FakeGithubAdapter(GithubAdapter):
 
     def tag_ref(self, tag):
         return self._tags.get(tag)
+
+    def branch_ref(self, branch):
+        return self._branches.get(branch)
+
+    def open_pull_requests_for_branch(self, branch):
+        return self._open_prs_by_branch.get(branch, [])
+
+    def matching_draft_releases(self, tag_name):
+        return self._draft_releases_by_tag.get(tag_name, [])
 
     def associated_prs(self, sha):
         return self._prs_by_sha.get(sha, [])
@@ -644,6 +695,83 @@ def suggest_version_bump(delta):
 
 
 # ---------------------------------------------------------------------------
+# Version-suggestion enforcement (Phase 2, Section E). The human-entered
+# version stays authoritative -- this never overrides it -- but an
+# under-classified request (smaller than the computed suggestion) fails
+# closed, an over-classified one warns, and anything that isn't a canonical
+# patch/minor/major bump of previous stable is rejected as malformed.
+# ---------------------------------------------------------------------------
+
+BUMP_RANK = {"patch": 1, "minor": 2, "major": 3}
+
+
+def canonical_bump(previous_version, bump):
+    """The exact version a patch/minor/major bump of previous_version
+    produces: X.Y.Z+1, X.Y+1.0, or X+1.0.0. There is no other legitimate
+    bump shape -- see classify_requested_bump."""
+    major, minor, patch = (int(part) for part in previous_version.split("."))
+    if bump == "patch":
+        return f"{major}.{minor}.{patch + 1}"
+    if bump == "minor":
+        return f"{major}.{minor + 1}.0"
+    if bump == "major":
+        return f"{major + 1}.0.0"
+    raise ValueError(f"unknown bump type {bump!r}")
+
+
+def classify_requested_bump(requested_version, previous_version):
+    """Return 'patch'/'minor'/'major' if requested_version is exactly the
+    canonical bump of that type from previous_version, else None (covers
+    decreases, skipped versions like 6.0.1->6.0.5, and any other
+    non-canonical jump)."""
+    for bump in ("patch", "minor", "major"):
+        if canonical_bump(previous_version, bump) == requested_version:
+            return bump
+    return None
+
+
+def enforce_version_suggestion(requested_version, previous_version, suggested_bump):
+    """Returns (status, detail) with status in {"pass", "warn", "fail"}.
+    Policy: exact match with the suggestion passes; a larger bump than
+    suggested warns but is allowed; a smaller bump than suggested, or a
+    version that isn't a canonical bump of previous_version at all, fails."""
+    validate_version(requested_version)
+    validate_version(previous_version)
+
+    requested_bump = classify_requested_bump(requested_version, previous_version)
+
+    if requested_bump is None:
+        return "fail", (
+            f"{requested_version!r} is not a canonical patch/minor/major bump of "
+            f"previous stable {previous_version!r} (expected one of "
+            f"{canonical_bump(previous_version, 'patch')!r}, "
+            f"{canonical_bump(previous_version, 'minor')!r}, "
+            f"{canonical_bump(previous_version, 'major')!r})"
+        )
+
+    if suggested_bump is None:
+        return "pass", (
+            f"no release-impact suggestion available since {previous_version}; "
+            f"accepting requested {requested_bump} bump ({requested_version}) at human discretion"
+        )
+
+    requested_rank = BUMP_RANK[requested_bump]
+    suggested_rank = BUMP_RANK[suggested_bump]
+
+    if requested_rank == suggested_rank:
+        return "pass", f"requested {requested_bump} bump matches suggested {suggested_bump}"
+    if requested_rank > suggested_rank:
+        return "warn", (
+            f"requested {requested_bump} bump ({requested_version}) is larger than the "
+            f"suggested {suggested_bump} bump -- allowed, but confirm this is intentional"
+        )
+    return "fail", (
+        f"requested {requested_bump} bump ({requested_version}) is smaller than the "
+        f"suggested {suggested_bump} bump -- refusing to under-classify this release"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Preparation-freshness invariant (Section 7): equality, not ancestry.
 # Phase 2's future release-prep-PR CI step calls this directly against the
 # live main SHA while the PR is still open.
@@ -877,6 +1005,72 @@ def run_prepare(version, github, offline):
         report.add_fail("tag-absent-remote", str(exc))
 
     try:
+        published = github.release(version)
+        if published is not None:
+            report.add_fail(
+                "published-release-collision",
+                f"a published release for {version!r} already exists",
+            )
+        else:
+            report.add_pass("published-release-collision", f"no published release for {version!r}")
+    except CheckError as exc:
+        report.add_fail("published-release-collision", str(exc))
+
+    try:
+        drafts = github.matching_draft_releases(version)
+        # Informational only -- Release Drafter drafts are never
+        # authoritative and never block preparation (see CLAUDE.md). Always
+        # surfaced (0, 1, or many) so a maintainer sees stale/duplicate
+        # drafts before Phase 3 has to pick one.
+        if not drafts:
+            report.add_warn(
+                "release-drafter-drafts-diagnostic",
+                f"0 draft releases currently named {version!r} on GitHub (informational only)",
+            )
+        elif len(drafts) == 1:
+            report.add_warn(
+                "release-drafter-drafts-diagnostic",
+                f"1 draft release named {version!r}: id={drafts[0]['id']} (informational only, "
+                "never mutated by Prepare)",
+            )
+        else:
+            report.add_warn(
+                "release-drafter-drafts-diagnostic",
+                f"{len(drafts)} DUPLICATE draft releases named {version!r}: "
+                f"ids={[d['id'] for d in drafts]} -- Phase 3 publish-time responsibility to "
+                "select/clean up, never auto-resolved here",
+            )
+    except CheckError as exc:
+        report.add_warn("release-drafter-drafts-diagnostic", str(exc))
+
+    branch_name = branch_name_for_version(version)
+    try:
+        remote_branch = github.branch_ref(branch_name)
+        if remote_branch is not None:
+            report.add_fail(
+                "remote-branch-collision", f"remote branch {branch_name!r} already exists on GitHub"
+            )
+        else:
+            report.add_pass("remote-branch-collision", f"remote branch {branch_name!r} available")
+    except CheckError as exc:
+        report.add_fail("remote-branch-collision", str(exc))
+
+    try:
+        open_prs = github.open_pull_requests_for_branch(branch_name)
+        if open_prs:
+            report.add_fail(
+                "open-pr-collision",
+                f"an open PR already exists from {branch_name!r}: "
+                f"{[(pr['number'], pr['title']) for pr in open_prs]} -- rerun only after it's "
+                "closed/merged, or edit that PR directly; Phase 2 does not regenerate over an "
+                "open preparation PR",
+            )
+        else:
+            report.add_pass("open-pr-collision", f"no open PR from {branch_name!r}")
+    except CheckError as exc:
+        report.add_fail("open-pr-collision", str(exc))
+
+    try:
         main_sha = github.main_sha()
         report.add_pass("main-sha-resolved", main_sha)
     except CheckError as exc:
@@ -893,6 +1087,14 @@ def run_prepare(version, github, offline):
         )
         for warning in suggestion["warnings"]:
             report.add_warn("release-impact-accounting", warning)
+
+        status, detail = enforce_version_suggestion(version, previous_version, suggestion["suggested_bump"])
+        if status == "pass":
+            report.add_pass("version-suggestion-policy", detail)
+        elif status == "warn":
+            report.add_warn("version-suggestion-policy", detail)
+        else:
+            report.add_fail("version-suggestion-policy", detail)
     except CheckError as exc:
         report.add_fail("release-impact-accounting", str(exc))
 
@@ -900,20 +1102,17 @@ def run_prepare(version, github, offline):
 
 
 # ---------------------------------------------------------------------------
-# Mode: candidate
+# Shared document-consistency checks -- used by both `candidate` (PR merged,
+# checking the exact commit about to be tagged) and `prep-pr` (PR still
+# open, checking in-progress preparation state). Never duplicate this
+# logic between the two modes.
 # ---------------------------------------------------------------------------
 
-def run_candidate(version, sha, github, offline):
-    report = Report()
-
-    try:
-        version = validate_version(version)
-        sha = validate_sha(sha)  # normalizes case -- comparisons below assume lowercase
-        report.add_pass("input-format", f"version={version!r} sha={sha!r}")
-    except CheckError as exc:
-        report.add_fail("input-format", str(exc))
-        return report
-
+def _check_release_documents(report, version):
+    """Runs the README/CHANGELOG/generation-sync/release-note checks common
+    to `candidate` and `prep-pr`. Returns (previous_version, provenance,
+    prepared_from_sha) for mode-specific follow-up checks; provenance and
+    prepared_from_sha are None if the provenance artifact is missing/bad."""
     try:
         actual_readme_version = parse_readme_version()
         if actual_readme_version != version:
@@ -942,7 +1141,6 @@ def run_candidate(version, sha, github, offline):
             )
     except CheckError as exc:
         report.add_fail("changelog-unreleased-compare-link", str(exc))
-        parsed = None
 
     section_match = None
     for candidate in CHANGELOG_DATED_SECTION_RE.finditer(changelog_text):
@@ -950,9 +1148,9 @@ def run_candidate(version, sha, github, offline):
             section_match = candidate
             break
 
+    previous_version = None
     if section_match is None:
         report.add_fail("changelog-section-exists", f"no dated section found for {version}")
-        previous_version = None
     else:
         previous_version = section_match.group("prev")
         report.add_pass(
@@ -1044,6 +1242,7 @@ def run_candidate(version, sha, github, offline):
             )
 
     provenance_path = RELEASE_DIR / f"{version}.json"
+    provenance = None
     prepared_from_sha = None
     if not provenance_path.exists():
         report.add_fail("provenance-artifact-exists", f"{provenance_path} not found")
@@ -1067,6 +1266,29 @@ def run_candidate(version, sha, github, offline):
                 report.add_pass("provenance-prepared-from-sha-present", prepared_from_sha)
         except (json.JSONDecodeError, OSError) as exc:
             report.add_fail("provenance-artifact-exists", f"{provenance_path} unreadable: {exc}")
+            provenance = None
+            prepared_from_sha = None
+
+    return previous_version, provenance, prepared_from_sha
+
+
+# ---------------------------------------------------------------------------
+# Mode: candidate -- PR already merged, checking the exact commit about to
+# be tagged.
+# ---------------------------------------------------------------------------
+
+def run_candidate(version, sha, github, offline):
+    report = Report()
+
+    try:
+        version = validate_version(version)
+        sha = validate_sha(sha)  # normalizes case -- comparisons below assume lowercase
+        report.add_pass("input-format", f"version={version!r} sha={sha!r}")
+    except CheckError as exc:
+        report.add_fail("input-format", str(exc))
+        return report
+
+    previous_version, provenance, prepared_from_sha = _check_release_documents(report, version)
 
     if prepared_from_sha:
         try:
@@ -1123,10 +1345,6 @@ def run_candidate(version, sha, github, offline):
     if previous_version:
         try:
             delta = compute_release_delta(github, previous_version, sha)
-            skip_only = all(
-                SKIP_LABEL in pr["labels"] and not (set(pr["labels"]) & set(RELEASE_IMPACT_LABELS))
-                for pr in delta["prs"].values()
-            ) if delta["prs"] else True
             report.add_pass(
                 "commit-accounting-since-previous-tag",
                 f"{len(delta['commits'])} commit(s), {len(delta['prs'])} PR(s), "
@@ -1139,6 +1357,150 @@ def run_candidate(version, sha, github, offline):
                 )
         except CheckError as exc:
             report.add_fail("commit-accounting-since-previous-tag", str(exc))
+
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Mode: prep-pr -- release-preparation PR still OPEN. Unlike `candidate`,
+# does NOT require main==PR-head (the PR hasn't merged), does NOT require
+# one-first-parent-hop provenance (there's no candidate commit yet), and
+# does NOT require the tag to be absent-and-about-to-be-created -- it
+# requires the tag/release to not exist AT ALL yet, and requires the
+# stale-main freshness EQUALITY invariant (prepared_from_sha == live main)
+# instead of candidate's post-merge one-hop check.
+# ---------------------------------------------------------------------------
+
+def run_prep_pr(version, github, offline):
+    report = Report()
+
+    try:
+        version = validate_version(version)
+        report.add_pass("input-format", f"version={version!r}")
+    except CheckError as exc:
+        report.add_fail("input-format", str(exc))
+        return report
+
+    previous_version, provenance, prepared_from_sha = _check_release_documents(report, version)
+
+    if provenance is not None:
+        try:
+            current_compat = load_compatibility_baseline()
+            stored_compat = provenance.get("compatibility") or {}
+            compat_fields = ("streamnzb_version", "streamnzb_sha", "jhin_version")
+            drift = {
+                field: (stored_compat.get(field), current_compat.get(field))
+                for field in compat_fields
+                if stored_compat.get(field) != current_compat.get(field)
+            }
+            if drift:
+                report.add_fail(
+                    "provenance-compatibility-snapshot-matches",
+                    f"{RELEASE_DIR}/{version}.json's stored compatibility snapshot has drifted "
+                    f"from the current repository state: {drift}",
+                )
+            else:
+                report.add_pass("provenance-compatibility-snapshot-matches", "matches current repo state")
+        except CheckError as exc:
+            report.add_fail("provenance-compatibility-snapshot-matches", str(exc))
+
+        try:
+            current_counts = load_current_counts()
+            stored_counts = provenance.get("expected_counts") or {}
+            if stored_counts != current_counts:
+                report.add_fail(
+                    "provenance-counts-snapshot-matches",
+                    f"stored={stored_counts} current={current_counts}",
+                )
+            else:
+                report.add_pass("provenance-counts-snapshot-matches", "matches current repo state")
+        except CheckError as exc:
+            report.add_fail("provenance-counts-snapshot-matches", str(exc))
+
+    if offline:
+        report.add_warn(
+            "github-dependent-checks",
+            "offline mode requested; preparation-freshness, version-suggestion-policy, and "
+            "tag/release existence checks were SKIPPED (not silently)",
+        )
+        return report
+
+    # Resolved once, reused for both freshness and the version-policy delta
+    # below -- one prep-pr invocation evaluates one coherent live-GitHub
+    # snapshot, never two different reads of `main` a few seconds apart.
+    live_main = None
+    try:
+        live_main = github.main_sha()
+        report.add_pass("main-sha-resolved", live_main)
+    except CheckError as exc:
+        report.add_fail("main-sha-resolved", str(exc))
+
+    if prepared_from_sha and live_main:
+        ok, detail = check_preparation_freshness(prepared_from_sha, live_main)
+        if ok:
+            report.add_pass("preparation-freshness", detail)
+        else:
+            report.add_fail("preparation-freshness", detail)
+    elif not prepared_from_sha:
+        report.add_fail("preparation-freshness", "no valid prepared_from_sha available to check")
+    else:
+        # live_main lookup failed above -- fail closed rather than silently
+        # skipping the freshness check.
+        report.add_fail("preparation-freshness", "live main SHA unavailable; cannot verify freshness")
+
+    # Stale-main equality alone does not catch this: main can be perfectly
+    # unchanged while a human hand-edits the open PR's README/CHANGELOG/
+    # .release/<version>.{json,md} consistently to an under-classified
+    # version (e.g. requesting 6.0.2 when the actual delta warrants a
+    # minor bump) -- document-consistency checks would all still agree
+    # with each other and pass. Revalidate the release-impact policy
+    # against the SAME live_main resolved above, using the exact same
+    # compute_release_delta()/suggest_version_bump()/
+    # enforce_version_suggestion() Prepare mode uses -- never a second
+    # implementation of bump logic.
+    if previous_version and live_main:
+        try:
+            delta = compute_release_delta(github, previous_version, live_main)
+            suggestion = suggest_version_bump(delta)
+            status, detail = enforce_version_suggestion(version, previous_version, suggestion["suggested_bump"])
+            if status == "pass":
+                report.add_pass("version-suggestion-policy", detail)
+            elif status == "warn":
+                report.add_warn("version-suggestion-policy", detail)
+            else:
+                report.add_fail("version-suggestion-policy", detail)
+        except CheckError as exc:
+            report.add_fail("version-suggestion-policy", str(exc))
+    elif not previous_version:
+        report.add_fail(
+            "version-suggestion-policy",
+            "no previous_version resolved from CHANGELOG.md -- cannot revalidate release-impact policy",
+        )
+    else:
+        report.add_fail("version-suggestion-policy", "live main SHA unavailable; cannot revalidate release-impact policy")
+
+    try:
+        tag_ref = github.tag_ref(version)
+        if tag_ref is not None:
+            report.add_fail(
+                "tag-not-yet-created", f"tag {version!r} already exists on GitHub -- unexpected before publish"
+            )
+        else:
+            report.add_pass("tag-not-yet-created", f"tag {version!r} not yet created")
+    except CheckError as exc:
+        report.add_fail("tag-not-yet-created", str(exc))
+
+    try:
+        release = github.release(version)
+        if release is not None:
+            report.add_fail(
+                "release-not-yet-published",
+                f"a published release for {version!r} already exists -- unexpected before publish",
+            )
+        else:
+            report.add_pass("release-not-yet-published", f"no published release for {version!r} yet")
+    except CheckError as exc:
+        report.add_fail("release-not-yet-published", str(exc))
 
     return report
 
@@ -1384,6 +1746,11 @@ def build_parser():
     verify_published.add_argument("--allow-missing-release-note", action="store_true")
     verify_published.set_defaults(func=cmd_verify_published)
 
+    prep_pr = subparsers.add_parser("prep-pr")
+    prep_pr.add_argument("--version", required=True)
+    prep_pr.add_argument("--offline", action="store_true")
+    prep_pr.set_defaults(func=cmd_prep_pr)
+
     return parser
 
 
@@ -1395,6 +1762,11 @@ def cmd_prepare(args):
 def cmd_candidate(args):
     github = None if args.offline else GhCliAdapter()
     return run_candidate(args.version, args.sha, github, args.offline)
+
+
+def cmd_prep_pr(args):
+    github = None if args.offline else GhCliAdapter()
+    return run_prep_pr(args.version, github, args.offline)
 
 
 def cmd_verify_published(args):

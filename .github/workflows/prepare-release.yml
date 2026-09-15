@@ -1,0 +1,203 @@
+name: Prepare Release
+
+# Phase 2 of the approved release-automation architecture (see CLAUDE.md's
+# "Release automation" section). Human-dispatched only. Never tags,
+# publishes, or mutates an existing GitHub release -- that is Phase 3
+# (Publish Release), not yet implemented.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to prepare (bare semver, e.g. 6.1.0)"
+        required: true
+        type: string
+
+# Minimal default GITHUB_TOKEN: only what scripts/check_release.py's
+# `prepare` mode actually reads (releases, refs, associated PRs -- all
+# GET). No write scope here at all; the mutation steps (commit/push/open
+# PR) use a separate, narrowly scoped GitHub App installation token
+# (Contents: write, Pull requests: write only), minted only after every
+# trusted preflight/validation/generation step below has already
+# succeeded against known-trusted `main` code -- this workflow never
+# checks out a PR head or any other untrusted ref, so there is nothing
+# for that token to run against even in principle.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Validate, generate housekeeping, open PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate requested version format
+        id: validate
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RAW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: version must be bare semver X.Y.Z (no 'v' prefix, no prerelease/build metadata), got: $RAW_VERSION" >&2
+            exit 1
+          fi
+          echo "version=$RAW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "branch=docs/prepare-release-${RAW_VERSION//./-}" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm dispatched from the default branch
+        run: |
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "ERROR: Prepare Release must be dispatched from main; got ${{ github.ref }}" >&2
+            exit 1
+          fi
+
+      - name: Check out exact current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Resolve the exact checked-out commit
+        id: checkout-sha
+        # Deliberately git rev-parse HEAD, not `github.sha`: if main advances
+        # in the window between dispatch and this checkout actually running,
+        # `github.sha` (fixed at dispatch time) would no longer match what
+        # was actually checked out and generated from. Every downstream use
+        # of prepared_from_sha must tie to what's on disk, not the trigger
+        # event's snapshot.
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Run Phase 1 checker in prepare mode (online, read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.validate.outputs.version }}
+        run: python3 scripts/check_release.py prepare --version "$VERSION"
+
+      - name: Resolve previous stable version
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PREVIOUS=$(python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          import check_release as cr
+          gh = cr.GhCliAdapter()
+          latest = gh.latest_stable_release()
+          print(latest["tag_name"])
+          PY
+          )
+          echo "version=$PREVIOUS" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release housekeeping
+        env:
+          VERSION: ${{ steps.validate.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+          PREPARED_FROM_SHA: ${{ steps.checkout-sha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y-%m-%d)"
+          python3 scripts/prepare_release_housekeeping.py \
+            --version "$VERSION" \
+            --previous-version "$PREVIOUS_VERSION" \
+            --date "$DATE" \
+            --prepared-from-sha "$PREPARED_FROM_SHA" \
+            --write
+
+      - name: Verify only the expected files changed
+        env:
+          VERSION: ${{ steps.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected=$(printf '%s\n' \
+            "README.md" \
+            "CHANGELOG.md" \
+            ".release/${VERSION}.json" \
+            ".release/${VERSION}.md" \
+          | sort)
+          actual=$(git status --porcelain=v1 | awk '{print $2}' | sort)
+          if [[ "$expected" != "$actual" ]]; then
+            echo "ERROR: generated diff touched unexpected paths." >&2
+            echo "--- expected ---" >&2
+            echo "$expected" >&2
+            echo "--- actual ---" >&2
+            echo "$actual" >&2
+            exit 1
+          fi
+
+      - name: Render release-preparation PR body
+        env:
+          VERSION: ${{ steps.validate.outputs.version }}
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+          PREPARED_FROM_SHA: ${{ steps.checkout-sha.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/render_prepare_release_pr_body.py \
+            --version "$VERSION" \
+            --previous-version "$PREVIOUS_VERSION" \
+            --prepared-from-sha "$PREPARED_FROM_SHA" \
+            --output prepare-release-pr-body.md
+
+      # Everything above this point ran only trusted `main` code with a
+      # read-only token. Nothing below reads from any ref other than the
+      # `main` checkout already validated above.
+      - name: Verify GitHub App credentials are configured
+        env:
+          APP_ID: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$APP_ID" || -z "$APP_PRIVATE_KEY" ]]; then
+            echo "ERROR: PREPARE_RELEASE_APP_ID / PREPARE_RELEASE_APP_PRIVATE_KEY secrets are not configured." >&2
+            echo "The narrowly scoped GitHub App for Prepare Release has not been set up yet." >&2
+            echo "See CLAUDE.md's release-automation section for the required App permissions." >&2
+            exit 1
+          fi
+
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+          # Without explicit permission-* inputs this action mints a token
+          # inheriting the App's FULL installation permissions, regardless
+          # of what the App is actually granted -- pin it down to exactly
+          # what peter-evans/create-pull-request needs below, so a future
+          # installation-permission change on the App can never silently
+          # widen this token's scope.
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open release-preparation PR
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ steps.validate.outputs.branch }}
+          delete-branch: true
+          add-paths: |
+            README.md
+            CHANGELOG.md
+            .release/${{ steps.validate.outputs.version }}.json
+            .release/${{ steps.validate.outputs.version }}.md
+          commit-message: "docs: prepare ${{ steps.validate.outputs.version }} release"
+          title: "docs: prepare ${{ steps.validate.outputs.version }} release"
+          body-path: prepare-release-pr-body.md
+          labels: |
+            docs
+            skip-changelog
+          # Deliberately NOT patch/minor/major: labeling the prep PR itself
+          # with a release-impact label would double-count it in Release
+          # Drafter's version resolver alongside the substantive PRs it
+          # bundles. `docs` is also redundant with the existing path-based
+          # labeler (label-pr.yml) but harmless to set explicitly here.

@@ -62,6 +62,16 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: Resolve the exact checked-out commit
+        id: checkout-sha
+        # Deliberately git rev-parse HEAD, not `github.sha`: if main advances
+        # in the window between dispatch and this checkout actually running,
+        # `github.sha` (fixed at dispatch time) would no longer match what
+        # was actually checked out and generated from. Every downstream use
+        # of prepared_from_sha must tie to what's on disk, not the trigger
+        # event's snapshot.
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -94,7 +104,7 @@ jobs:
         env:
           VERSION: ${{ steps.validate.outputs.version }}
           PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
-          PREPARED_FROM_SHA: ${{ github.sha }}
+          PREPARED_FROM_SHA: ${{ steps.checkout-sha.outputs.sha }}
         run: |
           set -euo pipefail
           DATE="$(date -u +%Y-%m-%d)"
@@ -130,7 +140,7 @@ jobs:
         env:
           VERSION: ${{ steps.validate.outputs.version }}
           PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
-          PREPARED_FROM_SHA: ${{ github.sha }}
+          PREPARED_FROM_SHA: ${{ steps.checkout-sha.outputs.sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/render_prepare_release_pr_body.py \
@@ -160,6 +170,14 @@ jobs:
         with:
           app-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
           private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+          # Without explicit permission-* inputs this action mints a token
+          # inheriting the App's FULL installation permissions, regardless
+          # of what the App is actually granted -- pin it down to exactly
+          # what peter-evans/create-pull-request needs below, so a future
+          # installation-permission change on the App can never silently
+          # widen this token's scope.
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Open release-preparation PR
         uses: peter-evans/create-pull-request@v8

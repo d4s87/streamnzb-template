@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_release import (  # noqa: E402
     GhCliAdapter,
     RELEASE_IMPACT_LABELS,
+    SKIP_LABEL,
     compute_release_delta,
     suggest_version_bump,
     validate_sha,
@@ -31,7 +32,11 @@ def render_body(version, previous_version, prepared_from_sha, delta, suggestion)
     for number, pr in sorted(delta["prs"].items()):
         labels = set(pr["labels"])
         line = f"- #{number} {pr['title']!r} ({', '.join(sorted(labels)) or 'no labels'})"
-        if labels & set(RELEASE_IMPACT_LABELS):
+        # skip-changelog always wins, even alongside an impact label --
+        # mirrors suggest_version_bump()'s own precedence exactly, so the
+        # rendered body never contradicts the accounting that actually
+        # produced the suggested bump above.
+        if labels & set(RELEASE_IMPACT_LABELS) and SKIP_LABEL not in labels:
             substantive.append(line)
         else:
             bookkeeping.append(line)

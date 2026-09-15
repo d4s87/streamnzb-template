@@ -42,16 +42,24 @@ jobs:
 
       - name: Locate the release-preparation provenance file
         id: locate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          matches=(.release/*.json)
-          if [[ ${#matches[@]} -ne 1 ]]; then
-            echo "ERROR: expected exactly one .release/<version>.json on this branch, found ${#matches[@]}" >&2
-            printf '%s\n' "${matches[@]}" >&2
+          # Must be the file THIS PR added, not just "whatever matches the
+          # glob" -- once more than one release has gone through Prepare,
+          # main legitimately retains every prior release's
+          # .release/<version>.json forever (per .release/README.md), so a
+          # bare glob over the checked-out tree would match every one of
+          # them, not just this preparation's own artifact.
+          added=$(git diff --diff-filter=A --name-only "$BASE_SHA"...HEAD -- '.release/*.json')
+          count=$(printf '%s\n' "$added" | grep -c . || true)
+          if [[ "$count" -ne 1 ]]; then
+            echo "ERROR: expected exactly one newly-added .release/<version>.json relative to main, found $count" >&2
+            echo "$added" >&2
             exit 1
           fi
-          version="$(basename "${matches[0]}" .json)"
+          version="$(basename "$added" .json)"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # check_preparation_freshness() requires exact equality against the

@@ -228,4 +228,34 @@ assert not f.ok and f.severity == "warning"
 
 print("PASS: prep-pr --offline skips GitHub-dependent checks explicitly (warning, not silent)")
 
+
+# ---------------------------------------------------------------------------
+# render_prepare_release_pr_body.render_body -- CodeRabbit finding: a PR
+# carrying both an impact label and skip-changelog must render as
+# bookkeeping, matching suggest_version_bump()'s own precedence (a
+# skip-changelog PR never drives the release, even with a co-applied
+# label) rather than contradicting it.
+# ---------------------------------------------------------------------------
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import render_prepare_release_pr_body as rprb  # noqa: E402
+
+
+def _delta_with_prs(prs):
+    return {"previous_tag": "6.0.1", "candidate_sha": "0" * 40, "commits": [], "prs": prs, "unaccounted_commits": []}
+
+
+ordinary_patch_pr = {1: {"number": 1, "title": "fix: a", "labels": ["patch"]}}
+body = rprb.render_body("6.1.0", "6.0.1", MAIN_SHA, _delta_with_prs(ordinary_patch_pr), {"suggested_bump": "patch", "evidence": [], "warnings": []})
+assert "#1 'fix: a' (patch)" in body.split("### Bookkeeping")[0]
+
+contradictory_pr = {2: {"number": 2, "title": "docs: prepare", "labels": ["patch", "skip-changelog"]}}
+body = rprb.render_body("6.1.0", "6.0.1", MAIN_SHA, _delta_with_prs(contradictory_pr), {"suggested_bump": None, "evidence": [], "warnings": []})
+substantive_section = body.split("### Bookkeeping")[0]
+bookkeeping_section = body.split("### Bookkeeping")[1]
+assert "#2" not in substantive_section
+assert "#2 'docs: prepare' (patch, skip-changelog)" in bookkeeping_section
+
+print("PASS: render_body classifies a skip-changelog PR as bookkeeping even alongside an impact label")
+
 print("PASS: check_release_phase2 tests")

@@ -163,9 +163,18 @@ print("PASS: inputs.version is only ever assigned to an env var, never interpola
 app_token_ref = "steps.app-token.outputs.token"
 assert app_token_ref in prepare_text
 token_lines = [line for line in prepare_text.splitlines() if app_token_ref in line]
-assert all("with:" not in line and "run:" not in line for line in token_lines) or all(
-    "token:" in line for line in token_lines
-), "the App token output must only be consumed via a `with: token:` action input, never printed/echoed in shell"
+# Every line referencing the token must be exactly a `token:` key/value --
+# the only legitimate shape (an action's `with: token: ...` input). This is
+# deliberately a structural match, not "does this line also happen to
+# contain the word run:" -- a reference smuggled into a multiline `run: |`
+# block (e.g. `echo "${{ steps.app-token.outputs.token }}"`) would not
+# contain the literal substrings "with:"/"run:" on its own line either, so
+# a same-line keyword check alone would miss it.
+TOKEN_KV_LINE_RE = re.compile(r"^\s*token:\s*\$\{\{\s*steps\.app-token\.outputs\.token\s*\}\}\s*$")
+assert all(TOKEN_KV_LINE_RE.match(line) for line in token_lines), (
+    f"the App token output must only ever appear as a `token: ...` action input line, "
+    f"never inline in a shell command: {token_lines}"
+)
 
 print("PASS: the App token is only ever passed via an action's `with: token:` input, never used in a shell command")
 

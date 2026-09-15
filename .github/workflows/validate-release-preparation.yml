@@ -1,0 +1,68 @@
+name: Validate release preparation
+
+# Read-only stale-main and release-note-curation gate for release-preparation
+# PRs opened by Prepare Release (Phase 2). Deliberately `pull_request`, not
+# `pull_request_target`: a release-prep PR is always same-repo/App-authored,
+# so there is no fork-trust boundary to work around, and this workflow
+# carries no App/write credentials at all -- see CLAUDE.md's
+# release-automation section for why PR validation must stay credential-free.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-release-preparation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Check release-preparation freshness and curation
+    runs-on: ubuntu-latest
+    # Only meaningful for release-preparation branches; every other PR
+    # skips this job entirely (no branch-protection dependency either way,
+    # this repo has none configured).
+    if: startsWith(github.head_ref, 'docs/prepare-release-')
+
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Locate the release-preparation provenance file
+        id: locate
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          matches=(.release/*.json)
+          if [[ ${#matches[@]} -ne 1 ]]; then
+            echo "ERROR: expected exactly one .release/<version>.json on this branch, found ${#matches[@]}" >&2
+            printf '%s\n' "${matches[@]}" >&2
+            exit 1
+          fi
+          version="$(basename "${matches[0]}" .json)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # check_preparation_freshness() requires exact equality against the
+      # LIVE remote main SHA (queried fresh via the API inside
+      # GhCliAdapter.main_sha()), never the PR's cached base SHA and never
+      # mere ancestry. `prep-pr` mode -- not `candidate` -- because this PR
+      # is still open: it does not require main==PR-head, does not require
+      # one-first-parent-hop provenance, and requires the tag/release to
+      # not exist at all yet rather than being "about to be created".
+      - name: Run Phase 1 checker in prep-pr mode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.locate.outputs.version }}
+        run: python3 scripts/check_release.py prep-pr --version "$VERSION"

@@ -4626,16 +4626,19 @@ func TestMovieAudioNormalizationHierarchy(t *testing.T) {
 }
 
 // TestAnimeAudioNeutrality proves the Anime side of the scoring-ceiling
-// fix directly: every codec DraCuLa touches for audio -- the five
-// high-impact/ordering-integrity codecs normalized for everyone
-// (TrueHD/DTS Lossless/Atmos/Dolby Digital Plus/Dolby Digital) and the two
-// remaining previously-untouched native codecs neutralized for Anime only
-// (AAC/DTS Lossy) -- must contribute exactly 0 effective points for an
-// Anime release. Anime's 80-point minimum tier gap has no room for any of
-// them. Dolby Digital reaches 0 through the universal "Neutralize Dolby
-// Digital" rule (see TestDolbyDigitalOrderingRegression), not a dedicated
-// Anime-only rule -- "Neutralize Anime Dolby Digital" no longer exists,
-// subsumed by the universal fix.
+// fix directly: every codec DraCuLa touches for audio -- the four
+// high-impact/ordering-integrity codecs normalized with a non-Anime
+// residual (TrueHD/DTS Lossless/Atmos/Dolby Digital Plus) and the three
+// codecs neutralized universally with no residual at all (Dolby Digital,
+// and, as of the AAC/DTS-Lossy tier-authority audit, AAC/DTS Lossy too) --
+// must contribute exactly 0 effective points for an Anime release. Anime's
+// 80-point minimum tier gap has no room for any of them. None of the seven
+// reach 0 through a dedicated Anime-only rule any more -- "Neutralize
+// Anime Dolby Digital", "Neutralize Anime AAC", and "Neutralize Anime DTS
+// Lossy" have all been subsumed by their universal equivalents, and this
+// test proves Anime's own net behavior is unchanged by that move. See
+// TestAACDTSLossyUniversalNeutralization for the corresponding proof
+// across every content kind, not just Anime.
 func TestAnimeAudioNeutrality(t *testing.T) {
 	productionRules := loadProductionRules(t)
 	defineLibrary := loadDefineLibrary(t)
@@ -5086,6 +5089,205 @@ func TestDolbyDigitalOrderingRegression(t *testing.T) {
 				"decorated-with-DD lower tier (%d) does not stay below clean higher tier (%d)\n  decorated: %s\n  clean:     %s",
 				lower, higher, decoratedWithDD, cleanHigher,
 			)
+		}
+	})
+}
+
+// TestAACDTSLossyUniversalNeutralization is the permanent real-engine proof
+// for the AAC/DTS-Lossy tier-authority audit fix (2026-09-15). Both codecs
+// carry a flat native +100 in Jhin (unchanged since at least v0.6.0, not
+// v6.1.0/0.7.1 pin drift) that DraCuLa previously only neutralized for
+// Anime ("Neutralize Anime AAC"/"Neutralize Anime DTS Lossy"), on the
+// premise that the 200-point Movie/Show tier gap "safely absorbed" the
+// leak. Real-engine reproduction found that no longer holds once combined
+// with the same realistic HDR10+/lossless-audio physical-media stack
+// TestVideoCodecNeutrality's own comment already measures at only a +2/+3
+// margin: substituting native/uncompensated AAC or DTS Lossy for the
+// compensated TrueHD+Atmos pair in that exact combo flips a realistic
+// Movie Remux (DTS Lossy) or Movie UHD BluRay encode (AAC or DTS Lossy)
+// T2/T1 or T3/T2 comparison into a ~+22/+23 inversion -- see
+// TestAdjacentTierCeilingMatrix's realisticLossyAudioVariants cases for the
+// full tier-authority reproduction/regression. This test covers the two
+// narrower claims: (1) "Neutralize AAC"/"Neutralize DTS Lossy" now bring
+// both codecs to exactly 0 effective points for every content kind,
+// replacing (not duplicating) the old Anime-only rules with no change to
+// Anime's own net behavior; (2) AAC/DTS Lossy no longer gain their
+// unintended native advantage over the compensated TrueHD+Atmos pair.
+func TestAACDTSLossyUniversalNeutralization(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "AAC/DTS-Lossy universal neutralization",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	defines := loadCeilingDefines(t)
+	groupFor := func(defineName string) string {
+		toks, ok := defines[defineName]
+		if !ok || len(toks) == 0 {
+			t.Fatalf("missing/empty Define %q", defineName)
+		}
+		return toks[0]
+	}
+
+	score := func(kind string, isAnime bool, title string) int {
+		t.Helper()
+
+		request := ranking.Request{Kind: kind, Title: "Example"}
+		if kind == ranking.KindSeries || kind == ranking.KindAnimeShow {
+			request.Season, request.Episode = 1, 1
+		}
+		if isAnime {
+			request.IsAnime = true
+		}
+
+		kept, rejected := profile.ApplyWithRejected(
+			request,
+			[]triage.Candidate{{Release: &release.Release{Title: title}}},
+			jhinrank.RankOptions{},
+		)
+		if len(rejected) != 0 || len(kept) != 1 {
+			t.Fatalf("%q: kept=%d rejected=%+v", title, len(kept), rejected)
+		}
+		return kept[0].Torrent.Rank
+	}
+
+	// Part 1: universal neutrality. AAC and DTS Lossy must contribute
+	// exactly 0 effective points for Movie, Series, Anime Movie, and Anime
+	// Show alike -- no content-kind split remains.
+	type kindCase struct {
+		label   string
+		kind    string
+		isAnime bool
+		group   string
+	}
+
+	kindCases := []kindCase{
+		{"Movie", ranking.KindMovie, false, groupFor("Movies WEB T1 Groups")},
+		{"Series", ranking.KindSeries, false, groupFor("Shows WEB T1 Groups")},
+		{"Anime Movie", ranking.KindAnimeMovie, true, groupFor("Anime Movies WEB T1 Groups")},
+		{"Anime Show", ranking.KindAnimeShow, true, groupFor("Anime Shows WEB T1 Groups")},
+	}
+
+	titlePrefix := func(kind string) string {
+		switch kind {
+		case ranking.KindSeries:
+			return "Example.Show.S01E01"
+		case ranking.KindAnimeShow:
+			return "Example.Anime.S01E01"
+		case ranking.KindAnimeMovie:
+			return "Example.Anime.Movie.2025"
+		default:
+			return "Example.Movie.2026"
+		}
+	}
+
+	for _, tc := range kindCases {
+		tc := tc
+
+		t.Run("universal neutrality/"+tc.label, func(t *testing.T) {
+			prefix := titlePrefix(tc.kind)
+
+			clean := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.x264-%s", prefix, tc.group,
+			))
+			withAAC := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.x264.AAC5.1-%s", prefix, tc.group,
+			))
+			withDTSLossy := score(tc.kind, tc.isAnime, fmt.Sprintf(
+				"%s.1080p.WEB-DL.x264.DTS.5.1-%s", prefix, tc.group,
+			))
+
+			if got := withAAC - clean; got != 0 {
+				t.Errorf(
+					"%s AAC effective delta=%+d; want 0 (clean=%d, withAAC=%d)",
+					tc.label, got, clean, withAAC,
+				)
+			}
+			if got := withDTSLossy - clean; got != 0 {
+				t.Errorf(
+					"%s DTS Lossy effective delta=%+d; want 0 (clean=%d, withDTSLossy=%d)",
+					tc.label, got, clean, withDTSLossy,
+				)
+			}
+		})
+	}
+
+	// Part 2: audio-hierarchy correction. Before this fix, native AAC/DTS
+	// Lossy (+100 each) outscored the compensated TrueHD+Atmos pair
+	// (effective +75 non-Anime) by 25 points -- the objectively worse
+	// (lossy) codec beat the objectively better (lossless) one. This does
+	// not assert a full ordering beyond that documented policy: only that
+	// TrueHD+Atmos now strictly outranks AAC/DTS Lossy for non-Anime (the
+	// exact native-leak correction), and that both remain equal (0) for
+	// Anime, where TrueHD/Atmos are themselves neutralized with no
+	// residual.
+	t.Run("audio hierarchy", func(t *testing.T) {
+		hierarchyCases := []struct {
+			label   string
+			kind    string
+			isAnime bool
+			group   string
+			// wantDelta is TrueHD+Atmos score minus AAC/DTS-Lossy score:
+			// +75 for non-Anime (the documented TrueHD/Atmos residual),
+			// 0 for Anime (both sides neutralized to nothing).
+			wantDelta int
+		}{
+			{"Movie", ranking.KindMovie, false, groupFor("Movies WEB T1 Groups"), 75},
+			{"Series", ranking.KindSeries, false, groupFor("Shows WEB T1 Groups"), 75},
+			{"Anime Movie", ranking.KindAnimeMovie, true, groupFor("Anime Movies WEB T1 Groups"), 0},
+			{"Anime Show", ranking.KindAnimeShow, true, groupFor("Anime Shows WEB T1 Groups"), 0},
+		}
+
+		for _, tc := range hierarchyCases {
+			tc := tc
+
+			t.Run(tc.label, func(t *testing.T) {
+				prefix := titlePrefix(tc.kind)
+
+				withAAC := score(tc.kind, tc.isAnime, fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264.AAC5.1-%s", prefix, tc.group,
+				))
+				withDTSLossy := score(tc.kind, tc.isAnime, fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264.DTS.5.1-%s", prefix, tc.group,
+				))
+				withTrueHDAtmos := score(tc.kind, tc.isAnime, fmt.Sprintf(
+					"%s.1080p.WEB-DL.x264.TrueHD.Atmos.7.1-%s", prefix, tc.group,
+				))
+
+				if got := withTrueHDAtmos - withAAC; got != tc.wantDelta {
+					t.Errorf(
+						"%s: TrueHD+Atmos (%d) minus AAC (%d) = %+d; want %+d",
+						tc.label, withTrueHDAtmos, withAAC, got, tc.wantDelta,
+					)
+				}
+				if got := withTrueHDAtmos - withDTSLossy; got != tc.wantDelta {
+					t.Errorf(
+						"%s: TrueHD+Atmos (%d) minus DTS Lossy (%d) = %+d; want %+d",
+						tc.label, withTrueHDAtmos, withDTSLossy, got, tc.wantDelta,
+					)
+				}
+				if tc.wantDelta > 0 && withTrueHDAtmos <= withAAC {
+					t.Errorf(
+						"%s: TrueHD+Atmos (%d) does not strictly outrank AAC (%d)",
+						tc.label, withTrueHDAtmos, withAAC,
+					)
+				}
+				if tc.wantDelta > 0 && withTrueHDAtmos <= withDTSLossy {
+					t.Errorf(
+						"%s: TrueHD+Atmos (%d) does not strictly outrank DTS Lossy (%d)",
+						tc.label, withTrueHDAtmos, withDTSLossy,
+					)
+				}
+			})
 		}
 	})
 }

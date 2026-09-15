@@ -261,8 +261,10 @@ for name in neutral_names:
 # fires on drift, not just that the current committed source happens to
 # pass. Universal "Neutralize X" rules must never gain an isAnime
 # condition; non-Anime "Prefer X" residual bonuses must never lose their
-# "not isAnime" scoping; Anime-only neutralizers for previously-untouched
-# codecs (AAC/DTS Lossy/Dolby Digital) must stay isAnime-scoped.
+# "not isAnime" scoping. (AAC/DTS Lossy used to be a third, Anime-only
+# category here; as of the AAC/DTS-Lossy tier-authority audit they are
+# universal zero-residual neutralizers instead -- see the
+# validate_zero_residual_neutralizers block below.)
 # ---------------------------------------------------------------------------
 
 import importlib.util as _importlib_util
@@ -284,13 +286,6 @@ _good_entries = (
             "rule": {"name": name, "when": 'not isAnime and "truehd" in traits'},
         }
         for name in build_profiles.EXPECTED_NON_ANIME_AUDIO_PREFERENCES
-    ]
-    + [
-        {
-            "owner": "core",
-            "rule": {"name": name, "when": 'isAnime and "aac" in traits'},
-        }
-        for name in build_profiles.EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS
     ]
 )
 
@@ -335,33 +330,6 @@ except ValueError as exc:
 else:
     raise AssertionError(
         "residual preference losing not-isAnime scoping was not detected"
-    )
-
-# An Anime-only neutralizer losing its isAnime scoping must fail closed.
-_drifted = _with_when(_good_entries, "Neutralize Anime AAC", '"aac" in traits')
-try:
-    build_profiles.validate_audio_neutralization_scoping(_drifted)
-except ValueError as exc:
-    assert "Neutralize Anime AAC" in str(exc)
-    assert "Anime only" in str(exc)
-else:
-    raise AssertionError(
-        "Anime-only neutralizer losing isAnime scoping was not detected"
-    )
-
-# An Anime-only neutralizer accidentally becoming universal (isAnime
-# replaced by "not isAnime", i.e. inverted rather than dropped) must
-# also fail closed.
-_drifted = _with_when(
-    _good_entries, "Neutralize Anime AAC", 'not isAnime and "aac" in traits'
-)
-try:
-    build_profiles.validate_audio_neutralization_scoping(_drifted)
-except ValueError as exc:
-    assert "Neutralize Anime AAC" in str(exc)
-else:
-    raise AssertionError(
-        "Anime-only neutralizer inverted to non-Anime was not detected"
     )
 
 # A missing expected rule must fail closed rather than silently validating.
@@ -512,7 +480,139 @@ except ValueError as exc:
 else:
     raise AssertionError("unexpected 'Prefer Dolby Digital' residual was not detected")
 
+# The subsumed Anime-only AAC/DTS-Lossy rules reappearing must also fail
+# closed (AAC/DTS-Lossy tier-authority audit: they share the same
+# FORBIDDEN_AUDIO_RULE_NAMES mechanism as "Neutralize Anime Dolby Digital").
+_resurrected_whens = {
+    "Neutralize Anime AAC": 'isAnime and "aac" in traits',
+    "Neutralize Anime DTS Lossy": 'isAnime and "dts_lossy" in traits',
+}
+for _resurrected_name, _resurrected_when in _resurrected_whens.items():
+    _resurrected = _dd_good_entries + [
+        {
+            "owner": "core",
+            "rule": {
+                "name": _resurrected_name,
+                "points": -100,
+                "when": _resurrected_when,
+            },
+        }
+    ]
+    try:
+        build_profiles.validate_dolby_digital_ordering(_resurrected)
+    except ValueError as exc:
+        assert _resurrected_name in str(exc)
+    else:
+        raise AssertionError(
+            f"resurrected {_resurrected_name!r} was not detected"
+        )
+
 print("PASS: Dolby Digital ordering-integrity structural guards")
+
+# ---------------------------------------------------------------------------
+# Universal zero-residual neutralizers (AAC/DTS-Lossy tier-authority audit
+# + StreamNZB v6.1.0/Jhin v0.7.1 pin-move compensation). Prove
+# validate_zero_residual_neutralizers() fires on drift: every entry must
+# exist with its exact points/when clause, stay unscoped and universal (no
+# isAnime/kind condition), and no "Prefer" residual may ever appear for any
+# of them.
+# ---------------------------------------------------------------------------
+
+_zr_good_entries = [
+    {
+        "owner": "core",
+        "rule": {"name": name, "points": points, "when": when},
+    }
+    for name, (points, when) in build_profiles.EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS.items()
+]
+
+# Valid shape must pass.
+build_profiles.validate_zero_residual_neutralizers(_zr_good_entries)
+
+# A missing expected rule must fail closed.
+_zr_missing = [
+    e for e in _zr_good_entries if e["rule"]["name"] != "Neutralize AAC"
+]
+try:
+    build_profiles.validate_zero_residual_neutralizers(_zr_missing)
+except ValueError as exc:
+    assert "Neutralize AAC" in str(exc)
+else:
+    raise AssertionError("missing 'Neutralize AAC' was not detected")
+
+# Points drift must fail closed.
+_zr_drifted_points = [
+    {
+        "owner": e["owner"],
+        "rule": {**e["rule"], "points": -99} if e["rule"]["name"] == "Neutralize DTS Lossy" else e["rule"],
+    }
+    for e in _zr_good_entries
+]
+try:
+    build_profiles.validate_zero_residual_neutralizers(_zr_drifted_points)
+except ValueError as exc:
+    assert "Neutralize DTS Lossy" in str(exc)
+    assert "points drifted" in str(exc)
+else:
+    raise AssertionError("'Neutralize DTS Lossy' points drift was not detected")
+
+# Gaining an isAnime condition must fail closed (the whole point of this
+# fix is that these must stay universal, unlike the old Anime-only rules).
+_zr_anime_scoped = _with_when(
+    _zr_good_entries, "Neutralize AAC", 'isAnime and "aac" in traits'
+)
+try:
+    build_profiles.validate_zero_residual_neutralizers(_zr_anime_scoped)
+except ValueError as exc:
+    assert "Neutralize AAC" in str(exc)
+    assert "universal" in str(exc)
+else:
+    raise AssertionError(
+        "'Neutralize AAC' gaining an isAnime condition was not detected"
+    )
+
+# A scope appearing on a universal zero-residual neutralizer must fail
+# closed (CodeRabbit finding, PR #27: this guard existed but was never
+# exercised by a test).
+_zr_scoped = [
+    {
+        "owner": e["owner"],
+        "rule": {**e["rule"], "scope": "movie"} if e["rule"]["name"] == "Neutralize AAC" else e["rule"],
+    }
+    for e in _zr_good_entries
+]
+try:
+    build_profiles.validate_zero_residual_neutralizers(_zr_scoped)
+except ValueError as exc:
+    assert "Neutralize AAC" in str(exc)
+    assert "unscoped" in str(exc)
+else:
+    raise AssertionError(
+        "scope appearing on 'Neutralize AAC' was not detected"
+    )
+
+# A never-intended "Prefer AAC"/"Prefer DTS Lossy" residual must fail closed.
+for _forbidden_residual in ("Prefer AAC", "Prefer DTS Lossy"):
+    _zr_with_residual = _zr_good_entries + [
+        {
+            "owner": "core",
+            "rule": {
+                "name": _forbidden_residual,
+                "points": 25,
+                "when": 'not isAnime and "aac" in traits',
+            },
+        }
+    ]
+    try:
+        build_profiles.validate_zero_residual_neutralizers(_zr_with_residual)
+    except ValueError as exc:
+        assert _forbidden_residual in str(exc)
+    else:
+        raise AssertionError(
+            f"unexpected {_forbidden_residual!r} residual was not detected"
+        )
+
+print("PASS: universal zero-residual neutralizer structural guards")
 
 # ---------------------------------------------------------------------------
 # Scoring share-code round-trip (schema v2). StreamNZB v5.18.0 / Jhin 0.6.2

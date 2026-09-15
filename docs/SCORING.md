@@ -98,7 +98,9 @@ Effective non-Anime preferences are:
 - Atmos: +25
 - Dolby Digital Plus: +25
 
-For Anime, those four codecs are score-neutral because the 80-point minimum tier gap is too small to safely absorb the native values. DTS lossy and AAC remain native for Movies/Shows but are neutralized for Anime. Dolby Digital is universally neutralized to avoid it outranking Dolby Digital Plus after compensation.
+For Anime, those four codecs are score-neutral because the 80-point minimum tier gap is too small to safely absorb the native values. Dolby Digital is universally neutralized to avoid it outranking Dolby Digital Plus after compensation.
+
+DTS Lossy and AAC are also universally neutralized with no residual, for every content kind including Anime. They were previously neutralized for Anime only, on the premise that the 200-point Movie/Show tier gap safely absorbed their native +100 each — the AAC/DTS-Lossy tier-authority audit found that judgment no longer held: combined with the same realistic HDR10+/lossless-audio physical-media decoration the tier-authority regression already measures at only a few points of margin, the native +100 reproduced a real, realistic adjacent-tier inversion (a Movie Remux or Movie UHD BluRay-encode release one tier lower outscoring a clean release one tier higher by roughly 22–23 points). DraCuLa does not treat either native score as positive ranking policy anywhere; this prevents native codec leakage from consuming trusted-tier headroom.
 
 Selected Vidhin-backed exclusion groups suppress residual Atmos/TrueHD bonuses for release groups known to falsely tag those attributes. The neutralization itself still applies.
 

@@ -1,0 +1,137 @@
+name: Publish Release
+
+# Phase 3 of the approved release-automation architecture (see CLAUDE.md's
+# "Release automation" section). Human-dispatched only, takes an explicit
+# version + expected commit SHA, and performs the one remaining manual gate:
+# tag-first publication of an already-merged, already-validated release
+# candidate. Never used to prepare housekeeping (Phase 2) and never mutates
+# an unrelated release/draft.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (bare semver, e.g. 6.1.0)"
+        required: true
+        type: string
+      expected_sha:
+        description: "Exact 40-character commit SHA on main to publish"
+        required: true
+        type: string
+
+# Minimal default GITHUB_TOKEN: only what the read-only `candidate`
+# preflight needs (releases, refs, check-runs, associated PRs -- all GET).
+# No write scope at all here; the privileged mutation steps (tag creation,
+# release write/publish) use a separate, narrowly scoped GitHub App
+# installation token (Contents: write ONLY -- deliberately no Pull
+# requests: write, unlike Prepare Release, since Publish never opens a PR),
+# minted only after every read-only candidate check below has already
+# passed. This workflow never checks out a PR head or any other untrusted
+# ref, so there is nothing for that token to run against even in principle.
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate candidate, then tag and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate requested version and SHA format
+        id: validate
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+          RAW_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RAW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: version must be bare semver X.Y.Z (no 'v' prefix, no prerelease/build metadata), got: $RAW_VERSION" >&2
+            exit 1
+          fi
+          if [[ ! "$RAW_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "ERROR: expected_sha must be exactly 40 hexadecimal characters, got: $RAW_SHA" >&2
+            exit 1
+          fi
+          echo "version=$RAW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=${RAW_SHA,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Confirm dispatched from the default branch
+        run: |
+          if [[ "${{ github.ref }}" != "refs/heads/main" ]]; then
+            echo "ERROR: Publish Release must be dispatched from main; got ${{ github.ref }}" >&2
+            exit 1
+          fi
+
+      - name: Check out exact current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # Read-only candidate preflight, under the default (read-only)
+      # GITHUB_TOKEN -- runs every check listed in CLAUDE.md's Phase 3
+      # candidate-invariants section, including the newly added
+      # target-release-absent hard-fail. Nothing below this step may run
+      # until every one of these checks has passed.
+      - name: Run Phase 1 checker in candidate mode (online, read-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.validate.outputs.version }}
+          SHA: ${{ steps.validate.outputs.sha }}
+        run: python3 scripts/check_release.py candidate --version "$VERSION" --sha "$SHA"
+
+      # Everything above this point ran only trusted `main` code with a
+      # read-only token, and every candidate check passed. Nothing below
+      # checks out a different ref or re-executes untrusted code -- the
+      # only steps left are minting the privileged token and running the
+      # privileged publish sequence, which itself only calls the GitHub
+      # API (never git push/checkout with the token).
+      - name: Verify GitHub App credentials are configured
+        env:
+          APP_ID: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$APP_ID" || -z "$APP_PRIVATE_KEY" ]]; then
+            echo "ERROR: PREPARE_RELEASE_APP_ID / PREPARE_RELEASE_APP_PRIVATE_KEY secrets are not configured." >&2
+            echo "Publish Release reuses the same GitHub App as Prepare Release." >&2
+            exit 1
+          fi
+
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+          # Contents: write ONLY. Deliberately narrower than Prepare
+          # Release's token -- Publish never opens/updates a pull request,
+          # so it never requests Pull requests: write. This also never
+          # broadens the underlying App installation's own permissions,
+          # which stay Contents+Pull-requests read/write as configured for
+          # Prepare Release; this token just doesn't exercise the PR half.
+          permission-contents: write
+
+      # The privileged mutation sequence itself (draft selection -> tag
+      # -first creation+verification -> release write/publish/verify ->
+      # compare verification -> bounded notification correlation). See
+      # scripts/check_release.py's `publish` mode / run_publish() docstring
+      # for the exact fixed order and partial-failure semantics: any
+      # failure at or before tag creation is safe to fix and rerun; any
+      # failure after tag creation stops with explicit recovery
+      # instructions and never auto-mutates the tag; a missing/failed
+      # notification run is WARN-only, never a publish failure.
+      - name: Publish release (privileged)
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ steps.validate.outputs.version }}
+          SHA: ${{ steps.validate.outputs.sha }}
+        run: python3 scripts/check_release.py publish --version "$VERSION" --expected-sha "$SHA"

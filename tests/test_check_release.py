@@ -189,7 +189,7 @@ else:
 print("PASS: check_compatibility_internal_consistency fails closed on README/go.mod drift")
 
 readme_version = cr.parse_readme_version()
-assert readme_version == "6.0.1"
+assert readme_version == "6.1.0"  # current stable as of the 6.1.0 release (PR #33)
 
 print("PASS: parse_readme_version reads the current stable version")
 
@@ -345,7 +345,15 @@ def _make_adapter(release=None, tag=None, main_sha=PR28_MERGE, checks=None, vers
 
 good_adapter = _make_adapter(release=GOOD_RELEASE, tag=GOOD_TAG)
 report = cr.run_verify_published("6.0.1", PR28_MERGE, good_adapter, offline=False, allow_missing_release_note=True)
-assert report.passed, report.render()
+# 6.0.1 is no longer the live README/CHANGELOG version (6.1.0 has since
+# shipped, permanently -- main only moves forward), so readme-version
+# -matches now legitimately fails here too, alongside the two pre
+# -existing legacy-6.0.1 warnings (missing release note, no notify run
+# in this fixture). This is exactly and only that -- everything else
+# about this fixture (tag, release draft/prerelease/timestamp/body) is
+# genuinely clean, which is the actual point of this test.
+EXPECTED_NON_PASSING_FOR_HISTORICAL_6_0_1 = {"readme-version-matches", "release-note-artifact", "notify-workflow-conclusion"}
+assert {f.check for f in report.findings if not f.ok} == EXPECTED_NON_PASSING_FOR_HISTORICAL_6_0_1, report.render()
 
 annotated_adapter = _make_adapter(release=GOOD_RELEASE, tag={"sha": PR28_MERGE, "type": "tag"})
 report = cr.run_verify_published("6.0.1", PR28_MERGE, annotated_adapter, offline=False, allow_missing_release_note=True)
@@ -538,7 +546,12 @@ legacy_report = cr.run_verify_published(
 )
 legacy_finding = next(f for f in legacy_report.findings if f.check == "release-note-artifact")
 assert not legacy_finding.ok and legacy_finding.severity == "warning", legacy_finding.render()
-assert legacy_report.passed  # a warning alone must not fail the report
+# A warning alone must not fail the report -- but 6.0.1 is also, by now,
+# permanently a historical (non-live) version, so readme-version-matches
+# legitimately fails here too (see EXPECTED_NON_PASSING_FOR_HISTORICAL_6_0_1
+# above). Assert precisely that set rather than a blanket `.passed`, which
+# can never hold again for this fixture once main advances past 6.0.1.
+assert {f.check for f in legacy_report.findings if not f.ok} == EXPECTED_NON_PASSING_FOR_HISTORICAL_6_0_1, legacy_report.render()
 
 # Without the legacy flag, the same missing artifact must be a hard FAIL.
 no_legacy_report = cr.run_verify_published(
@@ -577,7 +590,14 @@ uppercase_sha = PR28_MERGE.upper()
 report = cr.run_verify_published(
     "6.0.1", uppercase_sha, good_adapter, offline=False, allow_missing_release_note=True
 )
-assert report.passed, report.render()
+# Same historical-6.0.1 caveat as above: only readme-version-matches/
+# release-note-artifact/notify-workflow-conclusion are expected to be
+# non-passing; everything SHA-case-sensitive (tag-exists/tag-directness/
+# tag-sha-matches/release-target-commitish) must be clean, which is what
+# this test actually verifies.
+assert {f.check for f in report.findings if not f.ok} == EXPECTED_NON_PASSING_FOR_HISTORICAL_6_0_1, report.render()
+tag_sha_finding = next(f for f in report.findings if f.check == "tag-sha-matches")
+assert tag_sha_finding.ok, tag_sha_finding.render()
 
 candidate_report = cr.run_candidate("6.0.1", uppercase_sha, candidate_adapter, offline=False)
 main_finding = next(f for f in candidate_report.findings if f.check == "main-equals-candidate")

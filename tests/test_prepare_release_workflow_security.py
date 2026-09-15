@@ -135,6 +135,36 @@ print("PASS: App credentials are checked via env:+bash before minting, never via
 
 
 # ---------------------------------------------------------------------------
+# The App token-mint step authenticates via the supported `client-id` input
+# (never the deprecated `app-id`), using the existing PREPARE_RELEASE_APP_ID
+# secret value unchanged, with private-key and permission inputs intact.
+# actions/create-github-app-token@v3's `app-id` input carries
+# `deprecationMessage: "Use 'client-id' instead."` upstream -- both inputs
+# feed the identical authentication path (`getInput("client-id") ||
+# getInput("app-id")`), so this is a pure input-key migration, not a
+# behavior change.
+# ---------------------------------------------------------------------------
+
+app_token_step_match = re.search(
+    r"uses:\s*actions/create-github-app-token@v3\n((?:\s{2,}.+\n)+)", prepare_text
+)
+assert app_token_step_match, "prepare-release.yml missing a parseable create-github-app-token step"
+app_token_step = app_token_step_match.group(1)
+
+assert "client-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}" in app_token_step, (
+    "prepare-release.yml must authenticate via the supported client-id input, using the existing App ID secret"
+)
+assert not re.search(r"^\s*app-id:", app_token_step, re.MULTILINE), (
+    "prepare-release.yml must not use the deprecated app-id input"
+)
+assert "private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}" in app_token_step
+assert "permission-contents: write" in app_token_step
+assert "permission-pull-requests: write" in app_token_step
+
+print("PASS: prepare-release.yml's App token step uses client-id (not deprecated app-id), with private-key and permission inputs intact")
+
+
+# ---------------------------------------------------------------------------
 # inputs.version is never interpolated directly into a shell command --
 # only assigned to an env var (RAW_VERSION) once, then referenced as
 # "$RAW_VERSION" thereafter.

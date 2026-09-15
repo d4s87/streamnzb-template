@@ -120,6 +120,28 @@ print("PASS: the App token requests Contents: write only, no Pull requests: writ
 
 
 # ---------------------------------------------------------------------------
+# The App token-mint step authenticates via the supported `client-id` input
+# (never the deprecated `app-id`), using the existing PREPARE_RELEASE_APP_ID
+# secret value unchanged, with private-key intact.
+# actions/create-github-app-token@v3's `app-id` input carries
+# `deprecationMessage: "Use 'client-id' instead."` upstream -- both inputs
+# feed the identical authentication path (`getInput("client-id") ||
+# getInput("app-id")`), so this is a pure input-key migration, not a
+# behavior change.
+# ---------------------------------------------------------------------------
+
+assert "client-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}" in app_token_step, (
+    "publish-release.yml must authenticate via the supported client-id input, using the existing App ID secret"
+)
+assert not re.search(r"^\s*app-id:", app_token_step, re.MULTILINE), (
+    "publish-release.yml must not use the deprecated app-id input"
+)
+assert "private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}" in app_token_step
+
+print("PASS: publish-release.yml's App token step uses client-id (not deprecated app-id), with private-key intact")
+
+
+# ---------------------------------------------------------------------------
 # inputs.version / inputs.expected_sha are each interpolated directly into
 # a shell command exactly once -- the env: assignment inside the
 # validation step -- never used raw anywhere else (e.g. inside a `run:`

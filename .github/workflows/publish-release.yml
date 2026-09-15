@@ -110,7 +110,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          client-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
           private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
           # Contents: write ONLY. Deliberately narrower than Prepare
           # Release's token -- Publish never opens/updates a pull request,

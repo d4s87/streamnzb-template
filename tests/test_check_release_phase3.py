@@ -851,7 +851,7 @@ def _paged_gh_adapter(pages):
 
     def fake_api(path, allow_404=False):
         requested_paths.append(path)
-        base, _, query = path.partition("?")
+        _base, _, query = path.partition("?")
         params = dict(p.split("=", 1) for p in query.split("&") if p)
         page_number = int(params.get("page", "1"))
         if page_number > len(pages):

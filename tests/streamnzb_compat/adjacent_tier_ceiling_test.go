@@ -107,6 +107,14 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		return toks[0]
 	}
 
+	// lossyAudioVariant is one entry of a family's realisticLossyAudioVariants
+	// list -- an ordered slice rather than a map so iteration order (and
+	// therefore t.Logf/t.Errorf ordering) is deterministic across runs.
+	type lossyAudioVariant struct {
+		label       string
+		decorations []string
+	}
+
 	// A family describes one production tier ladder and everything needed
 	// to build a realistic "fully decorated" title for its lowest tier
 	// and a "clean" title for any tier.
@@ -170,8 +178,9 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// codec (AAC/DTS Lossy tier-authority audit, 2026-09-15 -- the
 		// exact realistic combo that reproduced a ~+22/+23 adjacent-tier
 		// inversion before "Neutralize AAC"/"Neutralize DTS Lossy" went
-		// universal). Keyed by variant label -> the audio tokens to use.
-		// Deliberately populated only for families/codecs where the
+		// universal). An ordered slice (not a map) so iteration -- and
+		// therefore t.Logf/t.Errorf order -- stays deterministic across
+		// runs. Deliberately populated only for families/codecs where the
 		// combination is actually authored in the wild: plain DTS Lossy on
 		// a physical-media Remux (many catalog UHD Blu-ray discs carry
 		// only a lossy DTS core, no lossless option) and AAC or DTS Lossy
@@ -180,7 +189,7 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// deliberately NOT added for Remux (the Blu-ray spec does not
 		// author AAC tracks) -- see README/CHANGELOG for the realism
 		// rationale; do not add it here without concrete evidence.
-		realisticLossyAudioVariants map[string][]string
+		realisticLossyAudioVariants []lossyAudioVariant
 	}
 
 	seriesTitle := func(source []string, group string, extras []string) string {
@@ -231,8 +240,8 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
 					"REPACK3", "TrueHD", "Atmos", "7.1",
 				},
-				realisticLossyAudioVariants: map[string][]string{
-					"DTS Lossy": {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"},
+				realisticLossyAudioVariants: []lossyAudioVariant{
+					{"DTS Lossy", []string{"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"}},
 				},
 			},
 			build: movieTitle,
@@ -262,9 +271,9 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				// (AAC or a retained lossy DTS core) while preserving the
 				// disc's HDR10+ metadata -- unlike Remux, AAC is realistic
 				// here too.
-				realisticLossyAudioVariants: map[string][]string{
-					"AAC":       {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "AAC5.1"},
-					"DTS Lossy": {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"},
+				realisticLossyAudioVariants: []lossyAudioVariant{
+					{"AAC", []string{"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "AAC5.1"}},
+					{"DTS Lossy", []string{"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"}},
 				},
 			},
 			build: movieTitle,
@@ -543,7 +552,8 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					// actually authored in the wild (see
 					// realisticLossyAudioVariants doc comment) -- this is
 					// not a synthetic algebraic-maximum case.
-					for variant, lossyDecorations := range f.realisticLossyAudioVariants {
+					for _, lv := range f.realisticLossyAudioVariants {
+						variant, lossyDecorations := lv.label, lv.decorations
 						lossyTitle := f.build(
 							hdr10Source, lowerGroup, lossyDecorations,
 						)
@@ -718,7 +728,8 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 
 					// Same AAC/DTS-Lossy realistic-combo evidence as above,
 					// checked against the RETAG'd higher tier too.
-					for variant, lossyDecorations := range f.realisticLossyAudioVariants {
+					for _, lv := range f.realisticLossyAudioVariants {
+						variant, lossyDecorations := lv.label, lv.decorations
 						lossyTitle := f.build(
 							hdr10Source, lowerGroup, lossyDecorations,
 						)

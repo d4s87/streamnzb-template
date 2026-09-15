@@ -571,6 +571,26 @@ else:
         "'Neutralize AAC' gaining an isAnime condition was not detected"
     )
 
+# A scope appearing on a universal zero-residual neutralizer must fail
+# closed (CodeRabbit finding, PR #27: this guard existed but was never
+# exercised by a test).
+_zr_scoped = [
+    {
+        "owner": e["owner"],
+        "rule": {**e["rule"], "scope": "movie"} if e["rule"]["name"] == "Neutralize AAC" else e["rule"],
+    }
+    for e in _zr_good_entries
+]
+try:
+    build_profiles.validate_zero_residual_neutralizers(_zr_scoped)
+except ValueError as exc:
+    assert "Neutralize AAC" in str(exc)
+    assert "unscoped" in str(exc)
+else:
+    raise AssertionError(
+        "scope appearing on 'Neutralize AAC' was not detected"
+    )
+
 # A never-intended "Prefer AAC"/"Prefer DTS Lossy" residual must fail closed.
 for _forbidden_residual in ("Prefer AAC", "Prefer DTS Lossy"):
     _zr_with_residual = _zr_good_entries + [

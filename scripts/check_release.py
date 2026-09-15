@@ -47,6 +47,19 @@ NOTICE_LINE = (
     "the latest stable release."
 )
 
+# Generator-owned markers (scripts/prepare_release_housekeeping.py) that
+# identify an untouched .release/<version>.md draft seed. Defined here, not
+# in the generator module, so both the generator and this checker can
+# import them from one place without a circular import (the generator
+# already imports from this module). Exact-marker matching only -- no
+# heuristic "does this look edited" prose detection.
+DRAFT_HEADING_MARKER = "— release notes draft"
+DRAFT_NOTICE = (
+    "<!-- Auto-generated draft, seeded verbatim from the CHANGELOG section below. "
+    "Condense for public release-note tone before merging the release-preparation "
+    "PR -- this is a review starting point, not final prose. -->"
+)
+
 CHANGELOG_UNRELEASED_RE = re.compile(
     r"^## \[Unreleased\]\(https://github\.com/(?P<slug>[^/]+/[^/]+)"
     r"/compare/(?P<prev>[0-9]+\.[0-9]+\.[0-9]+)\.\.\.HEAD\)[ \t]*$",
@@ -506,6 +519,17 @@ def changelog_section_body(text, version):
     if first_newline == -1:
         return ""
     return section[first_newline + 1:].strip("\n")
+
+
+def check_release_note_curated(text):
+    """A generated .release/<version>.md draft is not publication-ready
+    while either generator-owned marker remains. Exact-marker matching
+    only -- not a "does this look edited" heuristic. Returns (ok, detail)."""
+    if DRAFT_NOTICE in text:
+        return False, "still contains the generator's DRAFT_NOTICE HTML comment"
+    if DRAFT_HEADING_MARKER in text:
+        return False, f"heading still contains the generated draft marker {DRAFT_HEADING_MARKER!r}"
+    return True, "no generated draft markers present"
 
 
 # ---------------------------------------------------------------------------
@@ -997,6 +1021,17 @@ def run_candidate(version, sha, github, offline):
         else:
             report.add_pass("release-note-references-version", version)
 
+        curated_ok, curated_detail = check_release_note_curated(note_text)
+        if curated_ok:
+            report.add_pass("release-note-curated", curated_detail)
+        else:
+            report.add_fail(
+                "release-note-curated",
+                f"{release_note_path} {curated_detail} -- edit the generated public "
+                "release note and remove the generated draft markers before this "
+                "release-preparation PR may merge",
+            )
+
     provenance_path = RELEASE_DIR / f"{version}.json"
     prepared_from_sha = None
     if not provenance_path.exists():
@@ -1267,12 +1302,19 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
                 report.add_pass("release-target-commitish", sha)
 
             if release_note_path.exists():
+                # .release/<version>.md is authoritative under the approved
+                # architecture: a mismatch here is drift, not an expected
+                # hand-edit-at-publish-time variation -- hard fail, never a
+                # warning. Legacy releases with no artifact at all (6.0.1,
+                # via --allow-missing-release-note) are handled separately
+                # above and are unaffected by this branch.
                 expected_body = release_note_path.read_text(encoding="utf-8").strip()
                 if release["body"].strip() != expected_body:
-                    report.add_warn(
+                    report.add_fail(
                         "release-body-matches-artifact",
-                        "published body text differs from .release/<version>.md "
-                        "(expected if hand-edited further at publish time; review manually)",
+                        f"published body text differs from {release_note_path} -- "
+                        ".release/<version>.md is the authoritative release body; "
+                        "post-merge drift is not allowed",
                     )
                 else:
                     report.add_pass("release-body-matches-artifact", "byte-identical")

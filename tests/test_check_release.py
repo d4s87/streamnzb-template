@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
+import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_release as cr  # noqa: E402
+import prepare_release_housekeeping as prh  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -331,11 +334,11 @@ GOOD_RELEASE = {
 GOOD_TAG = {"sha": PR28_MERGE, "type": "commit"}
 
 
-def _make_adapter(release=None, tag=None, main_sha=PR28_MERGE, checks=None):
+def _make_adapter(release=None, tag=None, main_sha=PR28_MERGE, checks=None, version="6.0.1"):
     return cr.FakeGithubAdapter(
         main_sha=main_sha,
-        releases={"6.0.1": release} if release else {},
-        tags={"6.0.1": tag} if tag else {},
+        releases={version: release} if release else {},
+        tags={version: tag} if tag else {},
         check_conclusions_by_sha={PR28_MERGE: checks or {"validate": "success"}},
     )
 
@@ -386,5 +389,165 @@ report = cr.run_candidate("6.0.1", PR28_MERGE, tag_exists_adapter, offline=False
 assert any("tag-still-absent" in f.check and not f.ok for f in report.findings)
 
 print("PASS: run_candidate fires on main!=candidate and tag-already-exists")
+
+
+# ---------------------------------------------------------------------------
+# Release-note readiness: check_release_note_curated() -- exact-marker
+# matching only, shared constants (DRAFT_NOTICE / DRAFT_HEADING_MARKER)
+# live in this module and are imported by prepare_release_housekeeping.py,
+# never duplicated.
+# ---------------------------------------------------------------------------
+
+GENERATED_DRAFT_NOTE = prh.generate_release_note(
+    "6.0.2",
+    "6.0.1",
+    "### Bug Fixes\n\n- fixed a thing.",
+    {
+        "streamnzb_version": "6.1.0",
+        "streamnzb_sha": "2ff93449e59a6597f25fd008e3440920772578c3",
+        "jhin_version": "0.7.1",
+    },
+    {"samsung": 151, "neutral": 150, "core": 129, "presentation": 21, "device": 1, "defines": 62},
+    "d4s87/streamnzb-template",
+)
+assert cr.DRAFT_NOTICE in GENERATED_DRAFT_NOTE
+assert cr.DRAFT_HEADING_MARKER in GENERATED_DRAFT_NOTE
+
+# A. generated draft rejection: the exact generator output must fail readiness.
+ok, detail = cr.check_release_note_curated(GENERATED_DRAFT_NOTE)
+assert not ok
+assert "DRAFT_NOTICE" in detail or "draft marker" in detail
+
+print("PASS: check_release_note_curated rejects an untouched generator-produced draft")
+
+# B. curated note acceptance: strip only the two generator markers, keep
+# version/compatibility/counts/changelog-link content intact.
+CURATED_NOTE = GENERATED_DRAFT_NOTE.replace(
+    f"# DraCuLa StreamNZB Template 6.0.2 {cr.DRAFT_HEADING_MARKER}",
+    "# DraCuLa StreamNZB Template 6.0.2",
+).replace(cr.DRAFT_NOTICE + "\n\n", "")
+
+assert cr.DRAFT_NOTICE not in CURATED_NOTE
+assert cr.DRAFT_HEADING_MARKER not in CURATED_NOTE
+assert "6.0.2" in CURATED_NOTE
+assert "StreamNZB: 6.1.0" in CURATED_NOTE
+assert "Samsung QN90A: **151**" in CURATED_NOTE
+assert "compare/6.0.1...6.0.2" in CURATED_NOTE
+
+ok, detail = cr.check_release_note_curated(CURATED_NOTE)
+assert ok, detail
+
+print("PASS: check_release_note_curated accepts a curated note with markers removed and content intact")
+
+
+# ---------------------------------------------------------------------------
+# C. candidate integration: an untouched generated draft under
+# .release/<version>.md must produce a hard FAIL "release-note-curated";
+# a curated note at the same path must pass it. Uses a temporary directory
+# swapped in for cr.RELEASE_DIR -- never touches the repository's real
+# .release/ directory.
+# ---------------------------------------------------------------------------
+
+def _run_candidate_with_release_dir(version, sha, github, note_text, provenance):
+    original_release_dir = cr.RELEASE_DIR
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_release_dir = Path(tmpdir)
+        (tmp_release_dir / f"{version}.md").write_text(note_text, encoding="utf-8")
+        (tmp_release_dir / f"{version}.json").write_text(json.dumps(provenance), encoding="utf-8")
+        cr.RELEASE_DIR = tmp_release_dir
+        try:
+            return cr.run_candidate(version, sha, github, offline=False)
+        finally:
+            cr.RELEASE_DIR = original_release_dir
+
+
+fixture_provenance = {
+    "schema_version": 1,
+    "version": "6.0.1",
+    "previous_version": "6.0.0",
+    "prepared_from_sha": pr27_full,
+    "prepared_at_date": "2026-09-15",
+    "compatibility": {},
+    "expected_counts": {},
+}
+candidate_adapter = _make_adapter(release=None, tag=None, main_sha=PR28_MERGE)
+
+draft_report = _run_candidate_with_release_dir(
+    "6.0.1", PR28_MERGE, candidate_adapter, GENERATED_DRAFT_NOTE.replace("6.0.2", "6.0.1"), fixture_provenance
+)
+draft_finding = next(f for f in draft_report.findings if f.check == "release-note-curated")
+assert not draft_finding.ok and draft_finding.severity == "error", draft_finding.render()
+assert "edit the generated public release note" in draft_finding.detail
+
+curated_report = _run_candidate_with_release_dir(
+    "6.0.1", PR28_MERGE, candidate_adapter, CURATED_NOTE.replace("6.0.2", "6.0.1").replace("6.0.1...6.0.2", "6.0.0...6.0.1"), fixture_provenance
+)
+curated_finding = next(f for f in curated_report.findings if f.check == "release-note-curated")
+assert curated_finding.ok, curated_finding.render()
+
+print("PASS: run_candidate hard-fails 'release-note-curated' on an untouched draft, passes on a curated note (temp-isolated, no repo .release/ mutation)")
+
+
+# ---------------------------------------------------------------------------
+# D. verify-published body mismatch: for a future-style release with
+# .release/<version>.md present, an exact-match body passes and a
+# differing GitHub release body is now a hard FAIL (was a warning).
+# ---------------------------------------------------------------------------
+
+def _run_verify_published_with_release_dir(version, sha, github, note_text, **kwargs):
+    original_release_dir = cr.RELEASE_DIR
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_release_dir = Path(tmpdir)
+        (tmp_release_dir / f"{version}.md").write_text(note_text, encoding="utf-8")
+        cr.RELEASE_DIR = tmp_release_dir
+        try:
+            return cr.run_verify_published(version, sha, github, offline=False, **kwargs)
+        finally:
+            cr.RELEASE_DIR = original_release_dir
+
+
+FUTURE_NOTE = "# DraCuLa StreamNZB Template 6.0.2\n\nSome curated public prose.\n"
+
+exact_match_adapter = _make_adapter(
+    release={**GOOD_RELEASE, "tag_name": "6.0.2", "body": FUTURE_NOTE.strip()}, tag=GOOD_TAG, version="6.0.2"
+)
+report = _run_verify_published_with_release_dir("6.0.2", PR28_MERGE, exact_match_adapter, FUTURE_NOTE)
+finding = next(f for f in report.findings if f.check == "release-body-matches-artifact")
+assert finding.ok, finding.render()
+
+mismatched_adapter = _make_adapter(
+    release={**GOOD_RELEASE, "tag_name": "6.0.2", "body": "some other body entirely"}, tag=GOOD_TAG, version="6.0.2"
+)
+report = _run_verify_published_with_release_dir("6.0.2", PR28_MERGE, mismatched_adapter, FUTURE_NOTE)
+finding = next(f for f in report.findings if f.check == "release-body-matches-artifact")
+assert not finding.ok and finding.severity == "error", finding.render()
+assert "authoritative" in finding.detail
+
+print("PASS: run_verify_published hard-fails 'release-body-matches-artifact' on drift, passes on an exact match")
+
+
+# ---------------------------------------------------------------------------
+# E. legacy behavior: 6.0.1 with --allow-missing-release-note still passes
+# with a WARNING (not a failure, not silently absent) for the missing
+# artifact -- unaffected by the hard-fail change above, since that change
+# only fires when .release/<version>.md exists.
+# ---------------------------------------------------------------------------
+
+legacy_report = cr.run_verify_published(
+    "6.0.1", PR28_MERGE, good_adapter, offline=False, allow_missing_release_note=True
+)
+legacy_finding = next(f for f in legacy_report.findings if f.check == "release-note-artifact")
+assert not legacy_finding.ok and legacy_finding.severity == "warning", legacy_finding.render()
+assert legacy_report.passed  # a warning alone must not fail the report
+
+# Without the legacy flag, the same missing artifact must be a hard FAIL.
+no_legacy_report = cr.run_verify_published(
+    "6.0.1", PR28_MERGE, good_adapter, offline=False, allow_missing_release_note=False
+)
+no_legacy_finding = next(f for f in no_legacy_report.findings if f.check == "release-note-artifact")
+assert not no_legacy_finding.ok and no_legacy_finding.severity == "error"
+assert not no_legacy_report.passed
+
+print("PASS: legacy --allow-missing-release-note still warns (not fails) only for 6.0.1-style explicit opt-in")
 
 print("PASS: check_release tests")

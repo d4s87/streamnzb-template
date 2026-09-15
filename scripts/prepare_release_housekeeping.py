@@ -21,6 +21,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from check_release import (  # noqa: E402
     CheckError,
+    DRAFT_HEADING_MARKER,
+    DRAFT_NOTICE,
     NOTICE_LINE,
     README_PATH,
     README_VERSION_RE,
@@ -157,14 +159,13 @@ def build_provenance(version, previous_version, prepared_from_sha, prepared_at_d
 
 # ---------------------------------------------------------------------------
 # .release/<version>.md -- curated release-note seed
+#
+# DRAFT_NOTICE and DRAFT_HEADING_MARKER (the two generator-owned markers a
+# curated note must no longer contain) live in check_release.py, not here,
+# so both this generator and check_release.check_release_note_curated() can
+# import the same literal strings without a circular import -- this module
+# already imports from check_release, so the constants had to live there.
 # ---------------------------------------------------------------------------
-
-DRAFT_NOTICE = (
-    "<!-- Auto-generated draft, seeded verbatim from the CHANGELOG section below. "
-    "Condense for public release-note tone before merging the release-preparation "
-    "PR -- this is a review starting point, not final prose. -->"
-)
-
 
 def generate_release_note(version, previous_version, changelog_body, compatibility, counts, repo_slug):
     validate_version(version)
@@ -173,7 +174,7 @@ def generate_release_note(version, previous_version, changelog_body, compatibili
     body = changelog_body.strip() if changelog_body and changelog_body.strip() else "_No changes recorded._"
 
     lines = [
-        f"# DraCuLa StreamNZB Template {version} — release notes draft",
+        f"# DraCuLa StreamNZB Template {version} {DRAFT_HEADING_MARKER}",
         "",
         DRAFT_NOTICE,
         "",

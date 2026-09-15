@@ -258,4 +258,150 @@ assert "#2 'docs: prepare' (patch, skip-changelog)" in bookkeeping_section
 
 print("PASS: render_body classifies a skip-changelog PR as bookkeeping even alongside an impact label")
 
+
+# ---------------------------------------------------------------------------
+# prep-pr must revalidate the release-impact/version policy against LIVE
+# main, not just at Prepare-dispatch time -- architect finding: the
+# stale-main equality gate does NOT catch a human hand-editing the open
+# PR's README/CHANGELOG/.release/<version>.{json,md} *consistently* to an
+# under-classified version while main stays untouched (freshness would
+# still pass). Uses the real 6.0.0..6.0.1 commit range (5 real, known
+# SHAs) with FABRICATED PR-label associations via FakeGithubAdapter, so
+# the resulting "suggested bump" is fully controlled without touching
+# live GitHub state.
+# ---------------------------------------------------------------------------
+
+REAL_RANGE_COMMIT_SHAS = [
+    "8fea02c16c204988af3a1acf08dd303ada9f0414",
+    "d030429c1878a497759a89605668353684ca3b3d",
+    "31c4bd1df9a572a93484d9913b6b705f2dc37599",
+    "0c5bbc48879018145565ec0a78ee624229281d2c",
+    "1c8c954775d5763752cf2d7264c9c43e6a7dd946",
+]
+SLUG = "d4s87/streamnzb-template"
+
+
+def _fake_changelog_text(version, previous="6.0.0"):
+    return (
+        "# Changelog\n\n"
+        f"## [Unreleased](https://github.com/{SLUG}/compare/{version}...HEAD)\n\n"
+        f"{cr.NOTICE_LINE}\n\n"
+        f"## [{version}](https://github.com/{SLUG}/compare/{previous}...{version}) (2026-09-20)\n\n"
+        "Body.\n"
+    )
+
+
+def _fake_prs_by_sha(label):
+    pr = {"number": 999, "title": "fake pr for policy test", "labels": [label], "merged_at": "x", "merge_commit_sha": "y"}
+    return {sha: [pr] for sha in REAL_RANGE_COMMIT_SHAS}
+
+
+def _policy_adapter(suggested_label, main_sha=MAIN_SHA):
+    return cr.FakeGithubAdapter(main_sha=main_sha, prs_by_sha=_fake_prs_by_sha(suggested_label))
+
+
+def _note_for(version):
+    return f"# DraCuLa StreamNZB Template {version}\n\nCurated public prose.\n"
+
+
+def _provenance_for(version, prepared_from_sha, previous="6.0.0"):
+    return {
+        "schema_version": 1,
+        "version": version,
+        "previous_version": previous,
+        "prepared_from_sha": prepared_from_sha,
+        "prepared_at_date": "2026-09-20",
+        "compatibility": dict(REAL_COMPAT),
+        "expected_counts": dict(REAL_COUNTS),
+    }
+
+
+def _run_prep_pr_with_fake_changelog(version, github, note_text, provenance, previous="6.0.0"):
+    original_release_dir = cr.RELEASE_DIR
+    original_changelog_path = cr.CHANGELOG_PATH
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_release_dir = Path(tmpdir) / "release"
+        tmp_release_dir.mkdir()
+        (tmp_release_dir / f"{version}.md").write_text(note_text, encoding="utf-8")
+        (tmp_release_dir / f"{version}.json").write_text(json.dumps(provenance), encoding="utf-8")
+
+        changelog_path = Path(tmpdir) / "CHANGELOG.md"
+        changelog_path.write_text(_fake_changelog_text(version, previous), encoding="utf-8")
+
+        cr.RELEASE_DIR = tmp_release_dir
+        cr.CHANGELOG_PATH = changelog_path
+        try:
+            return cr.run_prep_pr(version, github, offline=False)
+        finally:
+            cr.RELEASE_DIR = original_release_dir
+            cr.CHANGELOG_PATH = original_changelog_path
+
+
+# 1. suggested minor, requested 6.1.0 -> PASS.
+report = _run_prep_pr_with_fake_changelog(
+    "6.1.0", _policy_adapter("minor"), _note_for("6.1.0"), _provenance_for("6.1.0", MAIN_SHA)
+)
+f = _finding(report, "version-suggestion-policy")
+assert f.ok, f.render()
+assert "matches suggested minor" in f.detail
+
+print("PASS: prep-pr version-suggestion-policy passes when requested bump matches the live-recomputed suggestion")
+
+# 2 & 5. suggested minor, but the open PR's artifacts were hand-edited
+# *consistently* to under-classified 6.0.1 (the canonical patch bump of
+# previous 6.0.0 -- deliberately not the real published 6.0.1 tag: this
+# adapter is fully fake and never touches live GitHub, only the string
+# happens to coincide), with main entirely unchanged (prepared_from_sha ==
+# live main, so freshness independently passes) -- must still hard FAIL,
+# specifically via version-suggestion-policy.
+report = _run_prep_pr_with_fake_changelog(
+    "6.0.1", _policy_adapter("minor"), _note_for("6.0.1"), _provenance_for("6.0.1", MAIN_SHA)
+)
+freshness = _finding(report, "preparation-freshness")
+policy = _finding(report, "version-suggestion-policy")
+assert freshness.ok, f"main is unchanged; freshness must independently pass: {freshness.render()}"
+assert not policy.ok and policy.severity == "error", policy.render()
+assert "smaller" in policy.detail
+
+print("PASS: prep-pr hard-fails version-suggestion-policy on an under-classified hand-edit even though main never advanced (freshness alone would have missed this)")
+
+# 3. suggested patch, requested changed to larger 6.1.0 -> WARN, allowed.
+report = _run_prep_pr_with_fake_changelog(
+    "6.1.0", _policy_adapter("patch"), _note_for("6.1.0"), _provenance_for("6.1.0", MAIN_SHA)
+)
+f = _finding(report, "version-suggestion-policy")
+assert not f.ok and f.severity == "warning", f.render()
+# A warning-severity finding alone must never appear in report.errors
+# (README.md legitimately fails readme-version-matches here since this
+# fixture doesn't fake that file too -- irrelevant to this check).
+assert f not in report.errors
+
+print("PASS: prep-pr warns-but-allows a larger-than-suggested requested bump")
+
+# 4. non-canonical edited version (skips semver relative to previous 6.0.0) -> FAIL regardless of suggestion.
+report = _run_prep_pr_with_fake_changelog(
+    "6.0.5", _policy_adapter("minor"), _note_for("6.0.5"), _provenance_for("6.0.5", MAIN_SHA)
+)
+f = _finding(report, "version-suggestion-policy")
+assert not f.ok and f.severity == "error", f.render()
+assert "canonical" in f.detail
+
+print("PASS: prep-pr hard-fails a non-canonical requested version regardless of the live suggestion")
+
+# 6. stale-main freshness remains independently enforced: main HAS
+# advanced (prepared_from_sha != live main) while the requested version is
+# otherwise correctly classified -- freshness must fail, and
+# version-suggestion-policy must still be evaluated on its own (not
+# skipped just because freshness failed), proving the two checks are
+# independent.
+report = _run_prep_pr_with_fake_changelog(
+    "6.1.0", _policy_adapter("minor"), _note_for("6.1.0"), _provenance_for("6.1.0", "c" * 40)
+)
+freshness = _finding(report, "preparation-freshness")
+policy = _finding(report, "version-suggestion-policy")
+assert not freshness.ok and freshness.severity == "error", freshness.render()
+assert policy.ok, f"version-suggestion-policy must still be evaluated independently of freshness: {policy.render()}"
+
+print("PASS: prep-pr's stale-main freshness check fails independently of version-suggestion-policy (neither masks the other)")
+
 print("PASS: check_release_phase2 tests")

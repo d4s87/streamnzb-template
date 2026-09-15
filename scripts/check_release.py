@@ -1420,23 +1420,64 @@ def run_prep_pr(version, github, offline):
     if offline:
         report.add_warn(
             "github-dependent-checks",
-            "offline mode requested; preparation-freshness and tag/release existence checks "
-            "were SKIPPED (not silently)",
+            "offline mode requested; preparation-freshness, version-suggestion-policy, and "
+            "tag/release existence checks were SKIPPED (not silently)",
         )
         return report
 
-    if prepared_from_sha:
-        try:
-            live_main = github.main_sha()
-            ok, detail = check_preparation_freshness(prepared_from_sha, live_main)
-            if ok:
-                report.add_pass("preparation-freshness", detail)
-            else:
-                report.add_fail("preparation-freshness", detail)
-        except CheckError as exc:
-            report.add_fail("preparation-freshness", str(exc))
-    else:
+    # Resolved once, reused for both freshness and the version-policy delta
+    # below -- one prep-pr invocation evaluates one coherent live-GitHub
+    # snapshot, never two different reads of `main` a few seconds apart.
+    live_main = None
+    try:
+        live_main = github.main_sha()
+        report.add_pass("main-sha-resolved", live_main)
+    except CheckError as exc:
+        report.add_fail("main-sha-resolved", str(exc))
+
+    if prepared_from_sha and live_main:
+        ok, detail = check_preparation_freshness(prepared_from_sha, live_main)
+        if ok:
+            report.add_pass("preparation-freshness", detail)
+        else:
+            report.add_fail("preparation-freshness", detail)
+    elif not prepared_from_sha:
         report.add_fail("preparation-freshness", "no valid prepared_from_sha available to check")
+    else:
+        # live_main lookup failed above -- fail closed rather than silently
+        # skipping the freshness check.
+        report.add_fail("preparation-freshness", "live main SHA unavailable; cannot verify freshness")
+
+    # Stale-main equality alone does not catch this: main can be perfectly
+    # unchanged while a human hand-edits the open PR's README/CHANGELOG/
+    # .release/<version>.{json,md} consistently to an under-classified
+    # version (e.g. requesting 6.0.2 when the actual delta warrants a
+    # minor bump) -- document-consistency checks would all still agree
+    # with each other and pass. Revalidate the release-impact policy
+    # against the SAME live_main resolved above, using the exact same
+    # compute_release_delta()/suggest_version_bump()/
+    # enforce_version_suggestion() Prepare mode uses -- never a second
+    # implementation of bump logic.
+    if previous_version and live_main:
+        try:
+            delta = compute_release_delta(github, previous_version, live_main)
+            suggestion = suggest_version_bump(delta)
+            status, detail = enforce_version_suggestion(version, previous_version, suggestion["suggested_bump"])
+            if status == "pass":
+                report.add_pass("version-suggestion-policy", detail)
+            elif status == "warn":
+                report.add_warn("version-suggestion-policy", detail)
+            else:
+                report.add_fail("version-suggestion-policy", detail)
+        except CheckError as exc:
+            report.add_fail("version-suggestion-policy", str(exc))
+    elif not previous_version:
+        report.add_fail(
+            "version-suggestion-policy",
+            "no previous_version resolved from CHANGELOG.md -- cannot revalidate release-impact policy",
+        )
+    else:
+        report.add_fail("version-suggestion-policy", "live main SHA unavailable; cannot revalidate release-impact policy")
 
     try:
         tag_ref = github.tag_ref(version)

@@ -81,7 +81,7 @@ print("PASS: enforce_version_suggestion (exact patch/minor/major pass, larger wa
 
 # ---------------------------------------------------------------------------
 # prep-pr mode -- version "6.0.1" reuses the real, current README.md/
-# CHANGELOG.md (both already reference 6.1.0), so only the .release/
+# CHANGELOG.md (both already reference 6.2.0), so only the .release/
 # artifacts and GitHub state need faking. Temp-dir-isolated RELEASE_DIR;
 # never touches the repository's real .release/.
 # ---------------------------------------------------------------------------
@@ -91,13 +91,13 @@ REAL_COUNTS = cr.load_current_counts()
 
 MAIN_SHA = "8fea02c16c204988af3a1acf08dd303ada9f0414"
 
-GOOD_NOTE = "# DraCuLa StreamNZB Template 6.1.0\n\nCurated public prose. Mentions 6.1.0.\n"
-DRAFT_NOTE = f"# DraCuLa StreamNZB Template 6.1.0 {cr.DRAFT_HEADING_MARKER}\n\n{cr.DRAFT_NOTICE}\n\nBody.\n"
+GOOD_NOTE = "# DraCuLa StreamNZB Template 6.2.0\n\nCurated public prose. Mentions 6.2.0.\n"
+DRAFT_NOTE = f"# DraCuLa StreamNZB Template 6.2.0 {cr.DRAFT_HEADING_MARKER}\n\n{cr.DRAFT_NOTICE}\n\nBody.\n"
 
 GOOD_PROVENANCE = {
     "schema_version": 1,
-    "version": "6.1.0",
-    "previous_version": "6.0.1",
+    "version": "6.2.0",
+    "previous_version": "6.1.0",
     "prepared_from_sha": MAIN_SHA,
     "prepared_at_date": "2026-09-15",
     "compatibility": {
@@ -125,8 +125,8 @@ def _run_prep_pr(version, github, note_text, provenance, offline=False):
 def _adapter(main_sha=MAIN_SHA, tag=None, release=None):
     return cr.FakeGithubAdapter(
         main_sha=main_sha,
-        tags={"6.1.0": tag} if tag else {},
-        releases={"6.1.0": release} if release else {},
+        tags={"6.2.0": tag} if tag else {},
+        releases={"6.2.0": release} if release else {},
     )
 
 
@@ -135,14 +135,14 @@ def _finding(report, check):
 
 
 # a. fresh main passes freshness
-report = _run_prep_pr("6.1.0", _adapter(main_sha=MAIN_SHA), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(main_sha=MAIN_SHA), GOOD_NOTE, GOOD_PROVENANCE)
 f = _finding(report, "preparation-freshness")
 assert f.ok, f.render()
 
 print("PASS: prep-pr freshness check passes when prepared_from_sha == live main")
 
 # b. changed main fails freshness
-report = _run_prep_pr("6.1.0", _adapter(main_sha="c" * 40), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(main_sha="c" * 40), GOOD_NOTE, GOOD_PROVENANCE)
 f = _finding(report, "preparation-freshness")
 assert not f.ok and f.severity == "error", f.render()
 assert "stale" in f.detail
@@ -150,14 +150,14 @@ assert "stale" in f.detail
 print("PASS: prep-pr freshness check fails closed when main has advanced")
 
 # c. uncurated release note fails
-report = _run_prep_pr("6.1.0", _adapter(), DRAFT_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(), DRAFT_NOTE, GOOD_PROVENANCE)
 f = _finding(report, "release-note-curated")
 assert not f.ok and f.severity == "error", f.render()
 
 print("PASS: prep-pr hard-fails release-note-curated on an untouched generated draft")
 
 # d. curated note passes
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
 f = _finding(report, "release-note-curated")
 assert f.ok, f.render()
 
@@ -165,7 +165,7 @@ print("PASS: prep-pr passes release-note-curated on a curated note")
 
 # e. provenance version mismatch fails
 bad_version_provenance = {**GOOD_PROVENANCE, "version": "9.9.9"}
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, bad_version_provenance)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, bad_version_provenance)
 f = _finding(report, "provenance-version-matches")
 assert not f.ok and f.severity == "error", f.render()
 
@@ -176,7 +176,7 @@ drifted_compat_provenance = {
     **GOOD_PROVENANCE,
     "compatibility": {**GOOD_PROVENANCE["compatibility"], "jhin_version": "0.0.0"},
 }
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, drifted_compat_provenance)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, drifted_compat_provenance)
 f = _finding(report, "provenance-compatibility-snapshot-matches")
 assert not f.ok and f.severity == "error", f.render()
 
@@ -184,19 +184,19 @@ drifted_counts_provenance = {
     **GOOD_PROVENANCE,
     "expected_counts": {**REAL_COUNTS, "samsung": 1},
 }
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, drifted_counts_provenance)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, drifted_counts_provenance)
 f = _finding(report, "provenance-counts-snapshot-matches")
 assert not f.ok and f.severity == "error", f.render()
 
 # Non-drifted snapshot passes both.
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
 assert _finding(report, "provenance-compatibility-snapshot-matches").ok
 assert _finding(report, "provenance-counts-snapshot-matches").ok
 
 print("PASS: prep-pr fails on stored compatibility/counts snapshot drift from current repo state, passes when matching")
 
 # g. tag collision fails
-report = _run_prep_pr("6.1.0", _adapter(tag={"sha": MAIN_SHA, "type": "commit"}), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(tag={"sha": MAIN_SHA, "type": "commit"}), GOOD_NOTE, GOOD_PROVENANCE)
 f = _finding(report, "tag-not-yet-created")
 assert not f.ok and f.severity == "error", f.render()
 
@@ -204,8 +204,8 @@ print("PASS: prep-pr fails when the tag already exists (unexpected before publis
 
 # h. published release collision fails
 report = _run_prep_pr(
-    "6.1.0",
-    _adapter(release={"tag_name": "6.1.0", "target_commitish": MAIN_SHA, "draft": False, "prerelease": False, "published_at": "x", "body": ""}),
+    "6.2.0",
+    _adapter(release={"tag_name": "6.2.0", "target_commitish": MAIN_SHA, "draft": False, "prerelease": False, "published_at": "x", "body": ""}),
     GOOD_NOTE,
     GOOD_PROVENANCE,
 )
@@ -215,13 +215,13 @@ assert not f.ok and f.severity == "error", f.render()
 print("PASS: prep-pr fails when a published release already exists (unexpected before publish)")
 
 # Fully-good fixture passes end to end.
-report = _run_prep_pr("6.1.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
+report = _run_prep_pr("6.2.0", _adapter(), GOOD_NOTE, GOOD_PROVENANCE)
 assert report.passed, report.render()
 
 print("PASS: prep-pr passes end to end for a fresh, curated, non-colliding preparation")
 
 # offline mode skips GitHub-dependent checks explicitly, not silently.
-report = _run_prep_pr("6.1.0", None, GOOD_NOTE, GOOD_PROVENANCE, offline=True)
+report = _run_prep_pr("6.2.0", None, GOOD_NOTE, GOOD_PROVENANCE, offline=True)
 assert report.passed
 f = _finding(report, "github-dependent-checks")
 assert not f.ok and f.severity == "warning"
@@ -463,8 +463,8 @@ print("PASS: prep-pr's recomputed suggestion reflects the entire commit range, n
 # `main`) so compute_release_delta's local git commands work unmodified.
 # ---------------------------------------------------------------------------
 
-PREPARE_MAIN_SHA = "e1383b0cdd361dd874da1c21c3bcea2fb55fc785"  # real current main / 6.1.0 tag commit (PR #33 merge)
-PREPARE_PREVIOUS_SHA = "8fea02c16c204988af3a1acf08dd303ada9f0414"  # real 6.0.1 tag commit
+PREPARE_MAIN_SHA = "4deacb17c47b32e204197fb0f524ed00449e63d9"  # real current main (PR #35 merge, 6.2.0 prepared-not-published)
+PREPARE_PREVIOUS_SHA = "e1383b0cdd361dd874da1c21c3bcea2fb55fc785"  # real 6.1.0 tag commit
 
 EXPECTED_DRAFT_DIAGNOSTIC = (
     "Release Drafter draft inventory is not authoritative in Prepare preflight: the "
@@ -488,14 +488,21 @@ class _NoDraftCallAdapter(cr.FakeGithubAdapter):
 def _prepare_adapter(releases=None, tags=None, branches=None, open_prs_by_branch=None):
     return _NoDraftCallAdapter(
         main_sha=PREPARE_MAIN_SHA,
-        # Default "latest stable" is the REAL 6.1.0 release -- matching the
-        # real, current CHANGELOG.md/README.md state -- so the happy-path
-        # test below doesn't collide with reality's own
-        # changelog-previous-version-agrees-with-github cross-check.
+        # Default "latest stable" is the REAL 6.1.0 release (still
+        # genuinely the latest published stable on GitHub as of this test
+        # -- 6.2.0 has been prepared via PR #35 but not yet published).
+        # compute_release_delta's git-log call below needs a real,
+        # resolvable tag, so this can't be the CHANGELOG's own
+        # Unreleased-previous value (which has already rolled forward to
+        # the still-unpublished "6.2.0") -- see the expected
+        # changelog-previous-version-agrees-with-github mismatch at the
+        # call site below, which is a real, current, correct-to-flag
+        # property of today's repo state (a second Prepare dispatch while
+        # one is already prepared-but-unpublished), not a fixture bug.
         releases=releases if releases is not None else {
             "6.1.0": {
                 "tag_name": "6.1.0",
-                "target_commitish": PREPARE_MAIN_SHA,
+                "target_commitish": PREPARE_PREVIOUS_SHA,
                 "draft": False,
                 "prerelease": False,
                 "published_at": "2026-09-15T16:44:55Z",
@@ -510,18 +517,28 @@ def _prepare_adapter(releases=None, tags=None, branches=None, open_prs_by_branch
 
 # a. Happy path: the diagnostic is a fixed, non-numeric, always-present
 # warning that never blocks preparation, and matching_draft_releases() is
-# never called (the adapter raises if it is). Uses "6.1.1" rather than
-# "6.1.0" as the hypothetical next-version-to-prepare: 6.1.0 has since
-# actually been prepared/released for real (branch, tag, and
-# .release/6.1.0.* all now genuinely exist in this repo), so it would
-# collide with itself here -- 6.1.1 was never used for a real release and
-# has no such collision, while still being a canonical patch bump of the
-# real, current "6.1.0 is latest stable" state.
+# never called (the adapter raises if it is). Uses "6.1.1" as the
+# hypothetical next-version-to-prepare: a canonical patch bump of the
+# fake "6.1.0 is latest stable" this adapter presents, with no real
+# collision (6.1.1 was never used for anything real).
 report = cr.run_prepare("6.1.1", _prepare_adapter(), offline=False)
 f = _finding(report, "release-drafter-drafts-diagnostic")
 assert f.severity == "warning" and not f.ok, f.render()
 assert f.detail == EXPECTED_DRAFT_DIAGNOSTIC, f.render()
-assert report.passed, report.render()
+# Real main has, as of this test, already been prepared (via PR #35)
+# past what its own CHANGELOG.md Unreleased section still names as
+# "previous" (6.2.0, not-yet-published) -- changelog-previous-version
+# -agrees-with-github is EXPECTED to disagree with this adapter's fake
+# "6.1.0 is latest published stable" for exactly that reason. This is a
+# real, current, correctly-flagged property of today's repo state, not
+# a defect in run_prepare or in this fixture; assert precisely that
+# single expected divergence rather than a blanket `.passed`.
+non_passing = {finding.check for finding in report.findings if not finding.ok}
+assert non_passing == {
+    "changelog-previous-version-agrees-with-github",
+    "release-drafter-drafts-diagnostic",  # asserted individually above -- always-present warning
+    "release-impact-accounting",  # WARN: the 2 real PR #34/#35 commits are unaccounted (this fake adapter never populates prs_by_sha)
+}, report.render()
 
 print("PASS: run_prepare's release-drafter-drafts-diagnostic is a fixed visibility warning (never a numeric claim), never blocks preparation, and never calls matching_draft_releases()")
 

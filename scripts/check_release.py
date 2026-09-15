@@ -47,6 +47,20 @@ RELEASE_DIR = ROOT / ".release"
 PREPARE_WORKFLOW_FILE = "prepare-release.yml"
 PUBLISH_WORKFLOW_FILE = "publish-release.yml"
 
+# The exact GitHub Actions job name (jobs.publish.name in
+# publish-release.yml) whose check-run represents THIS invocation of
+# `candidate` mode, when running inside the Publish Release workflow
+# itself. required-checks-green must exclude only this one exact name --
+# its conclusion is necessarily still `None` (or, on any later poll,
+# reflects a run that was still executing when this SHA's check-runs were
+# read) while the very candidate check reading it is what produces it, a
+# self-referential deadlock no repository state could ever resolve.
+# Every other check-run name -- including any check that merely shares
+# the same workflow_dispatch event, or any other Publish Release job that
+# might be added later -- still gates normally. Kept in sync with the
+# workflow YAML by tests/test_publish_release_workflow_security.py.
+PUBLISH_RELEASE_SELF_CHECK_NAME = "Validate candidate, then tag and publish"
+
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
@@ -1636,14 +1650,33 @@ def run_candidate(version, sha, github, offline):
         report.add_fail("target-release-absent", str(exc))
 
     try:
-        conclusions = github.check_conclusions(sha)
+        raw_conclusions = github.check_conclusions(sha)
+        # Exclude only the exact self-check name (see
+        # PUBLISH_RELEASE_SELF_CHECK_NAME) -- never pending checks in
+        # general, never every workflow_dispatch-triggered check, never
+        # unknown/unrecognized names. Every other check-run name is
+        # untouched and keeps its existing fail-closed behavior below.
+        conclusions = {
+            name: conclusion
+            for name, conclusion in raw_conclusions.items()
+            if name != PUBLISH_RELEASE_SELF_CHECK_NAME
+        }
+        excluded_self_check = PUBLISH_RELEASE_SELF_CHECK_NAME in raw_conclusions
         failing = {name: c for name, c in conclusions.items() if c not in ("success", "neutral", "skipped")}
         if not conclusions:
-            report.add_warn("required-checks-green", f"no check runs found for {sha}")
+            report.add_warn(
+                "required-checks-green",
+                f"no check runs found for {sha}"
+                + (f" (excluding self-check {PUBLISH_RELEASE_SELF_CHECK_NAME!r})" if excluded_self_check else ""),
+            )
         elif failing:
             report.add_fail("required-checks-green", f"non-passing checks: {failing}")
         else:
-            report.add_pass("required-checks-green", f"{len(conclusions)} check(s) all passing")
+            report.add_pass(
+                "required-checks-green",
+                f"{len(conclusions)} check(s) all passing"
+                + (f" (excluding self-check {PUBLISH_RELEASE_SELF_CHECK_NAME!r})" if excluded_self_check else ""),
+            )
     except CheckError as exc:
         report.add_fail("required-checks-green", str(exc))
 

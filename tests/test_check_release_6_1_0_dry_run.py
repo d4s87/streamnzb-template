@@ -65,7 +65,7 @@ print(f"PASS: previous stable before {RELEASE_VERSION} = {PREVIOUS_STABLE} (CHAN
 report = cr.run_verify_published(RELEASE_VERSION, RELEASE_SHA, github, offline=False)
 print(report.render())
 
-# Three tolerated non-passing findings, all pre-existing/informational,
+# Four tolerated non-passing findings, all pre-existing/informational,
 # none introduced by this dry run:
 #   - notify-workflow-conclusion: WARN-only by design (today it's a live
 #     PASS, but the exclusion must hold even for a future flaky/absent run).
@@ -82,7 +82,14 @@ print(report.render())
 #     instructions explicitly forbid altering the already-published 6.1.0
 #     release). Confirmed by direct diff: identical apart from that one
 #     leading title line + blank line.
-EXPECTED_NON_PASSING_CHECKS = ("notify-workflow-conclusion", "release-target-commitish", "release-body-matches-artifact")
+#   - readme-version-matches: 6.1.0 is no longer the live README/CHANGELOG
+#     version -- main has since been prepared through 6.2.0 (PR #35) --
+#     and will never be live main again, permanently, exactly like the
+#     6.0.1 dry run's own identical divergence once 6.1.0 itself shipped.
+EXPECTED_NON_PASSING_CHECKS = (
+    "notify-workflow-conclusion", "release-target-commitish", "release-body-matches-artifact",
+    "readme-version-matches",
+)
 failing_unexpectedly = [
     f for f in report.findings
     if not f.ok and f.check not in EXPECTED_NON_PASSING_CHECKS
@@ -98,7 +105,7 @@ assert published_body == tracked_minus_title, (
 )
 
 print(f"PASS: run_verify_published({RELEASE_VERSION}, {RELEASE_SHA}) passes end-to-end against live GitHub state, "
-      "modulo the three documented, already-published, informational divergences")
+      "modulo the four documented, already-published, informational divergences")
 
 
 # ---------------------------------------------------------------------------

@@ -2,8 +2,8 @@ name: Prepare Release
 
 # Phase 2 of the approved release-automation architecture (see CLAUDE.md's
 # "Release automation" section). Human-dispatched only. Never tags,
-# publishes, or mutates an existing GitHub release -- that is Phase 3
-# (Publish Release), not yet implemented.
+# publishes, or mutates an existing GitHub release -- that is handled by
+# the separate, manually dispatched Phase 3 Publish Release workflow.
 
 on:
   workflow_dispatch:

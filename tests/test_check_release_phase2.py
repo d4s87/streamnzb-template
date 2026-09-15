@@ -16,6 +16,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import check_release as cr  # noqa: E402
 
+SLUG = "d4s87/streamnzb-template"
+
 
 # ---------------------------------------------------------------------------
 # Branch construction
@@ -80,16 +82,40 @@ print("PASS: enforce_version_suggestion (exact patch/minor/major pass, larger wa
 
 
 # ---------------------------------------------------------------------------
-# prep-pr mode -- version "6.0.1" reuses the real, current README.md/
-# CHANGELOG.md (both already reference 6.2.0), so only the .release/
-# artifacts and GitHub state need faking. Temp-dir-isolated RELEASE_DIR;
-# never touches the repository's real .release/.
+# prep-pr mode -- models an explicit, isolated "6.2.0 prepared, 6.1.0
+# predecessor" scenario. README/CHANGELOG are FAKED via temp-file/
+# monkeypatch isolation (not read from the live repository) so this
+# scenario stays true regardless of what version main actually happens to
+# be prepared through at the time these tests run -- see the recurring
+# "bump hardcoded tests every time Prepare Release runs or is reverted"
+# failure class documented in backlog-roadmap.md. Only the .release/
+# artifacts, README version, and CHANGELOG text are faked; GitHub state is
+# faked via FakeGithubAdapter as before. Never touches the repository's
+# real README.md/CHANGELOG.md/.release/.
 # ---------------------------------------------------------------------------
 
 REAL_COMPAT = cr.load_compatibility_baseline()
 REAL_COUNTS = cr.load_current_counts()
 
+# A real, resolvable tag/commit pair: 6.1.0 (tag) and MAIN_SHA (the 6.0.1
+# release commit, an ancestor of 6.1.0) -- compute_release_delta() shells
+# out to real `git log`, so it needs real refs. The resulting range is
+# empty (MAIN_SHA precedes 6.1.0), which is fine: an empty delta yields no
+# suggested bump, and enforce_version_suggestion() always passes when no
+# suggestion is made (see test_check_release_phase2.py's own
+# enforce_version_suggestion coverage above).
 MAIN_SHA = "8fea02c16c204988af3a1acf08dd303ada9f0414"
+
+FAKE_README_VERSION = "6.2.0"
+FAKE_CHANGELOG_TEXT = (
+    "# Changelog\n\n"
+    f"## [Unreleased](https://github.com/{SLUG}/compare/6.2.0...HEAD)\n\n"
+    f"{cr.NOTICE_LINE}\n\n"
+    f"## [6.2.0](https://github.com/{SLUG}/compare/6.1.0...6.2.0) (2026-09-15)\n\n"
+    "### Added\n\n- Fake curated body for isolated fixture testing.\n\n"
+    f"## [6.1.0](https://github.com/{SLUG}/compare/6.0.1...6.1.0) (2026-09-15)\n\n"
+    "Body.\n"
+)
 
 GOOD_NOTE = "# DraCuLa StreamNZB Template 6.2.0\n\nCurated public prose. Mentions 6.2.0.\n"
 DRAFT_NOTE = f"# DraCuLa StreamNZB Template 6.2.0 {cr.DRAFT_HEADING_MARKER}\n\n{cr.DRAFT_NOTICE}\n\nBody.\n"
@@ -110,16 +136,30 @@ GOOD_PROVENANCE = {
 
 
 def _run_prep_pr(version, github, note_text, provenance, offline=False):
+    """Runs prep-pr mode against a fully isolated fixture: fake README
+    version, fake CHANGELOG text, and temp-dir .release/ artifacts. None of
+    this reads or depends on the live repository's actual prepared state."""
     original_release_dir = cr.RELEASE_DIR
+    original_changelog_path = cr.CHANGELOG_PATH
+    original_parse_readme_version = cr.parse_readme_version
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_release_dir = Path(tmpdir)
+        tmp_release_dir = Path(tmpdir) / "release"
+        tmp_release_dir.mkdir()
         (tmp_release_dir / f"{version}.md").write_text(note_text, encoding="utf-8")
         (tmp_release_dir / f"{version}.json").write_text(json.dumps(provenance), encoding="utf-8")
+
+        changelog_path = Path(tmpdir) / "CHANGELOG.md"
+        changelog_path.write_text(FAKE_CHANGELOG_TEXT, encoding="utf-8")
+
         cr.RELEASE_DIR = tmp_release_dir
+        cr.CHANGELOG_PATH = changelog_path
+        cr.parse_readme_version = lambda *a, **k: FAKE_README_VERSION
         try:
             return cr.run_prep_pr(version, github, offline)
         finally:
             cr.RELEASE_DIR = original_release_dir
+            cr.CHANGELOG_PATH = original_changelog_path
+            cr.parse_readme_version = original_parse_readme_version
 
 
 def _adapter(main_sha=MAIN_SHA, tag=None, release=None):
@@ -278,7 +318,6 @@ REAL_RANGE_COMMIT_SHAS = [
     "0c5bbc48879018145565ec0a78ee624229281d2c",
     "1c8c954775d5763752cf2d7264c9c43e6a7dd946",
 ]
-SLUG = "d4s87/streamnzb-template"
 
 
 def _fake_changelog_text(version, previous="6.0.0"):
@@ -459,11 +498,16 @@ print("PASS: prep-pr's recomputed suggestion reflects the entire commit range, n
 # came back empty, not because none existed. The fix removes the live
 # matching_draft_releases() call from run_prepare entirely and always
 # emits a fixed visibility-limitation warning instead. Uses the real
-# 6.0.1 -> current-main commit range (both real, known SHAs already on
-# `main`) so compute_release_delta's local git commands work unmodified.
+# 6.0.1 -> 6.1.0 commit range (both real, known SHAs already on `main`)
+# so compute_release_delta's local git commands work unmodified; README/
+# CHANGELOG are isolated fixtures (see _run_prepare_isolated below), never
+# the live repository's actual prepared state -- this models an explicit
+# "main's CHANGELOG has already rolled Unreleased forward to a further,
+# not-yet-published 6.2.0" scenario rather than depending on whatever main
+# happens to be prepared through when these tests run.
 # ---------------------------------------------------------------------------
 
-PREPARE_MAIN_SHA = "4deacb17c47b32e204197fb0f524ed00449e63d9"  # real current main (PR #35 merge, 6.2.0 prepared-not-published)
+PREPARE_MAIN_SHA = "4deacb17c47b32e204197fb0f524ed00449e63d9"  # real historical main (PR #35 merge, 6.2.0 prepared-not-published)
 PREPARE_PREVIOUS_SHA = "e1383b0cdd361dd874da1c21c3bcea2fb55fc785"  # real 6.1.0 tag commit
 
 EXPECTED_DRAFT_DIAGNOSTIC = (
@@ -471,6 +515,37 @@ EXPECTED_DRAFT_DIAGNOSTIC = (
     "read-only GITHUB_TOKEN may omit draft releases. Draft selection/hygiene remains a "
     "Phase 3 responsibility."
 )
+
+PREPARE_FAKE_README_TEXT = "**Current version: 6.2.0**  \n**Compatibility: StreamNZB 6.1.0 / Jhin 0.7.1**\n"
+PREPARE_FAKE_CHANGELOG_TEXT = (
+    "# Changelog\n\n"
+    f"## [Unreleased](https://github.com/{SLUG}/compare/6.2.0...HEAD)\n\n"
+    f"{cr.NOTICE_LINE}\n\n"
+    f"## [6.2.0](https://github.com/{SLUG}/compare/6.1.0...6.2.0) (2026-09-15)\n\n"
+    "Body.\n\n"
+    f"## [6.1.0](https://github.com/{SLUG}/compare/6.0.1...6.1.0) (2026-09-15)\n\n"
+    "Body.\n"
+)
+
+
+def _run_prepare_isolated(version, github, offline=False):
+    """Runs `prepare` mode against the fake README/CHANGELOG fixture above,
+    isolated from the live repository's actual prepared state -- same
+    rationale/pattern as _run_prep_pr's isolation above."""
+    original_readme_path = cr.README_PATH
+    original_changelog_path = cr.CHANGELOG_PATH
+    with tempfile.TemporaryDirectory() as tmpdir:
+        readme_path = Path(tmpdir) / "README.md"
+        readme_path.write_text(PREPARE_FAKE_README_TEXT, encoding="utf-8")
+        changelog_path = Path(tmpdir) / "CHANGELOG.md"
+        changelog_path.write_text(PREPARE_FAKE_CHANGELOG_TEXT, encoding="utf-8")
+        cr.README_PATH = readme_path
+        cr.CHANGELOG_PATH = changelog_path
+        try:
+            return cr.run_prepare(version, github, offline)
+        finally:
+            cr.README_PATH = original_readme_path
+            cr.CHANGELOG_PATH = original_changelog_path
 
 
 class _NoDraftCallAdapter(cr.FakeGithubAdapter):
@@ -488,17 +563,12 @@ class _NoDraftCallAdapter(cr.FakeGithubAdapter):
 def _prepare_adapter(releases=None, tags=None, branches=None, open_prs_by_branch=None):
     return _NoDraftCallAdapter(
         main_sha=PREPARE_MAIN_SHA,
-        # Default "latest stable" is the REAL 6.1.0 release (still
-        # genuinely the latest published stable on GitHub as of this test
-        # -- 6.2.0 has been prepared via PR #35 but not yet published).
+        # Default "latest stable" is the real 6.1.0 release -- deliberately
+        # mismatched against PREPARE_FAKE_CHANGELOG_TEXT's Unreleased
+        # compare-link previous ("6.2.0"), to exercise the
+        # changelog-previous-version-agrees-with-github divergence check.
         # compute_release_delta's git-log call below needs a real,
-        # resolvable tag, so this can't be the CHANGELOG's own
-        # Unreleased-previous value (which has already rolled forward to
-        # the still-unpublished "6.2.0") -- see the expected
-        # changelog-previous-version-agrees-with-github mismatch at the
-        # call site below, which is a real, current, correct-to-flag
-        # property of today's repo state (a second Prepare dispatch while
-        # one is already prepared-but-unpublished), not a fixture bug.
+        # resolvable tag, hence the real 6.1.0 tag rather than a fake one.
         releases=releases if releases is not None else {
             "6.1.0": {
                 "tag_name": "6.1.0",
@@ -521,18 +591,17 @@ def _prepare_adapter(releases=None, tags=None, branches=None, open_prs_by_branch
 # hypothetical next-version-to-prepare: a canonical patch bump of the
 # fake "6.1.0 is latest stable" this adapter presents, with no real
 # collision (6.1.1 was never used for anything real).
-report = cr.run_prepare("6.1.1", _prepare_adapter(), offline=False)
+report = _run_prepare_isolated("6.1.1", _prepare_adapter(), offline=False)
 f = _finding(report, "release-drafter-drafts-diagnostic")
 assert f.severity == "warning" and not f.ok, f.render()
 assert f.detail == EXPECTED_DRAFT_DIAGNOSTIC, f.render()
-# Real main has, as of this test, already been prepared (via PR #35)
-# past what its own CHANGELOG.md Unreleased section still names as
-# "previous" (6.2.0, not-yet-published) -- changelog-previous-version
-# -agrees-with-github is EXPECTED to disagree with this adapter's fake
-# "6.1.0 is latest published stable" for exactly that reason. This is a
-# real, current, correctly-flagged property of today's repo state, not
-# a defect in run_prepare or in this fixture; assert precisely that
-# single expected divergence rather than a blanket `.passed`.
+# The fixture's CHANGELOG.md Unreleased section deliberately names
+# "previous" as 6.2.0 (a further, not-yet-published version) while the
+# adapter's fake "latest published stable" is 6.1.0 --
+# changelog-previous-version-agrees-with-github is EXPECTED to disagree
+# for exactly that reason. This is an explicit, isolated scenario, not a
+# read of whatever main happens to be prepared through; assert precisely
+# that single expected divergence rather than a blanket `.passed`.
 non_passing = {finding.check for finding in report.findings if not finding.ok}
 assert non_passing == {
     "changelog-previous-version-agrees-with-github",
@@ -545,7 +614,7 @@ print("PASS: run_prepare's release-drafter-drafts-diagnostic is a fixed visibili
 # b. Published-release collision remains a hard failure, independent of
 # the draft-diagnostic fix -- releases/tags/{tag} stays the authoritative
 # check for an actually-published 6.1.0 release.
-report = cr.run_prepare(
+report = _run_prepare_isolated(
     "6.1.0",
     _prepare_adapter(releases={
         "6.0.1": {
@@ -566,7 +635,7 @@ assert not report.passed
 print("PASS: run_prepare still hard-fails published-release-collision")
 
 # c. Tag collision remains a hard failure.
-report = cr.run_prepare(
+report = _run_prepare_isolated(
     "6.1.0",
     _prepare_adapter(tags={"6.1.0": {"sha": "deadbeef", "type": "commit"}}),
     offline=False,

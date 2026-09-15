@@ -357,6 +357,30 @@ class GhCliAdapter(GithubAdapter):
             raise CheckError(f"gh api {path} failed: {result.stderr.strip()}")
         return json.loads(result.stdout)
 
+    def _api_paginated(self, path, per_page=100):
+        """Fetch and flatten every page of a GitHub list endpoint. Explicit
+        page/per_page pagination (not `gh api --paginate`, whose stdout
+        shape for array endpoints is multiple concatenated JSON documents
+        rather than one array, and would need version-dependent `--slurp`
+        handling) -- deterministic, one `_api()` call per page, stops at
+        the first page shorter than `per_page`. Only for endpoints known to
+        return a JSON array; ordinary single-object/single-page callers of
+        `_api()` are untouched. Fails closed on any page's API error (the
+        underlying `_api()` call already raises CheckError, never silently
+        treats a failed page as an empty one)."""
+        results = []
+        page = 1
+        while True:
+            separator = "&" if "?" in path else "?"
+            raw = self._api(f"{path}{separator}per_page={per_page}&page={page}")
+            if not isinstance(raw, list):
+                raise CheckError(f"expected a list response from {path}, got {type(raw).__name__}")
+            results.extend(raw)
+            if len(raw) < per_page:
+                break
+            page += 1
+        return results
+
     @staticmethod
     def _release_view(raw):
         return {
@@ -439,8 +463,12 @@ class GhCliAdapter(GithubAdapter):
         raw = self._api(f"repos/{self.repo}/pulls?state=open&head={owner}:{branch}")
         return [{"number": pr["number"], "title": pr["title"]} for pr in raw]
 
-    def matching_draft_releases(self, tag_name):
-        releases = self._api(f"repos/{self.repo}/releases")
+    def matching_draft_releases(self, tag_name, per_page=100):
+        # Authoritative privileged draft query (Phase 3): must see EVERY
+        # release, not just GitHub's default single page -- an exact-match
+        # or duplicate draft sitting on a later page would otherwise be
+        # invisible to Publish Release's fail-closed duplicate check.
+        releases = self._api_paginated(f"repos/{self.repo}/releases", per_page=per_page)
         return [
             {"id": r["id"], "name": r.get("name") or "", "created_at": r.get("created_at")}
             for r in releases
@@ -2146,13 +2174,22 @@ def write_and_publish_release(github, release_id, version, expected_sha, title, 
 
 def verify_compare(github, previous_version, version):
     """Compare verification (Section 10): previous_version...version must
-    resolve, be exactly behind_by == 0, and its base commit must correspond
-    to the previous stable tag's own target -- proof the release tag is a
-    strict, unambiguous descendant of the prior stable tag."""
+    resolve, be a STRICT forward descendant (status == "ahead" and
+    ahead_by > 0 -- an identical/non-advancing compare is not a valid new
+    release, even though it trivially satisfies behind_by == 0), and its
+    base commit must correspond to the previous stable tag's own target --
+    proof the release tag is a strict, unambiguous descendant of the prior
+    stable tag."""
     result = github.compare(previous_version, version)
     if result["behind_by"] != 0:
         raise CheckError(
             f"{previous_version}...{version} behind_by={result['behind_by']} (expected 0)"
+        )
+    if result["status"] != "ahead" or result["ahead_by"] <= 0:
+        raise CheckError(
+            f"{previous_version}...{version} is not a strict forward descendant "
+            f"(status={result['status']!r}, ahead_by={result['ahead_by']!r}, "
+            f"behind_by={result['behind_by']!r}) -- expected status='ahead' and ahead_by > 0"
         )
     previous_tag = github.tag_ref(previous_version)
     if previous_tag is None:

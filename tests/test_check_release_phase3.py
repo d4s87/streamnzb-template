@@ -457,18 +457,52 @@ else:
 
 print("PASS: verify_compare fails when the compare's base commit doesn't match the previous stable tag's target")
 
-behind_adapter = cr.FakeGithubAdapter(
+diverged_adapter = cr.FakeGithubAdapter(
     tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
     compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "diverged", "ahead_by": 3, "behind_by": 2, "base_commit_sha": PREV_TAG_SHA}},
 )
 try:
-    cr.verify_compare(behind_adapter, PREVIOUS_STABLE, "9.9.9")
+    cr.verify_compare(diverged_adapter, PREVIOUS_STABLE, "9.9.9")
 except cr.CheckError as exc:
     assert "behind_by" in str(exc)
 else:
-    raise AssertionError("behind_by != 0 must fail")
+    raise AssertionError("a diverged compare (behind_by != 0) must fail")
 
-print("PASS: verify_compare fails when behind_by != 0")
+print("PASS: verify_compare fails on a diverged compare (behind_by != 0)")
+
+pure_behind_adapter = cr.FakeGithubAdapter(
+    tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
+    compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "behind", "ahead_by": 0, "behind_by": 3, "base_commit_sha": PREV_TAG_SHA}},
+)
+try:
+    cr.verify_compare(pure_behind_adapter, PREVIOUS_STABLE, "9.9.9")
+except cr.CheckError as exc:
+    assert "behind_by" in str(exc)
+else:
+    raise AssertionError("behind_by > 0 must fail even with status='behind'")
+
+print("PASS: verify_compare fails when behind_by > 0")
+
+# CodeRabbit finding (third pass on PR #34): an identical compare
+# (status="identical", ahead_by=0) trivially satisfies behind_by == 0 and
+# the base-commit check, but is not a valid new release -- the target
+# must be a STRICT forward descendant of the previous stable tag.
+identical_adapter = cr.FakeGithubAdapter(
+    tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
+    compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "identical", "ahead_by": 0, "behind_by": 0, "base_commit_sha": PREV_TAG_SHA}},
+)
+try:
+    cr.verify_compare(identical_adapter, PREVIOUS_STABLE, "9.9.9")
+except cr.CheckError as exc:
+    detail = str(exc)
+    assert "strict forward descendant" in detail
+    assert "status='identical'" in detail
+    assert "ahead_by=0" in detail
+    assert "behind_by=0" in detail
+else:
+    raise AssertionError("an identical compare (ahead_by=0) must fail -- it is not a strict forward descendant")
+
+print("PASS: verify_compare fails on an identical compare (status='identical', ahead_by=0) with a diagnostic naming status/ahead_by/behind_by")
 
 api_failure_adapter = cr.FakeGithubAdapter(tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}})
 try:
@@ -797,3 +831,106 @@ assert _finding(report, "compare-verification").ok
 assert _finding(report, "publish-notification-correlated").ok
 
 print("PASS: a post-publication tag_ref()/release() API failure is reported as a finding, not raised, and doesn't block compare-verification/notification-correlation from still running")
+
+
+# ---------------------------------------------------------------------------
+# GhCliAdapter pagination (CodeRabbit third pass on PR #34): the
+# authoritative privileged draft query must see every release page, not
+# just GitHub's default single page. Constructs a real GhCliAdapter
+# instance (bypassing __init__'s gh-auth check) with `_api` monkeypatched
+# to serve canned pages -- proves the pagination mechanism itself
+# (explicit page=N/per_page=N query construction via _api_paginated), not
+# just FakeGithubAdapter behavior, which has no pagination concept at all.
+# ---------------------------------------------------------------------------
+
+def _paged_gh_adapter(pages):
+    """pages: list of lists of release dicts, one list per page."""
+    adapter = cr.GhCliAdapter.__new__(cr.GhCliAdapter)
+    adapter.repo = "d4s87/streamnzb-template"
+    requested_paths = []
+
+    def fake_api(path, allow_404=False):
+        requested_paths.append(path)
+        base, _, query = path.partition("?")
+        params = dict(p.split("=", 1) for p in query.split("&") if p)
+        page_number = int(params.get("page", "1"))
+        if page_number > len(pages):
+            return []
+        return pages[page_number - 1]
+
+    adapter._api = fake_api
+    adapter._requested_paths = requested_paths
+    return adapter
+
+
+def _fake_release(id_, tag_name, draft):
+    return {
+        "id": id_, "tag_name": tag_name, "target_commitish": "main",
+        "name": "", "body": "", "draft": draft, "prerelease": False, "published_at": None,
+    }
+
+
+class _FixedPageSizeAdapter:
+    """Thin proxy forcing a small per_page through matching_draft_releases
+    so select_or_create_draft (which calls it with no per_page override)
+    can be exercised against genuinely multi-page data in a test, without
+    changing select_or_create_draft's own signature."""
+
+    def __init__(self, inner, per_page):
+        self._inner = inner
+        self._per_page = per_page
+
+    def matching_draft_releases(self, tag_name):
+        return self._inner.matching_draft_releases(tag_name, per_page=self._per_page)
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
+# a. matching exact-version draft found on page 2+.
+page1 = [_fake_release(1, "1.0.0", False), _fake_release(2, "1.0.1", False)]
+page2 = [_fake_release(3, "9.9.9", True)]
+gh_adapter = _paged_gh_adapter([page1, page2])
+matches = gh_adapter.matching_draft_releases("9.9.9", per_page=2)
+assert [m["id"] for m in matches] == [3]
+assert any("page=1" in p for p in gh_adapter._requested_paths)
+assert any("page=2" in p for p in gh_adapter._requested_paths)
+
+print("PASS: GhCliAdapter.matching_draft_releases finds an exact-version draft on page 2+, requesting pages explicitly (page=1, page=2)")
+
+# b. duplicate exact-version drafts split across pages: both seen, and
+# select_or_create_draft (called exactly as run_publish calls it) fails closed.
+page1 = [_fake_release(1, "9.9.9", True)]
+page2 = [_fake_release(2, "9.9.9", True)]
+gh_adapter = _paged_gh_adapter([page1, page2])
+assert [m["id"] for m in gh_adapter.matching_draft_releases("9.9.9", per_page=1)] == [1, 2]
+try:
+    cr.select_or_create_draft(_FixedPageSizeAdapter(gh_adapter, per_page=1), "9.9.9", CANDIDATE_SHA, TITLE, BODY)
+except cr.CheckError as exc:
+    assert "1" in str(exc) and "2" in str(exc)
+else:
+    raise AssertionError("duplicate exact-version drafts split across pages must fail closed")
+
+print("PASS: duplicate exact-version drafts split across different pages are both detected by pagination and fail closed via select_or_create_draft")
+
+# c. unrelated drafts on later pages do not interfere with a different
+# version's exact match.
+page1 = [_fake_release(1, "1.0.0", False)]
+page2 = [_fake_release(2, "6.0.2", True)]  # unrelated version/tag
+gh_adapter = _paged_gh_adapter([page1, page2])
+assert gh_adapter.matching_draft_releases("9.9.9", per_page=1) == []
+
+print("PASS: unrelated drafts on later pages never interfere with a different version's exact match")
+
+# d. zero exact-version matches across ALL pages is a genuine empty
+# result verified against multiple real, non-matching pages (not just a
+# single-page absence) -- select_or_create_draft (already proven
+# adapter-agnostic elsewhere) then creates a controlled draft.
+page1 = [_fake_release(1, "1.0.0", False), _fake_release(2, "1.0.1", True)]
+page2 = [_fake_release(3, "6.0.2", True)]
+gh_adapter = _paged_gh_adapter([page1, page2])
+assert gh_adapter.matching_draft_releases("9.9.9", per_page=2) == []
+assert any("page=1" in p for p in gh_adapter._requested_paths)
+assert any("page=2" in p for p in gh_adapter._requested_paths)
+
+print("PASS: zero exact-version matches confirmed across multiple real non-matching pages, feeding select_or_create_draft's existing controlled-draft-creation path")

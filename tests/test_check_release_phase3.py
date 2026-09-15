@@ -213,6 +213,19 @@ report = _run_candidate(
 )
 assert _finding(report, "required-checks-green").ok
 
+# CodeRabbit finding: also cover a PRIOR self-check with a genuine
+# "failure" conclusion (the exact retry-after-a-prior-failed-attempt
+# scenario the exclusion is meant to unblock) -- still PASS, since the
+# self-check is excluded regardless of its own conclusion.
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "success", SELF_CHECK: "failure"}},
+    ),
+)
+assert _finding(report, "required-checks-green").ok
+
 print("PASS: required-checks-green PASSes when the self-check has already completed (excluded regardless of its own conclusion)")
 
 # 3. Unrelated required check pending (None) -> FAIL, not silently excused.

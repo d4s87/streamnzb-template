@@ -193,8 +193,17 @@ from pathlib import Path as _Path  # noqa: E402
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[1] / "scripts"))
 import check_release as _cr  # noqa: E402
 
-job_name_match = re.search(r"^    name:\s*(.+)$", publish_text, re.MULTILINE)
-assert job_name_match, "publish-release.yml missing a parseable job `name:` line"
+# Isolate the `  publish:` job block specifically (from that key to the
+# next same-or-lesser-indented top-level key, or EOF) before searching
+# for its `name:` line -- a bare whole-file regex would silently match
+# any other 4-space-indented `name:` line (a different job, a future
+# addition) instead of jobs.publish.name specifically.
+publish_job_match = re.search(r"^  publish:\n((?:    .+\n|\n)+)", publish_text, re.MULTILINE)
+assert publish_job_match, "publish-release.yml missing a parseable `  publish:` job block"
+publish_job_block = publish_job_match.group(1)
+
+job_name_match = re.search(r"^    name:\s*(.+)$", publish_job_block, re.MULTILINE)
+assert job_name_match, "publish-release.yml's `publish:` job block is missing a `name:` line"
 assert job_name_match.group(1) == _cr.PUBLISH_RELEASE_SELF_CHECK_NAME, (
     f"publish-release.yml's job name {job_name_match.group(1)!r} no longer matches "
     f"check_release.PUBLISH_RELEASE_SELF_CHECK_NAME {_cr.PUBLISH_RELEASE_SELF_CHECK_NAME!r} -- "

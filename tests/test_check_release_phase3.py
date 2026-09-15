@@ -176,6 +176,122 @@ print("PASS: check_preparation_provenance accepts a real multi-commit-branch/sin
 
 
 # ---------------------------------------------------------------------------
+# required-checks-green Publish Release self-check exclusion (real
+# incident: workflow run 35014579242 deadlocked on its own in-progress
+# check run -- {'Validate candidate, then tag and publish': None} -- since
+# candidate mode always evaluates before the run it's part of has
+# concluded). Only the exact self-check name is ever excluded; every other
+# check-run name keeps its existing fail-closed behavior.
+# ---------------------------------------------------------------------------
+
+OTHER_CHECK_NAME = "Validate profile and Define library"
+SELF_CHECK = cr.PUBLISH_RELEASE_SELF_CHECK_NAME
+
+# 1. All normal required checks green + self-check in progress (None) -> PASS.
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "success", SELF_CHECK: None}},
+    ),
+)
+f = _finding(report, "required-checks-green")
+assert f.ok, f.render()
+assert SELF_CHECK in f.detail  # excluded, and says so -- not silently dropped
+
+print("PASS: required-checks-green PASSes with all other checks green and the Publish Release self-check still in progress (conclusion=None)")
+
+# 2. Self-check completed success -> still PASS (excluded regardless of
+# its own conclusion -- a retry after a prior failure must not deadlock
+# on that prior attempt's outcome either).
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "success", SELF_CHECK: "success"}},
+    ),
+)
+assert _finding(report, "required-checks-green").ok
+
+# CodeRabbit finding: also cover a PRIOR self-check with a genuine
+# "failure" conclusion (the exact retry-after-a-prior-failed-attempt
+# scenario the exclusion is meant to unblock) -- still PASS, since the
+# self-check is excluded regardless of its own conclusion.
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "success", SELF_CHECK: "failure"}},
+    ),
+)
+assert _finding(report, "required-checks-green").ok
+
+print("PASS: required-checks-green PASSes when the self-check has already completed (excluded regardless of its own conclusion)")
+
+# 3. Unrelated required check pending (None) -> FAIL, not silently excused.
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: None, SELF_CHECK: None}},
+    ),
+)
+f = _finding(report, "required-checks-green")
+assert not f.ok and f.severity == "error", f.render()
+assert OTHER_CHECK_NAME in f.detail
+
+print("PASS: required-checks-green still fails when an unrelated required check is pending -- only the exact self-check name is excluded")
+
+# 4. Unrelated required check failure -> FAIL.
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "failure", SELF_CHECK: None}},
+    ),
+)
+f = _finding(report, "required-checks-green")
+assert not f.ok and f.severity == "error", f.render()
+assert OTHER_CHECK_NAME in f.detail
+
+print("PASS: required-checks-green still fails on a genuine unrelated check failure")
+
+# 5. A check with the same general workflow_dispatch event but a
+# different name must NOT be silently ignored -- only the exact self
+# -check name is excluded, never "anything from Publish Release" or
+# "anything workflow_dispatch-triggered".
+DIFFERENT_PUBLISH_JOB_NAME = "Some other Publish Release job"
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {DIFFERENT_PUBLISH_JOB_NAME: "failure", SELF_CHECK: None}},
+    ),
+)
+f = _finding(report, "required-checks-green")
+assert not f.ok and f.severity == "error", f.render()
+assert DIFFERENT_PUBLISH_JOB_NAME in f.detail
+
+print("PASS: a differently-named check is never silently ignored, even if it plausibly belongs to the same Publish Release workflow")
+
+# 6. Candidate continues to fail closed for genuine non-passing repository
+# checks even when the self-check is entirely absent from the response
+# (e.g. candidate mode invoked outside of Publish Release, manually).
+report = _run_candidate(
+    "9.9.9", CANDIDATE_SHA,
+    cr.FakeGithubAdapter(
+        main_sha=CANDIDATE_SHA,
+        check_conclusions_by_sha={CANDIDATE_SHA: {OTHER_CHECK_NAME: "failure"}},
+    ),
+)
+f = _finding(report, "required-checks-green")
+assert not f.ok and f.severity == "error", f.render()
+assert SELF_CHECK not in f.detail  # never mentioned when it wasn't even present
+
+print("PASS: required-checks-green still fails closed for genuine non-passing checks when the self-check isn't present at all")
+
+
+# ---------------------------------------------------------------------------
 # Read-only preflight never touches draft inventory (Section 2/5): a
 # candidate run must never call matching_draft_releases at all.
 # ---------------------------------------------------------------------------

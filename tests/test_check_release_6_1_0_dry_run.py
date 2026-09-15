@@ -82,10 +82,15 @@ print(report.render())
 #     instructions explicitly forbid altering the already-published 6.1.0
 #     release). Confirmed by direct diff: identical apart from that one
 #     leading title line + blank line.
-#   - readme-version-matches: 6.1.0 is no longer the live README/CHANGELOG
-#     version -- main has since been prepared through 6.2.0 (PR #35) --
-#     and will never be live main again, permanently, exactly like the
-#     6.0.1 dry run's own identical divergence once 6.1.0 itself shipped.
+#   - readme-version-matches: listed as tolerated, not required, non-
+#     passing -- whether it currently passes or fails depends on whatever
+#     version main is prepared through at the moment this dry run runs
+#     (6.1.0 itself when main is unprepared/reverted, a newer version once
+#     the next release is prepared), which is exactly the live-state
+#     coupling this dry run must NOT hard-assert either way. Only genuinely
+#     permanent divergences (this release's own published-body/
+#     target-commitish quirks, notify's WARN-only status) are asserted as
+#     load-bearing elsewhere in this file.
 EXPECTED_NON_PASSING_CHECKS = (
     "notify-workflow-conclusion", "release-target-commitish", "release-body-matches-artifact",
     "readme-version-matches",

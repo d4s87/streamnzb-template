@@ -189,7 +189,7 @@ else:
 print("PASS: check_compatibility_internal_consistency fails closed on README/go.mod drift")
 
 readme_version = cr.parse_readme_version()
-assert readme_version == "6.2.0"  # main's README, prepared (not yet published) via PR #35
+assert readme_version == "6.1.0"  # main's real, currently checked-in README version
 
 print("PASS: parse_readme_version reads the current stable version")
 

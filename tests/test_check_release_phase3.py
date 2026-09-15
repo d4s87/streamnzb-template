@@ -540,6 +540,59 @@ assert not f.ok and f.severity == "warning"
 
 print("PASS: a failed notification run is WARN-only, never a hard failure")
 
+# CodeRabbit finding (second pass on PR #34): a matching run still
+# queued/in_progress must not be returned prematurely -- its conclusion
+# isn't final yet, so returning it early would report a misleading WARN
+# for a notification that later actually succeeds. Poll again instead.
+in_progress_run = {**success_run, "status": "in_progress", "conclusion": None}
+sleep_calls_in_progress = []
+
+
+class _EventuallyCompletesAdapter(cr.FakeGithubAdapter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._calls = 0
+
+    def list_workflow_runs(self, workflow_file, event=None):
+        self._calls += 1
+        if self._calls == 1:
+            return [in_progress_run]
+        return [success_run]
+
+
+run = cr.correlate_publish_notification(
+    _EventuallyCompletesAdapter(), EXPECTED_SHA, OPERATION_STARTED_AT,
+    max_attempts=3, sleep_fn=lambda s: sleep_calls_in_progress.append(s),
+)
+assert run == success_run
+assert len(sleep_calls_in_progress) == 1  # polled once more after seeing the in_progress run
+
+print("PASS: correlate_publish_notification keeps polling a matching in_progress/queued run instead of returning it prematurely")
+
+# A transient query failure (a real GhCliAdapter CheckError) must not
+# abort the bounded poll -- it's treated as "no match this attempt".
+class _FlakyQueryAdapter(cr.FakeGithubAdapter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._calls = 0
+
+    def list_workflow_runs(self, workflow_file, event=None):
+        self._calls += 1
+        if self._calls == 1:
+            raise cr.CheckError("simulated transient GitHub API failure")
+        return [success_run]
+
+
+flaky_query_sleeps = []
+run = cr.correlate_publish_notification(
+    _FlakyQueryAdapter(), EXPECTED_SHA, OPERATION_STARTED_AT,
+    max_attempts=3, sleep_fn=lambda s: flaky_query_sleeps.append(s),
+)
+assert run == success_run
+assert len(flaky_query_sleeps) == 1
+
+print("PASS: correlate_publish_notification survives a transient list_workflow_runs() query failure and keeps polling")
+
 
 # ---------------------------------------------------------------------------
 # run_publish end-to-end + partial-failure boundaries (Sections 9/12).
@@ -691,3 +744,56 @@ assert "HUMAN INSPECTION" in f.detail
 assert len(drift_publish_adapter.updated_releases) == 2
 
 print("PASS: a post-publication verification failure is reported loudly (report.passed=False) but never triggers automatic mutation -- run_publish returns rather than raising, since the release is already public")
+
+# CodeRabbit finding (second pass on PR #34): a real GhCliAdapter read
+# failure during post-publication tag_ref()/release() re-verification
+# must not escape run_publish() as a raw, uncaught exception -- the
+# release is already public by this point, so this is exactly the same
+# "needs human inspection, never auto-mutate" reporting boundary as any
+# other post-publication drift, not a fatal abort.
+class _PostPublicationQueryFailureAdapter(cr.FakeGithubAdapter):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tag_ref_calls = 0
+        self._release_calls = 0
+
+    def tag_ref(self, tag):
+        self._tag_ref_calls += 1
+        # Call 1 = create_and_verify_tag's pre-create existence check,
+        # call 2 = its post-create verification, call 3 = run_publish's
+        # own post-publication re-verification -- fail only that third one.
+        if self._tag_ref_calls == 3:
+            raise cr.CheckError("simulated transient GitHub API failure reading tag")
+        return super().tag_ref(tag)
+
+    def release(self, tag):
+        self._release_calls += 1
+        # Call 1 = run_publish's defense-in-depth pre-mutation collision
+        # check, call 2 = its post-publication re-verification -- fail
+        # only that second one.
+        if self._release_calls == 2:
+            raise cr.CheckError("simulated transient GitHub API failure reading release")
+        return super().release(tag)
+
+
+query_failure_adapter = _PostPublicationQueryFailureAdapter(
+    main_sha=CANDIDATE_SHA,
+    tags={PREVIOUS_STABLE: {"sha": PREV_TAG_SHA, "type": "commit"}},
+    compares={(PREVIOUS_STABLE, "9.9.9"): {"status": "ahead", "ahead_by": 1, "behind_by": 0, "base_commit_sha": PREV_TAG_SHA}},
+    workflow_runs={"notify-release-discord.yml": [
+        {"id": 1, "head_sha": CANDIDATE_SHA, "created_at": "2099-01-01T00:00:00+00:00",
+         "status": "completed", "conclusion": "success", "html_url": "http://x", "event": "release"},
+    ]},
+)
+report = _run_publish("9.9.9", CANDIDATE_SHA, query_failure_adapter)  # must not raise
+assert not report.passed
+tag_finding = _finding(report, "post-publication-tag-verification")
+assert not tag_finding.ok and "could not re-fetch tag" in tag_finding.detail
+release_finding = _finding(report, "post-publication-release-exists")
+assert not release_finding.ok and "could not re-fetch release" in release_finding.detail
+# Everything downstream of the failed reads still runs -- a read failure
+# on one check must not abort the rest of the report.
+assert _finding(report, "compare-verification").ok
+assert _finding(report, "publish-notification-correlated").ok
+
+print("PASS: a post-publication tag_ref()/release() API failure is reported as a finding, not raised, and doesn't block compare-verification/notification-correlation from still running")

@@ -2176,15 +2176,27 @@ def correlate_publish_notification(
 ):
     """Bounded polling (Section 11) for the `release: published`-triggered
     notify workflow. Correlation requires: workflow file matches, event ==
-    "release", head_sha == expected_sha, and created_at not older than
-    operation_started_at -- never "latest run" alone. Returns the matching
-    run dict, or None if nothing matched within max_attempts. Never raises:
-    a missing/failed notification is WARN-only at the call site, since the
-    release is already public and this cannot be treated as rollbackable."""
+    "release", head_sha == expected_sha, status == "completed" (a
+    matching run still queued/in_progress is left to poll again rather
+    than reported prematurely -- its conclusion isn't final yet), and
+    created_at not older than operation_started_at -- never "latest run"
+    alone. Returns the matching completed run dict, or None if nothing
+    completed within max_attempts. Never raises: a transient query failure
+    is treated as "no match this attempt" (never aborts the bounded poll),
+    and a missing/failed notification is WARN-only at the call site, since
+    the release is already public and this cannot be treated as
+    rollbackable."""
     for attempt in range(max_attempts):
-        runs = github.list_workflow_runs(workflow_file, event="release")
+        try:
+            runs = github.list_workflow_runs(workflow_file, event="release")
+        except CheckError:
+            runs = []
         for run in runs:
-            if run["head_sha"] == expected_sha and run["created_at"] >= operation_started_at:
+            if (
+                run["head_sha"] == expected_sha
+                and run["created_at"] >= operation_started_at
+                and run["status"] == "completed"
+            ):
                 return run
         if attempt < max_attempts - 1:
             sleep_fn(poll_interval_seconds)
@@ -2277,37 +2289,56 @@ def run_publish(version, expected_sha, github, sleep_fn=time.sleep):
         ) from exc
 
     # Post-publication verification -- the release is already live from
-    # here on; every remaining failure is reported, never auto-mutated.
-    final_tag = github.tag_ref(version)
-    if final_tag is None or final_tag["type"] != "commit" or final_tag["sha"] != expected_sha:
+    # here on; every remaining failure (including a GitHub read failure
+    # itself) is reported, never auto-mutated and never allowed to escape
+    # as a raw, uncaught exception -- a transient query failure here is a
+    # "needs human inspection" finding, not grounds to raise past a
+    # successfully published release.
+    try:
+        final_tag = github.tag_ref(version)
+    except CheckError as exc:
+        final_tag = None
         report.add_fail(
             "post-publication-tag-verification",
-            f"tag re-fetch shows {final_tag!r}, expected commit@{expected_sha} -- "
-            "REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+            f"could not re-fetch tag after publication: {exc} -- REQUIRES HUMAN INSPECTION",
         )
     else:
-        report.add_pass("post-publication-tag-verification", f"commit {expected_sha}")
+        if final_tag is None or final_tag["type"] != "commit" or final_tag["sha"] != expected_sha:
+            report.add_fail(
+                "post-publication-tag-verification",
+                f"tag re-fetch shows {final_tag!r}, expected commit@{expected_sha} -- "
+                "REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+            )
+        else:
+            report.add_pass("post-publication-tag-verification", f"commit {expected_sha}")
 
-    final_release_by_tag = github.release(version)
-    if final_release_by_tag is None:
+    try:
+        final_release_by_tag = github.release(version)
+    except CheckError as exc:
         report.add_fail(
             "post-publication-release-exists",
-            "release object not discoverable by tag after publication -- REQUIRES HUMAN INSPECTION",
+            f"could not re-fetch release after publication: {exc} -- REQUIRES HUMAN INSPECTION",
         )
     else:
-        report.add_pass("post-publication-release-exists", f"tag_name={final_release_by_tag['tag_name']!r}")
-        try:
-            final_release = github.release_by_id(release_id)
-            _assert_release_fields(final_release, version, title, body, draft=False, prerelease=False)
-            report.add_pass(
-                "post-publication-release-verification",
-                "title/tag/body/draft/prerelease all verified against tracked release note",
-            )
-        except CheckError as exc:
+        if final_release_by_tag is None:
             report.add_fail(
-                "post-publication-release-verification",
-                f"{exc} -- REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+                "post-publication-release-exists",
+                "release object not discoverable by tag after publication -- REQUIRES HUMAN INSPECTION",
             )
+        else:
+            report.add_pass("post-publication-release-exists", f"tag_name={final_release_by_tag['tag_name']!r}")
+            try:
+                final_release = github.release_by_id(release_id)
+                _assert_release_fields(final_release, version, title, body, draft=False, prerelease=False)
+                report.add_pass(
+                    "post-publication-release-verification",
+                    "title/tag/body/draft/prerelease all verified against tracked release note",
+                )
+            except CheckError as exc:
+                report.add_fail(
+                    "post-publication-release-verification",
+                    f"{exc} -- REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+                )
 
     try:
         result = verify_compare(github, previous_version, version)

@@ -42,6 +42,11 @@ SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 RELEASE_IMPACT_LABELS = ("major", "minor", "patch")
 SKIP_LABEL = "skip-changelog"
 
+# The one documented legacy release predating .release/<version>.md (see
+# .release/README.md). --allow-missing-release-note is scoped to exactly
+# this version -- it must never let a later release skip the requirement.
+LEGACY_RELEASE_NOTE_EXCEPTION_VERSION = "6.0.1"
+
 NOTICE_LINE = (
     "Changes in this section are under development and are not part of "
     "the latest stable release."
@@ -257,9 +262,17 @@ class GhCliAdapter(GithubAdapter):
                 "(pass --offline to skip them explicitly)"
             )
 
-    def _api(self, path):
+    def _api(self, path, allow_404=False):
         result = _run(["gh", "api", path])
         if result.returncode != 0:
+            # Only an explicit 404 means "doesn't exist" -- gh reports it as
+            # "gh: <message> (HTTP 404)" on stderr. Anything else (rate
+            # limiting, 5xx, network failure, auth loss mid-run) must
+            # propagate as a real error: a safety check that silently
+            # treats "the API call failed" as "the tag/release is absent"
+            # fails open exactly where it must fail closed.
+            if allow_404 and "HTTP 404" in result.stderr:
+                return None
             raise CheckError(f"gh api {path} failed: {result.stderr.strip()}")
         return json.loads(result.stdout)
 
@@ -289,16 +302,14 @@ class GhCliAdapter(GithubAdapter):
         return self._release_view(stable[-1])
 
     def release(self, tag):
-        try:
-            raw = self._api(f"repos/{self.repo}/releases/tags/{tag}")
-        except CheckError:
+        raw = self._api(f"repos/{self.repo}/releases/tags/{tag}", allow_404=True)
+        if raw is None:
             return None
         return self._release_view(raw)
 
     def tag_ref(self, tag):
-        try:
-            raw = self._api(f"repos/{self.repo}/git/refs/tags/{tag}")
-        except CheckError:
+        raw = self._api(f"repos/{self.repo}/git/refs/tags/{tag}", allow_404=True)
+        if raw is None:
             return None
         return {"sha": raw["object"]["sha"], "type": raw["object"]["type"]}
 
@@ -896,8 +907,8 @@ def run_candidate(version, sha, github, offline):
     report = Report()
 
     try:
-        validate_version(version)
-        validate_sha(sha)
+        version = validate_version(version)
+        sha = validate_sha(sha)  # normalizes case -- comparisons below assume lowercase
         report.add_pass("input-format", f"version={version!r} sha={sha!r}")
     except CheckError as exc:
         report.add_fail("input-format", str(exc))
@@ -918,12 +929,12 @@ def run_candidate(version, sha, github, offline):
     changelog_text = CHANGELOG_PATH.read_text(encoding="utf-8")
     try:
         parsed = parse_changelog(changelog_text)
-        report.add_pass(
-            "changelog-unreleased-compare-link",
-            f"Unreleased -> compare/{version}...HEAD" if parsed["previous_version"] == version
-            else "mismatch",
-        )
-        if parsed["previous_version"] != version:
+        if parsed["previous_version"] == version:
+            report.add_pass(
+                "changelog-unreleased-compare-link",
+                f"Unreleased -> compare/{version}...HEAD",
+            )
+        else:
             report.add_fail(
                 "changelog-unreleased-compare-link",
                 f"Unreleased compare link references {parsed['previous_version']!r}, "
@@ -1140,8 +1151,8 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
     report = Report()
 
     try:
-        validate_version(version)
-        validate_sha(sha)
+        version = validate_version(version)
+        sha = validate_sha(sha)  # normalizes case -- comparisons below assume lowercase
         report.add_pass("input-format", f"version={version!r} sha={sha!r}")
     except CheckError as exc:
         report.add_fail("input-format", str(exc))
@@ -1202,17 +1213,26 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
     release_note_path = RELEASE_DIR / f"{version}.md"
     if release_note_path.exists():
         report.add_pass("release-note-artifact", f"{release_note_path} present")
-    elif allow_missing_release_note:
+    elif allow_missing_release_note and version == LEGACY_RELEASE_NOTE_EXCEPTION_VERSION:
         report.add_warn(
             "release-note-artifact",
             f"{release_note_path} absent -- explicitly allowed via legacy exception "
-            "(this release predates the .release/<version>.md system)",
+            f"(only {LEGACY_RELEASE_NOTE_EXCEPTION_VERSION} predates the "
+            ".release/<version>.md system)",
+        )
+    elif allow_missing_release_note:
+        report.add_fail(
+            "release-note-artifact",
+            f"{release_note_path} not found and --allow-missing-release-note does not apply: "
+            f"the legacy exception is scoped to {LEGACY_RELEASE_NOTE_EXCEPTION_VERSION} only, "
+            f"not {version!r}. Every release after {LEGACY_RELEASE_NOTE_EXCEPTION_VERSION} must "
+            "carry a real .release/<version>.md",
         )
     else:
         report.add_fail(
             "release-note-artifact",
-            f"{release_note_path} not found (pass --allow-missing-release-note only for "
-            "releases that predate this tooling)",
+            f"{release_note_path} not found (--allow-missing-release-note only applies to "
+            f"the documented legacy release, {LEGACY_RELEASE_NOTE_EXCEPTION_VERSION})",
         )
 
     try:

@@ -1,12 +1,14 @@
 # `.release/`
 
-Per-release artifacts produced by the (future, not-yet-implemented) release
-housekeeping generator, `scripts/prepare_release_housekeeping.py`. Never
-hand-edit the generated fields; the curated release-note prose is the one
-part meant for human editing (see below).
+Per-release artifacts produced by the release housekeeping generator,
+`scripts/prepare_release_housekeeping.py`. Never hand-edit the generated
+fields; the curated release-note prose is the one part meant for human
+editing (see below).
 
-This directory is empty as of Phase 1 -- see CLAUDE.md's release-automation
-section for the full design. It does **not** contain a `6.0.1.md`/`6.0.1.json`
+This directory is empty as of Phase 1 -- the generator exists and is
+callable (`python3 scripts/prepare_release_housekeeping.py --write ...`),
+but no workflow invokes it yet; see CLAUDE.md's release-automation section
+for the full design. It does **not** contain a `6.0.1.md`/`6.0.1.json`
 retroactively: 6.0.1 predates this system, and `check_release.py
 verify-published` accepts that one release as a documented legacy exception
 via `--allow-missing-release-note` (see `tests/test_check_release_6_0_1_dry_run.py`).

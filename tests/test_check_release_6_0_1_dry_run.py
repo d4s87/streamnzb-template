@@ -64,14 +64,20 @@ report = cr.run_verify_published(
 )
 print(report.render())
 
-# The only expected non-pass finding is the legacy release-note allowance
-# itself (6.0.1 predates .release/<version>.md) and possibly the notify
-# workflow conclusion (informational). No genuine FAIL is acceptable.
+# The only expected non-pass findings are the legacy release-note allowance
+# itself (6.0.1 predates .release/<version>.md) and, informationally, the
+# notify-workflow-conclusion warning path (it only warns, never fails the
+# report, if a future run of this test hits a flaky/absent notify run --
+# today it's a live PASS, but the exclusion must hold either way). No
+# genuine FAIL is acceptable. Deliberately NOT report.errors here: that
+# would silently accept *any* warning-severity finding by construction,
+# masking a new, unexpected warning this test should have caught by name.
 assert report.passed, "run_verify_published(6.0.1) must pass -- see findings above"
 
+EXPECTED_NON_PASSING_CHECKS = ("release-note-artifact", "notify-workflow-conclusion")
 failing_but_not_legacy = [
     f for f in report.findings
-    if not f.ok and f.check not in ("release-note-artifact",)
+    if not f.ok and f.check not in EXPECTED_NON_PASSING_CHECKS
 ]
 assert not failing_but_not_legacy, f"unexpected non-passing findings: {[f.render() for f in failing_but_not_legacy]}"
 

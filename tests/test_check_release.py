@@ -550,4 +550,39 @@ assert not no_legacy_report.passed
 
 print("PASS: legacy --allow-missing-release-note still warns (not fails) only for 6.0.1-style explicit opt-in")
 
+# The legacy exception must not generalize to any other version: passing
+# --allow-missing-release-note for a future release must still hard-fail
+# (CodeRabbit finding -- the flag previously bypassed the requirement for
+# every version, not just the documented 6.0.1 exception).
+future_adapter = _make_adapter(release=None, tag=None, main_sha=PR28_MERGE, version="9.9.9")
+future_legacy_report = cr.run_verify_published(
+    "9.9.9", PR28_MERGE, future_adapter, offline=False, allow_missing_release_note=True
+)
+future_finding = next(f for f in future_legacy_report.findings if f.check == "release-note-artifact")
+assert not future_finding.ok and future_finding.severity == "error", future_finding.render()
+assert not future_legacy_report.passed
+assert cr.LEGACY_RELEASE_NOTE_EXCEPTION_VERSION in future_finding.detail
+
+print("PASS: --allow-missing-release-note does not generalize past the documented 6.0.1 exception")
+
+
+# ---------------------------------------------------------------------------
+# SHA case normalization (CodeRabbit finding): validate_sha lowercases its
+# input, but the normalized value must actually be used for comparisons --
+# an operator passing --sha with uppercase hex must not see spurious
+# main-equals-candidate / tag-sha-matches / provenance-freshness failures.
+# ---------------------------------------------------------------------------
+
+uppercase_sha = PR28_MERGE.upper()
+report = cr.run_verify_published(
+    "6.0.1", uppercase_sha, good_adapter, offline=False, allow_missing_release_note=True
+)
+assert report.passed, report.render()
+
+candidate_report = cr.run_candidate("6.0.1", uppercase_sha, candidate_adapter, offline=False)
+main_finding = next(f for f in candidate_report.findings if f.check == "main-equals-candidate")
+assert main_finding.ok, main_finding.render()
+
+print("PASS: uppercase --sha input is normalized before comparison in both verify-published and candidate")
+
 print("PASS: check_release tests")

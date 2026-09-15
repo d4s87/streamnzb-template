@@ -236,8 +236,13 @@ class GithubAdapter:
     def matching_draft_releases(self, tag_name):
         """-> list of {id, name, created_at} for every DRAFT release whose
         nominal tag_name equals `tag_name` -- Release Drafter can and does
-        accumulate duplicates; this is diagnostic only, never a collision
-        check (see run_prepare)."""
+        accumulate duplicates. NOT called by Phase 2 `prepare` mode: GitHub's
+        List Releases endpoint omits draft releases for callers without push
+        access, and Prepare's preflight runs under a read-only GITHUB_TOKEN,
+        so an empty result here is not proof no drafts exist (see
+        run_prepare's release-drafter-drafts-diagnostic). Retained for a
+        future Phase 3 credential with sufficient access to use
+        authoritatively."""
         raise NotImplementedError
 
     def associated_prs(self, sha):
@@ -1016,32 +1021,30 @@ def run_prepare(version, github, offline):
     except CheckError as exc:
         report.add_fail("published-release-collision", str(exc))
 
-    try:
-        drafts = github.matching_draft_releases(version)
-        # Informational only -- Release Drafter drafts are never
-        # authoritative and never block preparation (see CLAUDE.md). Always
-        # surfaced (0, 1, or many) so a maintainer sees stale/duplicate
-        # drafts before Phase 3 has to pick one.
-        if not drafts:
-            report.add_warn(
-                "release-drafter-drafts-diagnostic",
-                f"0 draft releases currently named {version!r} on GitHub (informational only)",
-            )
-        elif len(drafts) == 1:
-            report.add_warn(
-                "release-drafter-drafts-diagnostic",
-                f"1 draft release named {version!r}: id={drafts[0]['id']} (informational only, "
-                "never mutated by Prepare)",
-            )
-        else:
-            report.add_warn(
-                "release-drafter-drafts-diagnostic",
-                f"{len(drafts)} DUPLICATE draft releases named {version!r}: "
-                f"ids={[d['id'] for d in drafts]} -- Phase 3 publish-time responsibility to "
-                "select/clean up, never auto-resolved here",
-            )
-    except CheckError as exc:
-        report.add_warn("release-drafter-drafts-diagnostic", str(exc))
+    # Deliberately NOT calling github.matching_draft_releases() here.
+    # GitHub's List Releases endpoint omits draft releases for callers
+    # without push access, and Prepare's preflight intentionally runs
+    # under a read-only GITHUB_TOKEN (contents: read, no write scope --
+    # see prepare-release.yml). A live 2026-09-15 Prepare run against a
+    # repo with a real 6.1.0 draft (id 389039961) demonstrated this
+    # exactly: the call succeeded (200 OK) but returned an empty list
+    # purely because the credential couldn't see drafts, which this
+    # check then reported as the false claim "0 draft releases" --
+    # indistinguishable from "no drafts exist". A successful, empty API
+    # response is not proof of absence under this credential, so no
+    # numeric count from this call can be trusted here. Surface the
+    # visibility limitation instead; draft selection/hygiene stays a
+    # Phase 3 responsibility, where a sufficiently privileged credential
+    # can use matching_draft_releases() authoritatively. Published-release
+    # collision (`published-release-collision` above) is unaffected --
+    # `releases/tags/{tag}` is draft-safe by construction (404s for an
+    # unpublished draft even when one exists under that tag_name).
+    report.add_warn(
+        "release-drafter-drafts-diagnostic",
+        "Release Drafter draft inventory is not authoritative in Prepare preflight: the "
+        "read-only GITHUB_TOKEN may omit draft releases. Draft selection/hygiene remains a "
+        "Phase 3 responsibility.",
+    )
 
     branch_name = branch_name_for_version(version)
     try:

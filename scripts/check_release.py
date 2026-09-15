@@ -1,26 +1,37 @@
 #!/usr/bin/env python3
 """
-Canonical release-readiness checker (Phase 1: read-only foundation).
+Canonical release-readiness checker and Phase 3 publication orchestrator.
 
-Three modes, matching the two future human-triggered workflow gates plus
-post-publication verification:
+Modes, matching the human-triggered workflow gates plus verification:
 
     prepare           -- before generating release housekeeping
+    prep-pr            -- while a release-preparation PR is still open
     candidate         -- after the release-prep PR has merged to main,
                           before tagging/publishing
+    publish           -- Phase 3: the privileged mutation sequence (draft
+                          selection, tag-first creation, release write/
+                          publish, post-publication verification, compare
+                          verification, notification correlation). Always
+                          online; assumes the caller already ran `candidate`
+                          under a read-only token and is now authenticated
+                          with a privileged Contents:write-only token.
     verify-published  -- after a release has been published (or, with
                           --allow-missing-release-note, for a historical
                           release that predates this tooling)
 
-This script never creates branches, pushes, tags, or publishes anything.
-See CLAUDE.md's release-automation section for the full two-gate design.
+Every mode except `publish` is read-only. `publish` itself never mints or
+manages credentials -- it only uses whatever `gh`/GH_TOKEN the caller has
+already configured. See CLAUDE.md's release-automation section for the
+full two-gate design and Phase 3's partial-failure semantics.
 """
 
 import argparse
+import datetime
 import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -41,6 +52,11 @@ SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 RELEASE_IMPACT_LABELS = ("major", "minor", "patch")
 SKIP_LABEL = "skip-changelog"
+
+# Phase 3 (Publish Release) authoritative title template. The body is
+# always the exact tracked contents of .release/<version>.md -- never
+# Release Drafter's continuously-regenerated draft body.
+RELEASE_TITLE_TEMPLATE = "DraCuLa StreamNZB Template {version}"
 
 # The one documented legacy release predating .release/<version>.md (see
 # .release/README.md). --allow-missing-release-note is scoped to exactly
@@ -260,6 +276,49 @@ class GithubAdapter:
         workflow file, optionally filtered by triggering event, or None."""
         raise NotImplementedError
 
+    # -- Phase 3 (Publish Release) mutation/query methods -------------------
+    # Everything below is a real GitHub mutation (or a query only meaningful
+    # in service of one) and must fail loudly on a GitHub API error -- never
+    # degrade a failure into a warning before publication (see CLAUDE.md
+    # Phase 3, Section 14).
+
+    def create_tag_ref(self, tag, sha):
+        """Create a lightweight/direct tag ref (POST git/refs, never an
+        annotated tag object) pointing `refs/tags/<tag>` at `sha`. ->
+        {"sha": ..., "type": ...}. Raises CheckError on any API failure --
+        callers must never treat a failed creation as "tag absent"."""
+        raise NotImplementedError
+
+    def create_release(self, tag_name, target_commitish, name, body, draft, prerelease):
+        """Create a new release object. -> {id, tag_name, target_commitish,
+        name, body, draft, prerelease, published_at}."""
+        raise NotImplementedError
+
+    def update_release(self, release_id, **fields):
+        """PATCH an existing release object's fields (e.g. tag_name,
+        target_commitish, name, body, draft, prerelease). -> the same shape
+        as create_release()."""
+        raise NotImplementedError
+
+    def release_by_id(self, release_id):
+        """-> the same shape as create_release(), read back by numeric
+        release id (draft or published) -- used to re-verify fields written
+        by update_release() while a controlled draft may not yet be
+        resolvable via release(tag))."""
+        raise NotImplementedError
+
+    def compare(self, base, head):
+        """GET compare/{base}...{head}. -> {status, ahead_by, behind_by,
+        base_commit_sha, html_url}."""
+        raise NotImplementedError
+
+    def list_workflow_runs(self, workflow_file, event=None):
+        """-> list of {id, head_sha, created_at, status, conclusion,
+        html_url} for a workflow file, newest first, optionally filtered by
+        triggering event. Superset of latest_workflow_run(), which is just
+        this list's first element."""
+        raise NotImplementedError
+
 
 class GhCliAdapter(GithubAdapter):
     """Production adapter: shells out to the `gh` CLI (argument arrays
@@ -298,6 +357,30 @@ class GhCliAdapter(GithubAdapter):
             raise CheckError(f"gh api {path} failed: {result.stderr.strip()}")
         return json.loads(result.stdout)
 
+    def _api_paginated(self, path, per_page=100):
+        """Fetch and flatten every page of a GitHub list endpoint. Explicit
+        page/per_page pagination (not `gh api --paginate`, whose stdout
+        shape for array endpoints is multiple concatenated JSON documents
+        rather than one array, and would need version-dependent `--slurp`
+        handling) -- deterministic, one `_api()` call per page, stops at
+        the first page shorter than `per_page`. Only for endpoints known to
+        return a JSON array; ordinary single-object/single-page callers of
+        `_api()` are untouched. Fails closed on any page's API error (the
+        underlying `_api()` call already raises CheckError, never silently
+        treats a failed page as an empty one)."""
+        results = []
+        page = 1
+        while True:
+            separator = "&" if "?" in path else "?"
+            raw = self._api(f"{path}{separator}per_page={per_page}&page={page}")
+            if not isinstance(raw, list):
+                raise CheckError(f"expected a list response from {path}, got {type(raw).__name__}")
+            results.extend(raw)
+            if len(raw) < per_page:
+                break
+            page += 1
+        return results
+
     @staticmethod
     def _release_view(raw):
         return {
@@ -308,6 +391,40 @@ class GhCliAdapter(GithubAdapter):
             "published_at": raw.get("published_at"),
             "body": raw.get("body") or "",
         }
+
+    @staticmethod
+    def _release_full_view(raw):
+        """Superset of _release_view() that also carries `id` and `name` --
+        needed once Phase 3 mutates a specific release object by id rather
+        than only reading one by tag."""
+        return {
+            "id": raw["id"],
+            "tag_name": raw["tag_name"],
+            "target_commitish": raw["target_commitish"],
+            "name": raw.get("name") or "",
+            "body": raw.get("body") or "",
+            "draft": raw["draft"],
+            "prerelease": raw["prerelease"],
+            "published_at": raw.get("published_at"),
+        }
+
+    def _api_mutate(self, method, path, fields=None):
+        """POST/PATCH via `gh api --method`, argument arrays only -- never
+        shell=True, never string-interpolated into a shell command. Fails
+        loudly on any non-2xx response; there is no allow_404 here because
+        every caller is a real mutation, not an existence probe."""
+        args = ["gh", "api", "--method", method, path]
+        for key, value in (fields or {}).items():
+            if isinstance(value, bool):
+                args += ["-F", f"{key}={'true' if value else 'false'}"]
+            else:
+                args += ["-f", f"{key}={value}"]
+        result = _run(args)
+        if result.returncode != 0:
+            raise CheckError(
+                f"gh api --method {method} {path} failed: {result.stderr.strip()}"
+            )
+        return json.loads(result.stdout) if result.stdout.strip() else {}
 
     def main_sha(self):
         return self._api(f"repos/{self.repo}/git/refs/heads/main")["object"]["sha"]
@@ -346,8 +463,12 @@ class GhCliAdapter(GithubAdapter):
         raw = self._api(f"repos/{self.repo}/pulls?state=open&head={owner}:{branch}")
         return [{"number": pr["number"], "title": pr["title"]} for pr in raw]
 
-    def matching_draft_releases(self, tag_name):
-        releases = self._api(f"repos/{self.repo}/releases")
+    def matching_draft_releases(self, tag_name, per_page=100):
+        # Authoritative privileged draft query (Phase 3): must see EVERY
+        # release, not just GitHub's default single page -- an exact-match
+        # or duplicate draft sitting on a later page would otherwise be
+        # invisible to Publish Release's fail-closed duplicate check.
+        releases = self._api_paginated(f"repos/{self.repo}/releases", per_page=per_page)
         return [
             {"id": r["id"], "name": r.get("name") or "", "created_at": r.get("created_at")}
             for r in releases
@@ -371,19 +492,72 @@ class GhCliAdapter(GithubAdapter):
         data = self._api(f"repos/{self.repo}/commits/{sha}/check-runs")
         return {run["name"]: run["conclusion"] for run in data.get("check_runs", [])}
 
-    def latest_workflow_run(self, workflow_file, event=None):
+    def list_workflow_runs(self, workflow_file, event=None):
         data = self._api(f"repos/{self.repo}/actions/workflows/{workflow_file}/runs")
         runs = data.get("workflow_runs", [])
         if event:
             runs = [r for r in runs if r.get("event") == event]
+        runs.sort(key=lambda r: r["run_number"], reverse=True)
+        return [
+            {
+                "id": r["id"],
+                "head_sha": r["head_sha"],
+                "created_at": r["created_at"],
+                "status": r["status"],
+                "conclusion": r["conclusion"],
+                "html_url": r["html_url"],
+            }
+            for r in runs
+        ]
+
+    def latest_workflow_run(self, workflow_file, event=None):
+        runs = self.list_workflow_runs(workflow_file, event=event)
         if not runs:
             return None
-        runs.sort(key=lambda r: r["run_number"], reverse=True)
         top = runs[0]
         return {
             "conclusion": top["conclusion"],
             "status": top["status"],
             "html_url": top["html_url"],
+        }
+
+    def create_tag_ref(self, tag, sha):
+        raw = self._api_mutate(
+            "POST", f"repos/{self.repo}/git/refs", {"ref": f"refs/tags/{tag}", "sha": sha}
+        )
+        return {"sha": raw["object"]["sha"], "type": raw["object"]["type"]}
+
+    def create_release(self, tag_name, target_commitish, name, body, draft, prerelease):
+        raw = self._api_mutate(
+            "POST",
+            f"repos/{self.repo}/releases",
+            {
+                "tag_name": tag_name,
+                "target_commitish": target_commitish,
+                "name": name,
+                "body": body,
+                "draft": draft,
+                "prerelease": prerelease,
+            },
+        )
+        return self._release_full_view(raw)
+
+    def update_release(self, release_id, **fields):
+        raw = self._api_mutate("PATCH", f"repos/{self.repo}/releases/{release_id}", fields)
+        return self._release_full_view(raw)
+
+    def release_by_id(self, release_id):
+        raw = self._api(f"repos/{self.repo}/releases/{release_id}")
+        return self._release_full_view(raw)
+
+    def compare(self, base, head):
+        raw = self._api(f"repos/{self.repo}/compare/{base}...{head}")
+        return {
+            "status": raw["status"],
+            "ahead_by": raw["ahead_by"],
+            "behind_by": raw["behind_by"],
+            "base_commit_sha": raw["base_commit"]["sha"],
+            "html_url": raw.get("html_url"),
         }
 
 
@@ -402,16 +576,34 @@ class FakeGithubAdapter(GithubAdapter):
         branches=None,
         open_prs_by_branch=None,
         draft_releases_by_tag=None,
+        compares=None,
+        releases_by_id=None,
     ):
         self._main_sha = main_sha
         self._releases = releases or {}
         self._tags = tags or {}
         self._prs_by_sha = prs_by_sha or {}
         self._check_conclusions_by_sha = check_conclusions_by_sha or {}
+        # {workflow_file: [{id, head_sha, created_at, status, conclusion,
+        # html_url, event}, ...]}, newest first -- superset shape of the
+        # old latest-only fixture, see list_workflow_runs()/
+        # latest_workflow_run() below.
         self._workflow_runs = workflow_runs or {}
         self._branches = branches or {}
         self._open_prs_by_branch = open_prs_by_branch or {}
         self._draft_releases_by_tag = draft_releases_by_tag or {}
+        # {(base, head): result_dict_or_Exception}
+        self._compares = compares or {}
+        # id -> full release dict (mutable store for create/update/publish)
+        self._releases_by_id = dict(releases_by_id or {})
+        self._next_release_id = 1000 + len(self._releases_by_id)
+
+        # Mutation observability for tests (Section 15) -- never mutated by
+        # anything except the methods below.
+        self.created_tag_refs = []       # [(tag, sha)]
+        self.created_releases = []       # [release dict snapshot]
+        self.updated_releases = []       # [(release_id, fields dict)]
+        self.compare_calls = []          # [(base, head)]
 
     def main_sha(self):
         return self._main_sha
@@ -447,8 +639,84 @@ class FakeGithubAdapter(GithubAdapter):
     def check_conclusions(self, sha):
         return self._check_conclusions_by_sha.get(sha, {})
 
+    def list_workflow_runs(self, workflow_file, event=None):
+        runs = list(self._workflow_runs.get(workflow_file, []))
+        if event:
+            runs = [r for r in runs if r.get("event", "release") == event]
+        return runs
+
     def latest_workflow_run(self, workflow_file, event=None):
-        return self._workflow_runs.get(workflow_file)
+        runs = self.list_workflow_runs(workflow_file, event=event)
+        if not runs:
+            return None
+        top = runs[0]
+        return {"conclusion": top["conclusion"], "status": top["status"], "html_url": top["html_url"]}
+
+    def create_tag_ref(self, tag, sha):
+        self.created_tag_refs.append((tag, sha))
+        if tag in self._tags:
+            raise CheckError(f"tag {tag!r} already exists (fake) -- refusing to move it")
+        self._tags[tag] = {"sha": sha, "type": "commit"}
+        return dict(self._tags[tag])
+
+    def create_release(self, tag_name, target_commitish, name, body, draft, prerelease):
+        release_id = self._next_release_id
+        self._next_release_id += 1
+        release = {
+            "id": release_id,
+            "tag_name": tag_name,
+            "target_commitish": target_commitish,
+            "name": name,
+            "body": body,
+            "draft": draft,
+            "prerelease": prerelease,
+            "published_at": None,
+        }
+        self._releases_by_id[release_id] = dict(release)
+        self.created_releases.append(dict(release))
+        if not draft:
+            self._releases[tag_name] = self._release_view_from_full(release)
+        return dict(release)
+
+    def update_release(self, release_id, **fields):
+        if release_id not in self._releases_by_id:
+            raise CheckError(f"no such release id {release_id} (fake)")
+        self.updated_releases.append((release_id, dict(fields)))
+        release = self._releases_by_id[release_id]
+        release.update(fields)
+        if fields.get("draft") is False and not release.get("published_at"):
+            release["published_at"] = "2026-01-01T00:00:00Z"
+        self._releases_by_id[release_id] = release
+        if not release["draft"]:
+            self._releases[release["tag_name"]] = self._release_view_from_full(release)
+        return dict(release)
+
+    def release_by_id(self, release_id):
+        release = self._releases_by_id.get(release_id)
+        if release is None:
+            raise CheckError(f"no such release id {release_id} (fake)")
+        return dict(release)
+
+    @staticmethod
+    def _release_view_from_full(release):
+        return {
+            "tag_name": release["tag_name"],
+            "target_commitish": release["target_commitish"],
+            "draft": release["draft"],
+            "prerelease": release["prerelease"],
+            "published_at": release.get("published_at"),
+            "body": release.get("body") or "",
+        }
+
+    def compare(self, base, head):
+        self.compare_calls.append((base, head))
+        key = (base, head)
+        if key not in self._compares:
+            raise CheckError(f"no fake compare result configured for {base}...{head}")
+        result = self._compares[key]
+        if isinstance(result, Exception):
+            raise result
+        return dict(result)
 
 
 # ---------------------------------------------------------------------------
@@ -586,6 +854,19 @@ def changelog_section_body(text, version):
     if first_newline == -1:
         return ""
     return section[first_newline + 1:].strip("\n")
+
+
+def normalize_release_body(text):
+    """GitHub's API echoes release bodies back with CRLF line endings
+    regardless of how they were submitted (confirmed live against the
+    real, already-published 6.1.0 release -- see
+    tests/test_check_release_6_1_0_dry_run.py), while every
+    .release/<version>.md is tracked with LF. Both
+    run_verify_published()'s release-body-matches-artifact check and
+    Phase 3's _assert_release_fields() must compare through this one
+    normalization, never a bare .strip(), or every real publish/verify
+    would spuriously report drift on line endings alone."""
+    return text.replace("\r\n", "\n").strip()
 
 
 def check_release_note_curated(text):
@@ -1333,6 +1614,27 @@ def run_candidate(version, sha, github, offline):
     except CheckError as exc:
         report.add_fail("tag-still-absent", str(exc))
 
+    # Critical defect closed here (Phase 3 audit finding): `candidate` mode
+    # previously validated tag absence but never rejected an already
+    # -published target release for this exact version. A published release
+    # can exist even while its tag still resolves correctly (or, in a
+    # corrupted state, points somewhere else) -- either way, republishing
+    # over/alongside it must fail closed here, before Publish Release ever
+    # mints a privileged token.
+    try:
+        published = github.release(version)
+        if published is not None:
+            report.add_fail(
+                "target-release-absent",
+                f"a published release for {version!r} already exists "
+                f"(tag_name={published['tag_name']!r}, draft={published['draft']!r}) -- "
+                "refusing to treat this version as an unpublished candidate",
+            )
+        else:
+            report.add_pass("target-release-absent", f"no published release exists yet for {version!r}")
+    except CheckError as exc:
+        report.add_fail("target-release-absent", str(exc))
+
     try:
         conclusions = github.check_conclusions(sha)
         failing = {name: c for name, c in conclusions.items() if c not in ("success", "neutral", "skipped")}
@@ -1693,8 +1995,8 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
                 # warning. Legacy releases with no artifact at all (6.0.1,
                 # via --allow-missing-release-note) are handled separately
                 # above and are unaffected by this branch.
-                expected_body = release_note_path.read_text(encoding="utf-8").strip()
-                if release["body"].strip() != expected_body:
+                expected_body = normalize_release_body(release_note_path.read_text(encoding="utf-8"))
+                if normalize_release_body(release["body"]) != expected_body:
                     report.add_fail(
                         "release-body-matches-artifact",
                         f"published body text differs from {release_note_path} -- "
@@ -1719,6 +2021,374 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
             report.add_pass("notify-workflow-conclusion", "success")
     except CheckError as exc:
         report.add_warn("notify-workflow-conclusion", str(exc))
+
+    return report
+
+
+# ---------------------------------------------------------------------------
+# Mode: publish (Phase 3) -- privileged mutation sequence. Assumes the
+# read-only `candidate` preflight above has already passed and that
+# `github` is authenticated with a privileged (Contents: write only) token
+# minted after that preflight succeeded -- this function never mints or
+# knows about credentials itself, it only uses whatever adapter it's given.
+#
+# Fixed order, matching CLAUDE.md's Phase 3 partial-failure semantics:
+#   1. published-release-collision defense-in-depth re-check
+#   2. draft selection/creation (still pre-tag -- safe to fix and rerun)
+#   3. tag-first creation + immediate verification (the point of no return)
+#   4. release metadata write (draft) -> re-read -> publish -> re-read
+#   5. post-publication tag + release verification
+#   6. compare verification
+#   7. notification correlation (WARN only, never a publication failure)
+#
+# Any failure at step 2 raises CheckError before any GitHub mutation --
+# safe to fix and rerun. Any failure at step 3 or 4 raises CheckError
+# wrapped with explicit "do not auto-recover" instructions. Failures at
+# steps 5-6 are recorded as report failures (not raised) because the
+# release is already public at that point -- reported loudly for human
+# inspection, never auto-mutated. Step 7 is WARN-only by construction.
+# ---------------------------------------------------------------------------
+
+def _assert_release_fields(release, version, title, body, draft, prerelease):
+    """Raise CheckError describing every mismatch between a release object
+    and the authoritative fields Phase 3 always writes. target_commitish is
+    deliberately not asserted here -- per CLAUDE.md it's useful metadata,
+    never authoritative once the direct tag ref exists."""
+    mismatches = []
+    if release["tag_name"] != version:
+        mismatches.append(f"tag_name={release['tag_name']!r} != {version!r}")
+    if release["name"] != title:
+        mismatches.append(f"name={release['name']!r} != {title!r}")
+    if normalize_release_body(release["body"]) != normalize_release_body(body):
+        mismatches.append("body does not match tracked .release/<version>.md content")
+    if release["draft"] != draft:
+        mismatches.append(f"draft={release['draft']!r} != {draft!r}")
+    if release["prerelease"] != prerelease:
+        mismatches.append(f"prerelease={release['prerelease']!r} != {prerelease!r}")
+    if mismatches:
+        raise CheckError("; ".join(mismatches))
+
+
+def utc_now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def select_or_create_draft(github, version, expected_sha, title, body):
+    """Draft selection (CLAUDE.md Phase 3, Section 5): query drafts under
+    the privileged token and match only tag_name == version AND
+    draft == true. Zero matches -> create a controlled draft. Exactly one
+    -> reuse it. More than one -> fail closed, reporting every matching id
+    (never select by latest/list-order/creation-time/partial-name-match).
+    Returns (release_id, created: bool)."""
+    drafts = github.matching_draft_releases(version)
+    if len(drafts) > 1:
+        raise CheckError(
+            f"{len(drafts)} draft releases exactly match tag_name={version!r}: "
+            f"ids={[d['id'] for d in drafts]} -- fail closed, resolve the duplicate "
+            "drafts manually before rerunning Publish Release"
+        )
+    if len(drafts) == 1:
+        return drafts[0]["id"], False
+    created = github.create_release(
+        tag_name=version,
+        target_commitish=expected_sha,
+        name=title,
+        body=body,
+        draft=True,
+        prerelease=False,
+    )
+    return created["id"], True
+
+
+def create_and_verify_tag(github, version, expected_sha, sleep_fn=time.sleep, max_read_attempts=3, retry_interval_seconds=2):
+    """Tag-first publication (Section 6): create the lightweight tag via
+    the Git References API, then immediately re-fetch and verify it -- the
+    ref must resolve to object type 'commit' at exactly expected_sha. This
+    is the point of no return: any CheckError raised here or after must
+    never trigger automatic tag move/delete/recreate.
+
+    The post-create read is retried a small, bounded number of times: a
+    real GitHub ref can briefly 404 while it propagates immediately after
+    creation (GhCliAdapter.tag_ref() maps that 404 to None), which is a
+    read-consistency race, not a creation failure -- treating it as a hard
+    stop here would trigger an unnecessary "human inspection required" for
+    a tag that was actually created successfully. This is still a single,
+    bounded verification step, not a resume of a failed operation."""
+    existing = github.tag_ref(version)
+    if existing is not None:
+        raise CheckError(
+            f"tag {version!r} already exists (sha={existing['sha']!r}, "
+            f"type={existing['type']!r}) -- STOP, refusing to move/recreate it"
+        )
+    github.create_tag_ref(version, expected_sha)
+    refreshed = None
+    for attempt in range(max_read_attempts):
+        refreshed = github.tag_ref(version)
+        if refreshed is not None:
+            break
+        if attempt < max_read_attempts - 1:
+            sleep_fn(retry_interval_seconds)
+    if refreshed is None:
+        raise CheckError(
+            f"tag {version!r} not found after {max_read_attempts} verification attempts "
+            "following creation -- STOP, human inspection required"
+        )
+    if refreshed["type"] != "commit":
+        raise CheckError(
+            f"tag {version!r} resolved to object type {refreshed['type']!r} after creation, "
+            "expected 'commit' (an annotated tag object was created?) -- STOP, human inspection required"
+        )
+    if refreshed["sha"] != expected_sha:
+        raise CheckError(
+            f"tag {version!r} resolved to {refreshed['sha']!r} after creation, expected "
+            f"{expected_sha!r} -- STOP, human inspection required"
+        )
+    return refreshed
+
+
+def write_and_publish_release(github, release_id, version, expected_sha, title, body):
+    """Publication object sequence (Section 8): write authoritative
+    metadata/body while still draft, re-read and validate, then publish by
+    setting draft=false and re-read/validate again. The tag already exists
+    by the time this runs (create_and_verify_tag() precedes it in
+    run_publish()) -- any CheckError here is a post-tag failure and must
+    propagate with explicit recovery instructions, never trigger automatic
+    tag mutation."""
+    github.update_release(
+        release_id,
+        tag_name=version,
+        target_commitish=expected_sha,
+        name=title,
+        body=body,
+        draft=True,
+        prerelease=False,
+    )
+    staged = github.release_by_id(release_id)
+    _assert_release_fields(staged, version, title, body, draft=True, prerelease=False)
+
+    github.update_release(release_id, draft=False)
+    published = github.release_by_id(release_id)
+    _assert_release_fields(published, version, title, body, draft=False, prerelease=False)
+    return published
+
+
+def verify_compare(github, previous_version, version):
+    """Compare verification (Section 10): previous_version...version must
+    resolve, be a STRICT forward descendant (status == "ahead" and
+    ahead_by > 0 -- an identical/non-advancing compare is not a valid new
+    release, even though it trivially satisfies behind_by == 0), and its
+    base commit must correspond to the previous stable tag's own target --
+    proof the release tag is a strict, unambiguous descendant of the prior
+    stable tag."""
+    result = github.compare(previous_version, version)
+    if result["behind_by"] != 0:
+        raise CheckError(
+            f"{previous_version}...{version} behind_by={result['behind_by']} (expected 0)"
+        )
+    if result["status"] != "ahead" or result["ahead_by"] <= 0:
+        raise CheckError(
+            f"{previous_version}...{version} is not a strict forward descendant "
+            f"(status={result['status']!r}, ahead_by={result['ahead_by']!r}, "
+            f"behind_by={result['behind_by']!r}) -- expected status='ahead' and ahead_by > 0"
+        )
+    previous_tag = github.tag_ref(previous_version)
+    if previous_tag is None:
+        raise CheckError(f"previous stable tag {previous_version!r} does not resolve")
+    if result["base_commit_sha"] != previous_tag["sha"]:
+        raise CheckError(
+            f"compare base commit {result['base_commit_sha']!r} != previous stable tag "
+            f"{previous_version!r} target {previous_tag['sha']!r}"
+        )
+    return result
+
+
+def correlate_publish_notification(
+    github,
+    expected_sha,
+    operation_started_at,
+    workflow_file="notify-release-discord.yml",
+    max_attempts=8,
+    poll_interval_seconds=15,
+    sleep_fn=time.sleep,
+):
+    """Bounded polling (Section 11) for the `release: published`-triggered
+    notify workflow. Correlation requires: workflow file matches, event ==
+    "release", head_sha == expected_sha, status == "completed" (a
+    matching run still queued/in_progress is left to poll again rather
+    than reported prematurely -- its conclusion isn't final yet), and
+    created_at not older than operation_started_at -- never "latest run"
+    alone. Returns the matching completed run dict, or None if nothing
+    completed within max_attempts. Never raises: a transient query failure
+    is treated as "no match this attempt" (never aborts the bounded poll),
+    and a missing/failed notification is WARN-only at the call site, since
+    the release is already public and this cannot be treated as
+    rollbackable."""
+    for attempt in range(max_attempts):
+        try:
+            runs = github.list_workflow_runs(workflow_file, event="release")
+        except CheckError:
+            runs = []
+        for run in runs:
+            if (
+                run["head_sha"] == expected_sha
+                and run["created_at"] >= operation_started_at
+                and run["status"] == "completed"
+            ):
+                return run
+        if attempt < max_attempts - 1:
+            sleep_fn(poll_interval_seconds)
+    return None
+
+
+def report_notification_outcome(report, run):
+    if run is None:
+        report.add_warn(
+            "publish-notification-correlated",
+            "no matching notify-release-discord.yml run found within the bounded poll window "
+            "-- WARN only, the release is already public and this is not treated as rollbackable",
+        )
+    elif run["conclusion"] == "success":
+        report.add_pass("publish-notification-correlated", f"run {run['id']} succeeded ({run['html_url']})")
+    else:
+        report.add_warn(
+            "publish-notification-correlated",
+            f"run {run['id']} conclusion={run['conclusion']!r} ({run['html_url']}) -- WARN only",
+        )
+
+
+def run_publish(version, expected_sha, github, sleep_fn=time.sleep):
+    """Full Phase 3 privileged mutation sequence. Raises CheckError (never
+    returns a failing-but-live Report) for any failure at or before tag
+    creation, or for a post-tag release-write failure -- these are the
+    "stop, do not auto-recover" boundaries. Returns a Report for
+    post-publication verification / compare / notification, which may
+    itself contain failures that require human inspection but were reached
+    only after the release was already successfully published."""
+    report = Report()
+    operation_started_at = utc_now_iso()
+
+    version = validate_version(version)
+    expected_sha = validate_sha(expected_sha)
+
+    provenance_path = RELEASE_DIR / f"{version}.json"
+    note_path = RELEASE_DIR / f"{version}.md"
+    try:
+        provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+        previous_version = provenance["previous_version"]
+    except (OSError, json.JSONDecodeError, KeyError) as exc:
+        raise CheckError(
+            f"cannot read previous_version from {provenance_path}: {exc} -- aborting before any mutation"
+        ) from exc
+    try:
+        body = note_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise CheckError(
+            f"cannot read the authoritative release body {note_path}: {exc} -- aborting before any mutation"
+        ) from exc
+    title = RELEASE_TITLE_TEMPLATE.format(version=version)
+
+    # Defense-in-depth re-checks -- the read-only `candidate` preflight
+    # (main-equals-candidate, target-release-absent) already covered both
+    # of these before any privileged token existed, but never trust that a
+    # separate process step actually ran, and never trust that main hasn't
+    # moved in the (narrow but nonzero) window since that preflight ran.
+    # Both checks are still pre-tag: safe to fix and rerun.
+    live_main = github.main_sha()
+    if live_main != expected_sha:
+        raise CheckError(
+            f"live main is {live_main!r}, expected candidate {expected_sha!r} -- main has moved "
+            "since the candidate preflight ran; aborting before any mutation"
+        )
+    if github.release(version) is not None:
+        raise CheckError(
+            f"a published release for {version!r} already exists -- aborting before any mutation"
+        )
+
+    # Pre-tag: safe to fix and rerun.
+    release_id, created = select_or_create_draft(github, version, expected_sha, title, body)
+    if created:
+        report.add_pass("draft-created", f"created controlled draft release id={release_id}")
+    else:
+        report.add_pass("draft-selected", f"reusing existing exact-matching draft release id={release_id}")
+
+    # Point of no return.
+    create_and_verify_tag(github, version, expected_sha, sleep_fn=sleep_fn)
+    report.add_pass("tag-created-and-verified", f"refs/tags/{version} -> commit {expected_sha}")
+
+    try:
+        write_and_publish_release(github, release_id, version, expected_sha, title, body)
+        report.add_pass("release-published", f"release id={release_id} draft=false, fields verified")
+    except CheckError as exc:
+        raise CheckError(
+            f"POST-TAG FAILURE: tag {version}@{expected_sha} now exists on GitHub, but release "
+            f"publication failed ({exc}). Do NOT move/delete/recreate the tag automatically -- "
+            "this requires human inspection before any retry."
+        ) from exc
+
+    # Post-publication verification -- the release is already live from
+    # here on; every remaining failure (including a GitHub read failure
+    # itself) is reported, never auto-mutated and never allowed to escape
+    # as a raw, uncaught exception -- a transient query failure here is a
+    # "needs human inspection" finding, not grounds to raise past a
+    # successfully published release.
+    try:
+        final_tag = github.tag_ref(version)
+    except CheckError as exc:
+        final_tag = None
+        report.add_fail(
+            "post-publication-tag-verification",
+            f"could not re-fetch tag after publication: {exc} -- REQUIRES HUMAN INSPECTION",
+        )
+    else:
+        if final_tag is None or final_tag["type"] != "commit" or final_tag["sha"] != expected_sha:
+            report.add_fail(
+                "post-publication-tag-verification",
+                f"tag re-fetch shows {final_tag!r}, expected commit@{expected_sha} -- "
+                "REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+            )
+        else:
+            report.add_pass("post-publication-tag-verification", f"commit {expected_sha}")
+
+    try:
+        final_release_by_tag = github.release(version)
+    except CheckError as exc:
+        report.add_fail(
+            "post-publication-release-exists",
+            f"could not re-fetch release after publication: {exc} -- REQUIRES HUMAN INSPECTION",
+        )
+    else:
+        if final_release_by_tag is None:
+            report.add_fail(
+                "post-publication-release-exists",
+                "release object not discoverable by tag after publication -- REQUIRES HUMAN INSPECTION",
+            )
+        else:
+            report.add_pass("post-publication-release-exists", f"tag_name={final_release_by_tag['tag_name']!r}")
+            try:
+                final_release = github.release_by_id(release_id)
+                _assert_release_fields(final_release, version, title, body, draft=False, prerelease=False)
+                report.add_pass(
+                    "post-publication-release-verification",
+                    "title/tag/body/draft/prerelease all verified against tracked release note",
+                )
+            except CheckError as exc:
+                report.add_fail(
+                    "post-publication-release-verification",
+                    f"{exc} -- REQUIRES HUMAN INSPECTION, no automatic mutation attempted",
+                )
+
+    try:
+        result = verify_compare(github, previous_version, version)
+        report.add_pass(
+            "compare-verification",
+            f"{previous_version}...{version} resolves, behind_by=0, base matches previous stable tag "
+            f"({result['base_commit_sha']})",
+        )
+    except CheckError as exc:
+        report.add_fail("compare-verification", str(exc))
+
+    run = correlate_publish_notification(github, expected_sha, operation_started_at, sleep_fn=sleep_fn)
+    report_notification_outcome(report, run)
 
     return report
 
@@ -1754,6 +2424,11 @@ def build_parser():
     prep_pr.add_argument("--offline", action="store_true")
     prep_pr.set_defaults(func=cmd_prep_pr)
 
+    publish = subparsers.add_parser("publish")
+    publish.add_argument("--version", required=True)
+    publish.add_argument("--expected-sha", required=True)
+    publish.set_defaults(func=cmd_publish)
+
     return parser
 
 
@@ -1779,6 +2454,16 @@ def cmd_verify_published(args):
     )
 
 
+def cmd_publish(args):
+    # Always online, always live: Publish Release has no --offline mode --
+    # it is a real privileged mutation, and GhCliAdapter shells out to
+    # whichever `gh`/GH_TOKEN credential the caller has already configured
+    # (the workflow sets this to the minted GitHub App token before this
+    # command runs; see .github/workflows/publish-release.yml).
+    github = GhCliAdapter()
+    return run_publish(args.version, args.expected_sha, github)
+
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -1786,6 +2471,12 @@ def main():
         report = args.func(args)
     except GithubUnavailableError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+    except CheckError as exc:
+        # run_publish() raises CheckError directly (rather than returning a
+        # failing Report) for any pre-tag or post-tag hard-stop failure --
+        # surface it as a clear FATAL line, not a Python traceback.
+        print(f"FATAL: {exc}", file=sys.stderr)
         return 1
     print(report.render())
     return 0 if report.passed else 1

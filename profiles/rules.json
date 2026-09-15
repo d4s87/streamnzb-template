@@ -1096,17 +1096,17 @@
     {
       "owner": "core",
       "rule": {
-        "name": "Neutralize Anime AAC",
+        "name": "Neutralize AAC",
         "points": -100,
-        "when": "isAnime and \"aac\" in traits"
+        "when": "\"aac\" in traits"
       }
     },
     {
       "owner": "core",
       "rule": {
-        "name": "Neutralize Anime DTS Lossy",
+        "name": "Neutralize DTS Lossy",
         "points": -100,
-        "when": "isAnime and \"dts_lossy\" in traits"
+        "when": "\"dts_lossy\" in traits"
       }
     },
     {

@@ -164,6 +164,23 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 		// about reachable interactions rather than synthetic
 		// combinatorics.
 		hdr10PlusDecorations []string
+		// realisticLossyAudioVariants, when set, adds a further per-variant
+		// check reusing the same HDR10+ combo above but with the
+		// TrueHD+Atmos audio slot replaced by a native/uncompensated lossy
+		// codec (AAC/DTS Lossy tier-authority audit, 2026-09-15 -- the
+		// exact realistic combo that reproduced a ~+22/+23 adjacent-tier
+		// inversion before "Neutralize AAC"/"Neutralize DTS Lossy" went
+		// universal). Keyed by variant label -> the audio tokens to use.
+		// Deliberately populated only for families/codecs where the
+		// combination is actually authored in the wild: plain DTS Lossy on
+		// a physical-media Remux (many catalog UHD Blu-ray discs carry
+		// only a lossy DTS core, no lossless option) and AAC or DTS Lossy
+		// on a UHD BluRay re-encode (x265 groups routinely re-encode/keep
+		// lossy audio while preserving HDR10+ metadata). AAC is
+		// deliberately NOT added for Remux (the Blu-ray spec does not
+		// author AAC tracks) -- see README/CHANGELOG for the realism
+		// rationale; do not add it here without concrete evidence.
+		realisticLossyAudioVariants map[string][]string
 	}
 
 	seriesTitle := func(source []string, group string, extras []string) string {
@@ -214,6 +231,9 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
 					"REPACK3", "TrueHD", "Atmos", "7.1",
 				},
+				realisticLossyAudioVariants: map[string][]string{
+					"DTS Lossy": {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"},
+				},
 			},
 			build: movieTitle,
 		},
@@ -236,6 +256,15 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 				hdr10PlusDecorations: []string{
 					"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio",
 					"REPACK3", "TrueHD", "Atmos", "7.1",
+				},
+				// UHD BluRay is a re-encode (not a Remux), so a smaller
+				// x265 release realistically re-encodes/keeps lossy audio
+				// (AAC or a retained lossy DTS core) while preserving the
+				// disc's HDR10+ metadata -- unlike Remux, AAC is realistic
+				// here too.
+				realisticLossyAudioVariants: map[string][]string{
+					"AAC":       {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "AAC5.1"},
+					"DTS Lossy": {"HDR10Plus", "Open.Matte", "Extended.Edition", "Dual.Audio", "REPACK3", "DTS", "5.1"},
 				},
 			},
 			build: movieTitle,
@@ -504,6 +533,50 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 							cleanTitle,
 						)
 					}
+
+					// AAC/DTS-Lossy tier-authority audit (2026-09-15): the
+					// exact realistic HDR10+ + native-lossy-audio combo
+					// that reproduced a ~+22/+23 adjacent-tier inversion
+					// against this same cleanHigher before "Neutralize
+					// AAC"/"Neutralize DTS Lossy" went universal. Only
+					// exercised where the codec/family combination is
+					// actually authored in the wild (see
+					// realisticLossyAudioVariants doc comment) -- this is
+					// not a synthetic algebraic-maximum case.
+					for variant, lossyDecorations := range f.realisticLossyAudioVariants {
+						lossyTitle := f.build(
+							hdr10Source, lowerGroup, lossyDecorations,
+						)
+						lossyLower := score(f.kind, lossyTitle, &fullAvail)
+
+						t.Logf(
+							"%s T%d HDR10+/%s combo: decorated=%d "+
+								"clean-T%d=%d margin=%+d",
+							f.label,
+							lowerTier,
+							variant,
+							lossyLower,
+							higherTier,
+							cleanHigher,
+							lossyLower-cleanHigher,
+						)
+
+						if lossyLower >= cleanHigher {
+							t.Errorf(
+								"%s: T%d HDR10+ + %s combo (%d) does not "+
+									"stay below clean T%d (%d)\n"+
+									"  decorated: %s\n  clean:     %s",
+								f.label,
+								lowerTier,
+								variant,
+								lossyLower,
+								higherTier,
+								cleanHigher,
+								lossyTitle,
+								cleanTitle,
+							)
+						}
+					}
 				}
 
 				// Edition-neutrality regression: the Edition Preference
@@ -642,42 +715,91 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 							retagHigherTitle,
 						)
 					}
+
+					// Same AAC/DTS-Lossy realistic-combo evidence as above,
+					// checked against the RETAG'd higher tier too.
+					for variant, lossyDecorations := range f.realisticLossyAudioVariants {
+						lossyTitle := f.build(
+							hdr10Source, lowerGroup, lossyDecorations,
+						)
+						lossyLower := score(f.kind, lossyTitle, &fullAvail)
+
+						t.Logf(
+							"%s T%d HDR10+/%s combo (%d) vs RETAG'd clean "+
+								"T%d (%d): margin=%+d",
+							f.label,
+							lowerTier,
+							variant,
+							lossyLower,
+							higherTier,
+							retagHigher,
+							retagHigher-lossyLower,
+						)
+
+						if lossyLower >= retagHigher {
+							t.Errorf(
+								"%s: T%d HDR10+ + %s combo (%d) does not "+
+									"stay below RETAG'd T%d (%d); margin=%+d\n"+
+									"  decorated: %s\n  RETAG'd higher: %s",
+								f.label,
+								lowerTier,
+								variant,
+								lossyLower,
+								higherTier,
+								retagHigher,
+								retagHigher-lossyLower,
+								lossyTitle,
+								retagHigherTitle,
+							)
+						}
+					}
 				}
 			}
 		})
 	}
 
-	// Dedicated case: DTS lossy, AAC, and Dolby Digital are deliberately
-	// left native/uncompensated (see README "High-Impact Audio
-	// Normalization"). Their native contributions (+100/+100/+50) were
-	// judged acceptable against the 200-point Movie/Show tier gap, but
-	// that judgment was never separately checked against Anime's much
-	// tighter 80-point minimum gap. This checks the tightest real Anime
-	// boundary (WEB T5->T6, exactly the 80-point minimum) with AAC audio
-	// alone and nothing else decorated.
-	t.Run("Anime Show WEB AAC-only (untouched native codec)", func(t *testing.T) {
-		t5 := tok("Anime Shows WEB T5 Groups")
-		t6 := tok("Anime Shows WEB T6 Groups")
+	// Dedicated case: AAC and DTS Lossy are now universally neutralized to
+	// 0 for every content kind ("Neutralize AAC"/"Neutralize DTS Lossy",
+	// AAC/DTS-Lossy tier-authority audit, 2026-09-15 -- they are no longer
+	// "untouched native" for Movies/Shows; only Dolby Digital remains a
+	// dedicated universal-no-residual case documented separately, see
+	// TestDolbyDigitalOrderingRegression). This checks the tightest real
+	// Anime boundary (WEB T5->T6, exactly the 80-point minimum) with each
+	// codec alone and nothing else decorated, confirming Anime's own
+	// effective-zero behavior is unchanged by the move from an Anime-only
+	// rule to a universal one.
+	for _, tc := range []struct {
+		label string
+		extra string
+	}{
+		{"AAC", "AAC2.0"},
+		{"DTS Lossy", "DTS.5.1"},
+	} {
+		tc := tc
 
-		source := []string{"1080p", "WEB-DL", "x264"}
+		t.Run(fmt.Sprintf("Anime Show WEB %s-only (universal neutralizer)", tc.label), func(t *testing.T) {
+			t5 := tok("Anime Shows WEB T5 Groups")
+			t6 := tok("Anime Shows WEB T6 Groups")
 
-		t6WithAAC := animeShowTitle(source, t6, []string{"AAC2.0"})
-		t5Clean := animeShowTitle(source, t5, nil)
+			source := []string{"1080p", "WEB-DL", "x264"}
 
-		t6Score := score(ranking.KindAnimeShow, t6WithAAC, nil)
-		t5Score := score(ranking.KindAnimeShow, t5Clean, nil)
+			t6Decorated := animeShowTitle(source, t6, []string{tc.extra})
+			t5Clean := animeShowTitle(source, t5, nil)
 
-		if t6Score >= t5Score {
-			t.Errorf(
-				"Anime Show WEB T6 with AAC only (%d) does not stay below "+
-					"clean T5 (%d); margin=%+d -- untouched native AAC "+
-					"alone crosses the 80-point minimum Anime tier gap\n"+
-					"  T6+AAC: %s\n  T5 clean: %s",
-				t6Score, t5Score, t6Score-t5Score,
-				t6WithAAC, t5Clean,
-			)
-		}
-	})
+			t6Score := score(ranking.KindAnimeShow, t6Decorated, nil)
+			t5Score := score(ranking.KindAnimeShow, t5Clean, nil)
+
+			if t6Score >= t5Score {
+				t.Errorf(
+					"Anime Show WEB T6 with %s only (%d) does not stay "+
+						"below clean T5 (%d); margin=%+d\n"+
+						"  T6+%s: %s\n  T5 clean: %s",
+					tc.label, t6Score, t5Score, t6Score-t5Score,
+					tc.label, t6Decorated, t5Clean,
+				)
+			}
+		})
+	}
 }
 
 func loadCeilingDefines(t *testing.T) map[string][]string {

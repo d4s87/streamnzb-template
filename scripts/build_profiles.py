@@ -69,6 +69,11 @@ EXPECTED_PRESENTATION_RULES = {
 # non-Anime-only, exactly mirroring the existing Neutralize/Prefer HDR10
 # Plus split. If either side drifts, Anime's 80-point minimum tier gap
 # (already proven razor-thin) can silently be violated again.
+#
+# AAC and DTS Lossy are NOT part of this pair-with-residual contract —
+# see EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS below, where they were moved
+# by the AAC/DTS-Lossy tier-authority audit (2026-09-15): unlike this
+# set, they get no "Prefer" residual at all.
 EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS = {
     "Neutralize TrueHD",
     "Neutralize DTS Lossless",
@@ -89,19 +94,6 @@ EXPECTED_NON_ANIME_AUDIO_PREFERENCES = {
     "Prefer Dolby Digital Plus",
 }
 
-# Codecs Jhin scores natively without any DraCuLa compensation for
-# Movies/Shows (their 200-point tier gap safely absorbs +100/+100).
-# Anime's 80-point gap cannot, so these two are neutralized for Anime
-# only; Movies/Shows must remain untouched. Dolby Digital was formerly a
-# third member of this set, but it is now neutralized universally (see
-# EXPECTED_DOLBY_DIGITAL_NEUTRALIZER) because its native +50 outranked
-# DTS Lossless Plus's compensated effective +25 for Movies/Shows too —
-# "Neutralize Anime Dolby Digital" is subsumed and must no longer exist.
-EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS = {
-    "Neutralize Anime AAC",
-    "Neutralize Anime DTS Lossy",
-}
-
 # Dolby Digital ordering-integrity fix: native +50 must be neutralized to 0
 # for every content kind, universally, with no non-Anime residual "Prefer
 # Dolby Digital" rule (unlike the Neutralize/Prefer pairs above, this is a
@@ -117,6 +109,13 @@ EXPECTED_DOLBY_DIGITAL_NEUTRALIZER = {
 FORBIDDEN_AUDIO_RULE_NAMES = {
     "Neutralize Anime Dolby Digital",
     "Prefer Dolby Digital",
+    # Subsumed by universal zero-residual neutralization (AAC/DTS-Lossy
+    # tier-authority audit, 2026-09-15): Movies/Shows used to leak the
+    # native +100 for both; the Anime-only rules below are replaced by
+    # "Neutralize AAC"/"Neutralize DTS Lossy" in
+    # EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS and must no longer exist.
+    "Neutralize Anime AAC",
+    "Neutralize Anime DTS Lossy",
 }
 
 # Video-codec neutralization contract (codec-scoring tier-authority audit):
@@ -141,21 +140,41 @@ EXPECTED_VIDEO_CODEC_NEUTRALIZERS = {
     "Neutralize VC-1": (-100, "vc1"),
 }
 
-# StreamNZB v6.0.0 / Jhin v0.7.1 pin-move compensation (2026-09-15 audit):
-# three more native scores the new Jhin version assigns that DraCuLa did not
-# previously need to compensate. HLG populates the same `hdr` list HDR/
-# HDR10+/Dolby Vision do (`any(hdr, # == "HLG")`); DTS:X and DTS-ES are their
-# own distinct `traits` entries, not aliases of `dts_lossless`/`dts_lossy`.
-# The real-engine matrix found universal, zero-residual neutralization is
-# the smallest safe design for all three: HLG (+1500 native) and DTS:X
-# (+2000 native) invert tiers outright; a DTS-ES non-Anime residual was
-# tested and rejected the same way as VC-1's (fragile, same headroom).
-# VC-1 itself is neutralized alongside AVC/HEVC/AV1 above, not here, since
-# it shares that group's `parsed.codec` predicate shape.
-EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS = {
+# Universal zero-residual neutralizers: native Jhin scores DraCuLa cancels
+# to exactly 0 for every content kind, with no "Prefer" residual bonus at
+# all (unlike EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS's pair-with-residual
+# contract above). Two audits feed this set:
+#
+# - StreamNZB v6.0.0 / Jhin v0.7.1 pin-move compensation (2026-09-15
+#   audit): HLG, DTS:X, DTS-ES — three native scores the new Jhin version
+#   assigns that DraCuLa did not previously need to compensate. HLG
+#   populates the same `hdr` list HDR/HDR10+/Dolby Vision do
+#   (`any(hdr, # == "HLG")`); DTS:X and DTS-ES are their own distinct
+#   `traits` entries, not aliases of `dts_lossless`/`dts_lossy`. HLG
+#   (+1500 native) and DTS:X (+2000 native) invert tiers outright; a
+#   DTS-ES non-Anime residual was tested and rejected as fragile (same
+#   headroom problem as VC-1's). VC-1 itself is neutralized alongside
+#   AVC/HEVC/AV1 above, not here, since it shares that group's
+#   `parsed.codec` predicate shape.
+# - AAC/DTS-Lossy tier-authority audit (2026-09-15): both predate the
+#   6.1.0/0.7.1 pin (Jhin has scored them +100 since at least v0.6.0) and
+#   were previously judged "safely absorbed by the 200-point Movie/Show
+#   tier gap" via Anime-only neutralizers (`Neutralize Anime AAC`/
+#   `Neutralize Anime DTS Lossy`). Real-engine reproduction found that
+#   judgment no longer holds: combined with the HDR10+/lossless-audio
+#   physical-media stack (already measured at only a +2/+3-point margin —
+#   see EXPECTED_VIDEO_CODEC_NEUTRALIZERS's comment above), the native
+#   +100 flips a realistic Movie Remux (DTS Lossy) or Movie UHD/HD BluRay
+#   encode (AAC or DTS Lossy) T2/T1 or T3/T2 comparison into a ~+22/+23
+#   inversion. Both are now neutralized universally with no residual,
+#   replacing (not duplicating) the Anime-only rules — Anime's own
+#   effective score is unchanged (native +100 cancelled to 0 either way).
+EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS = {
     "Neutralize HLG": (-1500, 'any(hdr, # == "HLG")'),
     "Neutralize DTS X": (-2000, '"dts_x" in traits'),
     "Neutralize DTS-ES": (-100, '"dts_es" in traits'),
+    "Neutralize AAC": (-100, '"aac" in traits'),
+    "Neutralize DTS Lossy": (-100, '"dts_lossy" in traits'),
 }
 
 
@@ -395,7 +414,7 @@ def validate_registry(payload: dict):
     validate_audio_neutralization_scoping(entries)
     validate_dolby_digital_ordering(entries)
     validate_video_codec_neutralization_scoping(entries)
-    validate_new_native_attribute_neutralizers(entries)
+    validate_zero_residual_neutralizers(entries)
     validate_retag_rules(entries)
     validate_edition_neutralization_scoping(entries)
 
@@ -411,7 +430,6 @@ def validate_audio_neutralization_scoping(entries):
     expected_names = (
         EXPECTED_UNIVERSAL_AUDIO_NEUTRALIZERS
         | EXPECTED_NON_ANIME_AUDIO_PREFERENCES
-        | EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS
     )
 
     missing = expected_names - set(by_name)
@@ -442,15 +460,6 @@ def validate_audio_neutralization_scoping(entries):
                 f"80-point minimum tier gap); when clause: {when!r}"
             )
 
-    for name in EXPECTED_ANIME_ONLY_AUDIO_NEUTRALIZERS:
-        when = by_name[name]["when"]
-
-        if "not isAnime" in when or "isAnime" not in when:
-            raise ValueError(
-                f"{name!r} must remain scoped to Anime only (Movies/Shows "
-                "keep this native codec score untouched); "
-                f"when clause: {when!r}"
-            )
 
 
 def validate_dolby_digital_ordering(entries):
@@ -505,8 +514,9 @@ def validate_dolby_digital_ordering(entries):
 
     if present_forbidden:
         raise ValueError(
-            "Dolby Digital ordering fix subsumed these rule(s); they must "
-            "no longer exist: " + ", ".join(sorted(present_forbidden))
+            "rule(s) subsumed by a universal zero-residual neutralizer; "
+            "they must no longer exist: "
+            + ", ".join(sorted(present_forbidden))
         )
 
 
@@ -590,13 +600,13 @@ def validate_video_codec_neutralization_scoping(entries):
         )
 
 
-def validate_new_native_attribute_neutralizers(entries):
+def validate_zero_residual_neutralizers(entries):
     by_name = {}
 
     for entry in entries:
         name = entry["rule"]["name"]
 
-        if name not in EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS:
+        if name not in EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS:
             continue
 
         if name in by_name:
@@ -606,18 +616,18 @@ def validate_new_native_attribute_neutralizers(entries):
 
         by_name[name] = entry["rule"]
 
-    missing = set(EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS) - set(by_name)
+    missing = set(EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS) - set(by_name)
 
     if missing:
         raise ValueError(
-            "expected StreamNZB v6.0.0/Jhin v0.7.1 neutralization rule(s) "
+            "expected universal zero-residual neutralization rule(s) "
             "missing: " + ", ".join(sorted(missing))
         )
 
     for name, (
         expected_points,
         expected_when,
-    ) in EXPECTED_NEW_NATIVE_ATTRIBUTE_NEUTRALIZERS.items():
+    ) in EXPECTED_ZERO_RESIDUAL_NEUTRALIZERS.items():
         rule = by_name[name]
         when = rule["when"]
         points = rule["points"]
@@ -661,6 +671,8 @@ def validate_new_native_attribute_neutralizers(entries):
         "Prefer HLG",
         "Prefer DTS X",
         "Prefer DTS-ES",
+        "Prefer AAC",
+        "Prefer DTS Lossy",
     }
 
     unexpected_residuals = forbidden_residuals & all_names
@@ -668,9 +680,8 @@ def validate_new_native_attribute_neutralizers(entries):
     if unexpected_residuals:
         raise ValueError(
             "unexpected residual preference rule(s) found for a "
-            "StreamNZB v6.0.0/Jhin v0.7.1 compensation-only neutralizer "
-            "without a deliberate reviewed change: "
-            + ", ".join(sorted(unexpected_residuals))
+            "universal zero-residual neutralizer without a deliberate "
+            "reviewed change: " + ", ".join(sorted(unexpected_residuals))
         )
 
 

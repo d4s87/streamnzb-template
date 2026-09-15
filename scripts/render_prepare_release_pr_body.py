@@ -92,7 +92,7 @@ def render_body(version, previous_version, prepared_from_sha, delta, suggestion)
         "### Not part of this PR",
         "",
         "- No tag is created; no GitHub release is published, edited, or otherwise mutated.",
-        "- Publish Release (Phase 3) remains a separate, manually dispatched workflow, not yet implemented.",
+        "- Publish Release (Phase 3) is a separate, manually dispatched workflow and is not triggered by this preparation PR.",
         "",
         "### Stale-main rule",
         "",

@@ -6,6 +6,20 @@ Changes in this section are under development and are not part of the latest sta
 
 ## [6.2.0](https://github.com/d4s87/streamnzb-template/compare/6.1.0...6.2.0) (2026-09-15)
 
+### Added
+
+- Added the manually gated Publish Release workflow, completing the Prepare → human review/merge → exact-SHA Publish release path.
+- Added direct lightweight-tag publication, deterministic exact-version release-draft handling, authoritative tracked release-note publication, and post-publication verification.
+
+### Fixed
+
+- Fixed Publish Release candidate validation deadlocking on its own in-progress workflow check during the first production dogfood run.
+
+### Safety
+
+- Publication fails closed on stale `main`, tag or published-release collisions, duplicate exact-version drafts, incompatible release state, invalid compare ancestry, and unrelated non-green checks.
+- Post-tag failures require explicit human recovery; release-notification failures remain non-destructive warnings after publication.
+
 ## [6.1.0](https://github.com/d4s87/streamnzb-template/compare/6.0.1...6.1.0) (2026-09-15)
 
 ## [6.0.1](https://github.com/d4s87/streamnzb-template/compare/6.0.0...6.0.1) (2026-09-15)

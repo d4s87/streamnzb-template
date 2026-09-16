@@ -250,8 +250,9 @@ func TestLibraryReservation_WeakLibraryCandidateStillSurvives(t *testing.T) {
 func TestLibraryReservation_SeasonPackHasNoDedicatedLibraryProtection(t *testing.T) {
 	productionRules := loadProductionRules(t)
 	library := findProductionRule(t, productionRules, "Best 1 Library per R/Q")
-	if !strings.Contains(library.When, "seasonPack") {
-		t.Fatalf("Best 1 Library per R/Q must still name seasonPack in its exclusion, when=%q", library.When)
+	wantExclusion := `not ((kind == "series" or kind == "anime_show") and seasonPack)`
+	if !strings.Contains(library.When, wantExclusion) {
+		t.Fatalf("Best 1 Library per R/Q must exclude season packs with the exact clause %q, when=%q", wantExclusion, library.When)
 	}
 
 	profile := bestNLibraryProfile(t)
@@ -311,13 +312,20 @@ func TestLibraryReservation_SeaDexCapUnaffected(t *testing.T) {
 // does not bypass, weaken or interact with earlier reject/prune stages,
 // and the adaptive-filter exemption is unchanged.
 func TestLibraryReservation_NegativeClassificationAndAdaptiveFilterExemptionUnchanged(t *testing.T) {
-	profile := bestNLibraryProfile(t, "Adaptive Low-Score Filtering")
+	// "Movies LQ Penalty" (-10000, real production scoring) is included so
+	// the EVO candidate's own finalScore is realistically deeply negative --
+	// without it, six untiered alternatives never clear Adaptive Low-Score
+	// Filtering's ">= current.finalScore + 5000" gap at all, and the
+	// exemption assertion below would pass for the wrong reason (a
+	// condition that never fires) rather than the `not library` guard.
+	profile := bestNLibraryProfile(t, "Movies LQ Penalty", "Adaptive Low-Score Filtering")
 	req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"}
 
-	// "EVO" is a real Movies LQ Groups member (Vidhin-backed). Six stronger
-	// tier-boosted alternatives satisfy Adaptive Low-Score Filtering's
+	// "EVO" is a real Movies LQ Groups member (Vidhin-backed), so it also
+	// draws the real -10000 "Movies LQ Penalty". Six untiered alternatives
+	// (finalScore 0) then comfortably clear Adaptive Low-Score Filtering's
 	// "count(finalScore >= current.finalScore + 5000) >= 6" condition.
-	libraryLQ := "Example.Movie.2020.2160p.WEB-DL.EVO"
+	libraryLQ := "Example.Movie.2020.2160p.WEB-DL.X264-EVO"
 
 	ts := []bnTitle{lib(libraryLQ)}
 	for i := 0; i < 6; i++ {
@@ -331,6 +339,22 @@ func TestLibraryReservation_NegativeClassificationAndAdaptiveFilterExemptionUnch
 	}
 	if bnRejectedBy(o, libraryLQ, "Adaptive Low-Score Filtering") {
 		t.Error("Library candidate must never be pruned by Adaptive Low-Score Filtering")
+	}
+
+	// Control: the identical non-Library candidate, same alternatives, must
+	// actually be pruned -- proving the survival above is the `not library`
+	// exemption at work, not a condition that simply never fires.
+	controlTS := []bnTitle{notLib(libraryLQ)}
+	for i := 0; i < 6; i++ {
+		controlTS = append(controlTS, notLib(strongMovie(fmt.Sprintf("S%d", i))))
+	}
+	controlO := bnApply(t, profile, req, controlTS...)
+
+	if controlO.kept[libraryLQ] {
+		t.Error("control: expected the non-Library LQ-group candidate to be pruned by Adaptive Low-Score Filtering (if it survives too, the Library assertion above proves nothing)")
+	}
+	if !bnRejectedBy(controlO, libraryLQ, "Adaptive Low-Score Filtering") {
+		t.Errorf("control: expected the non-Library LQ-group candidate to be rejected specifically by Adaptive Low-Score Filtering, got %v", controlO.rejected[libraryLQ])
 	}
 }
 

@@ -60,6 +60,9 @@ jobs:
       - name: Test shared Discord webhook sender
         run: ./tests/test_send_discord_webhook.sh
 
+      - name: Test PR metadata branch/title validation
+        run: ./tests/test_validate_pr_metadata.sh
+
       - name: Validate Anime tier integrity
         run: python tests/test_tier_integrity.py
 

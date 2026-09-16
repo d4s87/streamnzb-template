@@ -796,9 +796,11 @@ def validate_1080p_remux_preference(rules):
 
 
 def validate_season_pack_limits(rules):
-    """Validate the independent episode/non-pack and season-pack R/Q ceilings."""
+    """Validate the independent episode/non-pack, Library, and season-pack
+    R/Q ceilings."""
 
     general_name = "Best 3 per R/Q"
+    library_name = "Best 1 Library per R/Q"
     pack_name = "Best 1 Season Pack per R/Q"
 
     expected_group = 'resolution + " " + quality'
@@ -806,7 +808,9 @@ def validate_season_pack_limits(rules):
         '(kind == "series" or kind == "anime_show") '
         'and seasonPack'
     )
-    general_when = f"not ({pack_when})"
+    non_pack_exclusion = f"not ({pack_when})"
+    general_when = f"not library\nand {non_pack_exclusion}"
+    library_when = f"library\nand {non_pack_exclusion}"
 
     expected = {
         general_name: {
@@ -814,6 +818,12 @@ def validate_season_pack_limits(rules):
             "count": 3,
             "group_by": expected_group,
             "when": general_when,
+        },
+        library_name: {
+            "action": "limit",
+            "count": 1,
+            "group_by": expected_group,
+            "when": library_when,
         },
         pack_name: {
             "action": "limit",
@@ -862,13 +872,14 @@ def validate_season_pack_limits(rules):
                 "condition rather than profile scope"
             )
 
-    if (
+    if not (
         resolved[general_name]["group_by"]
-        != resolved[pack_name]["group_by"]
+        == resolved[library_name]["group_by"]
+        == resolved[pack_name]["group_by"]
     ):
         raise AssertionError(
-            "Episode/non-pack and season-pack ceilings must "
-            "use the same resolution + quality grouping"
+            "Episode/non-pack, Library, and season-pack ceilings must "
+            "all use the same resolution + quality grouping"
         )
 
     if resolved[general_name]["count"] <= resolved[pack_name]["count"]:
@@ -877,15 +888,42 @@ def validate_season_pack_limits(rules):
             "the season-pack ceiling"
         )
 
+    if resolved[general_name]["count"] <= resolved[library_name]["count"]:
+        raise AssertionError(
+            "General R/Q ceiling must remain larger than "
+            "the Library ceiling"
+        )
+
     if "seasonPack" not in resolved[pack_name]["when"]:
         raise AssertionError(
             "Season-pack ceiling must explicitly require seasonPack"
         )
 
-    if not resolved[general_name]["when"].startswith("not ("):
+    if not resolved[general_name]["when"].startswith("not library"):
         raise AssertionError(
-            "General R/Q ceiling must explicitly exclude "
-            "the episodic season-pack partition"
+            "General R/Q ceiling must explicitly exclude Library candidates"
+        )
+
+    if resolved[library_name]["when"].startswith("not library"):
+        raise AssertionError(
+            "Library ceiling must match Library candidates, not exclude them"
+        )
+
+    if not resolved[library_name]["when"].startswith("library"):
+        raise AssertionError(
+            "Library ceiling must explicitly require library"
+        )
+
+    for name in (general_name, library_name):
+        if "not (" not in resolved[name]["when"]:
+            raise AssertionError(
+                f"{name} must explicitly exclude "
+                "the episodic season-pack partition"
+            )
+
+    if "seadex" in resolved[library_name]["when"].lower():
+        raise AssertionError(
+            "Library ceiling must not reference SeaDex"
         )
 
 
@@ -1960,9 +1998,9 @@ if not rules:
         "Decoded profile contains no rules"
     )
 
-if len(rules) != 151:
+if len(rules) != 152:
     raise AssertionError(
-        f"Expected 151 profile rules, found {len(rules)}"
+        f"Expected 152 profile rules, found {len(rules)}"
     )
 
 defines = parse_define_library(defines_text)

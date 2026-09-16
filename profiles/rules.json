@@ -717,7 +717,17 @@
         "count": 3,
         "group_by": "resolution + \" \" + quality",
         "name": "Best 3 per R/Q",
-        "when": "not ((kind == \"series\" or kind == \"anime_show\") and seasonPack)"
+        "when": "not library\nand not ((kind == \"series\" or kind == \"anime_show\") and seasonPack)"
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
+        "action": "limit",
+        "count": 1,
+        "group_by": "resolution + \" \" + quality",
+        "name": "Best 1 Library per R/Q",
+        "when": "library\nand not ((kind == \"series\" or kind == \"anime_show\") and seasonPack)"
       }
     },
     {

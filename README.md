@@ -21,7 +21,7 @@ Both profiles use the same shared Define Library and formatter architecture.
 - Adaptive filtering that keeps weak releases available when search results are sparse.
 - Vidhin-backed LQ, Bad Dual, Obfuscated, retag and related release classifications.
 - Tier-safe handling of HDR, audio and video-codec metadata so ordinary metadata does not override release-group authority.
-- Availability-aware tie-breaking, Library priority and same-release failover.
+- Availability-aware tie-breaking, Library priority, a bounded Library Best-N reservation and same-release failover.
 - Anime-specific service, revision, uncensored, 10-bit and Dual/Multi Audio handling.
 - Linked formatter with language/subtitle metadata, corrected-release labels and NZB availability indicators.
 

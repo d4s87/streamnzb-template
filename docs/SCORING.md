@@ -134,6 +134,27 @@ Freshness and grab-count metadata can still be displayed by the formatter but ar
 
 Library results use StreamNZB's native +500 library bonus. DraCuLa does not add a second profile-level library bonus.
 
+### Best-N per resolution/quality bucket
+
+Ordinary (non-season-pack) results are capped per `resolution + quality` bucket:
+
+- Up to 3 non-Library candidates survive (`Best 3 per R/Q`).
+- Up to 1 additional Library candidate survives (`Best 1 Library per R/Q`) —
+  a bounded reservation, not an unconditional exemption: a Library
+  candidate cannot also consume one of the 3 ordinary slots, and multiple
+  Library candidates in the same bucket remain capped at the single
+  highest-ranked one.
+- A bucket's maximum size is therefore ordinarily 3, and up to 4 when a
+  qualifying Library candidate is present — an intentional, bounded
+  retention-policy expansion, not a side effect.
+- Series/Anime season packs are unaffected: they continue through the
+  existing, separate `Best 1 Season Pack per R/Q` ceiling. Library does
+  **not** receive a dedicated season-pack reservation — a Library season
+  pack competes for the single season-pack slot on the same terms as any
+  other pack.
+- Existing SeaDex caps (`At most 1 SeaDex Best` / `At most 1 SeaDex
+  Alternative`) are unchanged and independent of this reservation.
+
 ## Bounded preset size scoring
 
 The built-in 4K preset can give size a very large ranking contribution. DraCuLa publishes explicit shared size scoring in both profiles with the same upstream target sizes but a maximum contribution of +500:

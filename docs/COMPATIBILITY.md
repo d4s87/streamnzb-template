@@ -97,12 +97,12 @@ only activates for already-downloaded Library candidates. No DraCuLa rule
 change is required: DraCuLa's existing rules simply see more accurate input
 for Library candidates than before.
 
-## `matchesExcept` and the Movies Anywhere badge
+## `matchesExcept` and the Movies Anywhere / Max badges
 
 `matchesExcept(text, pattern, exceptPattern)` is a lookaround-equivalent
 rule-DSL function, available since Jhin 0.8.0: `pattern` counts as a match
 only where no match of `exceptPattern` covers the same offset. DraCuLa's
-`Movies Anywhere` non-Anime streaming-service formatter badge is the first
+`Movies Anywhere` non-Anime streaming-service formatter badge was the first
 production rule to depend on it, resolving the one concrete collision that
 previously kept the badge deferred: bare `MA` (the service tag) also reads
 as the tail of `DTS-HD MA` (DTS-HD Master Audio), and a release can carry
@@ -110,10 +110,18 @@ both. An ordinary `matches ... and not matches ...` expression reads the
 whole release name twice and cannot tell the two apart, so it silently
 drops the service badge on any release that also happens to use DTS-HD MA
 audio. `matchesExcept` asks where each match landed instead, so the badge
-still fires when both are present. `Movies Anywhere` remains zero-point,
-`presentation`-owned, `not isAnime`-scoped, and gated by the same WEB-family
-traits as every other non-Anime service badge — only the collision guard
-on bare `MA` is new.
+still fires when both are present.
+
+The `Max` badge uses the same function for a different collision shape:
+bare `MAX` (the service tag) also reads as the tail of the `HBO Max`
+branding prefix, and a release can carry both — e.g. a release tagged with
+the standalone service and separately mentioning "HBO Max" branding.
+`matchesExcept` excludes only the `HBO Max` occurrence, so the standalone
+`MAX` tag elsewhere in the same release name still fires the badge.
+
+Both badges remain zero-point, `presentation`-owned, `not isAnime`-scoped,
+and gated by the same WEB-family traits as every other non-Anime service
+badge — only the collision guard on the bare token is new in each case.
 
 ## Parser-sensitive behavior
 

@@ -989,6 +989,14 @@
       }
     },
     {
+      "owner": "presentation",
+      "rule": {
+        "name": "Max",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand matchesExcept(releaseName, \"(?i)(?:^|[. _\\[\\]-])MAX(?:$|[. _\\[\\]-])\", \"(?i)HBO.?MAX\")"
+      }
+    },
+    {
       "owner": "core",
       "rule": {
         "name": "Seadex Best",

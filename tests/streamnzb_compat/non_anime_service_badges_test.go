@@ -59,10 +59,15 @@ var nonAnimeServiceBadges = []struct {
 // Do not "fix" this list by adding one of these names to
 // nonAnimeServiceBadges -- that would be exactly the un-audited shortcut
 // the feature was scoped to avoid.
+//
+// "Movies Anywhere"/"MA" were removed from this list once the StreamNZB
+// v6.2.0 pin-readiness audit's classification-A finding was implemented --
+// see movies_anywhere_service_badge_test.go for its own dedicated
+// matchesExcept-based real-engine regression, kept separate from this
+// file's generic bounded-token contract because its collision-safety shape
+// is genuinely different.
 var deferredAmbiguousServiceRuleNames = []string{
 	"Max",
-	"Movies Anywhere",
-	"MA",
 	"Google Play",
 	"iTunes",
 	"Showtime",

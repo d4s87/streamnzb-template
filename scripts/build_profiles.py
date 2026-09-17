@@ -40,10 +40,10 @@ EXPECTED_PRESENTATION_RULES = {
     # 2026-09-09): zero-point, presentation-only, scoped `not isAnime`,
     # covering only the 16 services proven to have no Jhin v0.6.2 native
     # `.Network` coverage and no PCRE-lookaround-dependent Vidhin regex.
-    # Do not add any of the 11 deferred/ambiguous services (bare Max,
-    # Movies Anywhere/MA, Google Play, iTunes, Showtime, Stan, Fandango,
-    # Comedy Central, TVING, Viu, iQIYI) to this set without a dedicated
-    # RE2 boolean-translation + fixture pass first.
+    # Do not add any of the 10 remaining deferred/ambiguous services (bare
+    # Max, Google Play, iTunes, Showtime, Stan, Fandango, Comedy Central,
+    # TVING, Viu, iQIYI) to this set without a dedicated RE2
+    # boolean-translation + fixture pass first.
     "Peacock",
     "Paramount+",
     "Criterion Channel",
@@ -60,6 +60,12 @@ EXPECTED_PRESENTATION_RULES = {
     "Wavve",
     "WeTV",
     "Youku",
+    # Movies Anywhere / MA (StreamNZB v6.2.0 pin-readiness audit,
+    # classification A): the RE2-lookaround-equivalent `matchesExcept`
+    # function (available since Jhin v0.8.0) resolves the one concrete,
+    # upstream-documented collision -- bare "MA" vs. the "DTS-HD MA"
+    # audio-codec token -- that previously kept this badge deferred.
+    "Movies Anywhere",
 }
 
 # High-impact audio normalization contract (post scoring-ceiling audit):
@@ -317,9 +323,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 152:
+    if len(entries) != 153:
         raise ValueError(
-            f"expected 152 source rules, found {len(entries)}"
+            f"expected 153 source rules, found {len(entries)}"
         )
 
     names = []
@@ -364,7 +370,7 @@ def validate_registry(payload: dict):
 
     expected_counts = {
     "core": 130,
-    "presentation": 21,
+    "presentation": 22,
     "device:samsung-qn90a": 1,
 }
 
@@ -957,7 +963,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 152,
+            "expected_rules": 153,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -966,7 +972,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 151,
+            "expected_rules": 152,
         },
     }
 

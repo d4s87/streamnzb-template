@@ -21,7 +21,6 @@ additions present in this baseline, they are simply compatible with it:
 - Jhin 0.8.0's missing-tier evaluation semantics (a rule referencing an
   absent tier settles wherever the answerable side of `and`/`or` is enough
   by itself, rather than skipping the whole rule unconditionally);
-- `matchesExcept`, a lookaround-equivalent rule-DSL function;
 - formatter `union`/`without` list helpers;
 - complete ISO 639-1 language resolution;
 - `GET /api/capabilities` and dropped-release diagnostics;
@@ -97,6 +96,24 @@ rules read (`DV without HDR fallback`, `Neutralize Dolby Vision`,
 only activates for already-downloaded Library candidates. No DraCuLa rule
 change is required: DraCuLa's existing rules simply see more accurate input
 for Library candidates than before.
+
+## `matchesExcept` and the Movies Anywhere badge
+
+`matchesExcept(text, pattern, exceptPattern)` is a lookaround-equivalent
+rule-DSL function, available since Jhin 0.8.0: `pattern` counts as a match
+only where no match of `exceptPattern` covers the same offset. DraCuLa's
+`Movies Anywhere` non-Anime streaming-service formatter badge is the first
+production rule to depend on it, resolving the one concrete collision that
+previously kept the badge deferred: bare `MA` (the service tag) also reads
+as the tail of `DTS-HD MA` (DTS-HD Master Audio), and a release can carry
+both. An ordinary `matches ... and not matches ...` expression reads the
+whole release name twice and cannot tell the two apart, so it silently
+drops the service badge on any release that also happens to use DTS-HD MA
+audio. `matchesExcept` asks where each match landed instead, so the badge
+still fires when both are present. `Movies Anywhere` remains zero-point,
+`presentation`-owned, `not isAnime`-scoped, and gated by the same WEB-family
+traits as every other non-Anime service badge — only the collision guard
+on bare `MA` is new.
 
 ## Parser-sensitive behavior
 

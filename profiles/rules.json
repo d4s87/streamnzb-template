@@ -981,6 +981,14 @@
       }
     },
     {
+      "owner": "presentation",
+      "rule": {
+        "name": "Movies Anywhere",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand matchesExcept(releaseName, \"(?i)(?:^|[. _\\[\\]-])(?:MA|Movies[ ._-]?Anywhere)(?:$|[. _\\[\\]-])\", \"(?i)DTS-HD.MA\")"
+      }
+    },
+    {
       "owner": "core",
       "rule": {
         "name": "Seadex Best",

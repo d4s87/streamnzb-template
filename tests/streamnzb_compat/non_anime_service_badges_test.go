@@ -1,12 +1,16 @@
 package streamnzb_compat
 
 // Permanent real-engine regression for the "Non-Anime Streaming-Service
-// Formatter Badges" feature: 16 zero-point, presentation-only rules that
+// Formatter Badges" feature: 20 zero-point, presentation-only rules that
 // give the DraCuLa normal formatter a fallback service label for Movie/
-// Series releases from streaming services Jhin v0.6.2's own `.Network`
-// table does not recognize. See the roadmap audit ("Non-Anime
-// Streaming-Service Formatter Badges") for the full Phase 1-9 analysis
-// these 16 services (and the 11 deliberately deferred ones) are based on.
+// Series releases from streaming services Jhin's own `.Network` table does
+// not recognize. The original 16 came from the initial audit; TVING, Viu,
+// iQIYI, and Fandango were added by the remaining-badges audit (2026-09-17)
+// once Vidhin's own regex data confirmed a plain, non-lookaround-dependent
+// RE2 translation exists for each. Movies Anywhere/Max (matchesExcept) and
+// Google Play (WEB-adjacency-gated) have their own dedicated files because
+// their collision-safety shapes are genuinely different from this file's
+// generic bounded-token contract.
 //
 // Each rule mirrors the pre-existing Anime CR/DSNP/NF/... shape exactly:
 // `not isAnime and (<web traits>) and releaseName matches
@@ -28,9 +32,12 @@ import (
 	"streamnzb/pkg/search/triage"
 )
 
-// nonAnimeServiceBadges is the exact 16-service contract this feature adds.
-// Keep in sync with build_profiles.py's EXPECTED_PRESENTATION_RULES and the
-// formatter source's `$service` fallback chain.
+// nonAnimeServiceBadges is the exact 20-service contract this file covers
+// (the original 16 plus TVING/Viu/iQIYI/Fandango). Keep in sync with
+// build_profiles.py's EXPECTED_PRESENTATION_RULES and the formatter
+// source's `$service` fallback chain. iQIYI's own IQIY/IQIYI-alias and
+// bare-IQ-exclusion coverage lives in its own dedicated sub-test below,
+// alongside the pre-existing Hotstar HTSR/bare-HS pattern.
 var nonAnimeServiceBadges = []struct {
 	rule  string
 	token string
@@ -51,14 +58,13 @@ var nonAnimeServiceBadges = []struct {
 	{"Wavve", "WAVVE"},
 	{"WeTV", "WETV"},
 	{"Youku", "YOUKU"},
+	{"TVING", "TVING"},
+	{"Viu", "Viu"},
+	{"iQIYI", "IQIYI"},
+	{"Fandango", "FAND"},
 }
 
-// deferredAmbiguousServiceRuleNames must never appear as a production rule:
-// their upstream Vidhin regexes depend on PCRE lookaround/adjacency this
-// feature deliberately did not translate to RE2 (see the audit, Phase 6/9).
-// Do not "fix" this list by adding one of these names to
-// nonAnimeServiceBadges -- that would be exactly the un-audited shortcut
-// the feature was scoped to avoid.
+// deferredAmbiguousServiceRuleNames must never appear as a production rule.
 //
 // "Movies Anywhere"/"MA" and "Max" were removed from this list once the
 // StreamNZB v6.2.0 pin-readiness audit's classification-A findings were
@@ -66,21 +72,31 @@ var nonAnimeServiceBadges = []struct {
 // max_service_badge_test.go for their own dedicated matchesExcept-based
 // real-engine regressions, kept separate from this file's generic
 // bounded-token contract because their collision-safety shapes are
-// genuinely different.
+// genuinely different. "TVING"/"Viu"/"iQIYI"/"Fandango" were removed once
+// the remaining-badges audit (2026-09-17) confirmed a plain, non-lookaround
+// RE2 translation exists for each -- see nonAnimeServiceBadges above.
+// "Google Play" was removed the same day -- see
+// google_play_service_badge_test.go for its own dedicated WEB-adjacency-
+// gated real-engine regression, kept separate because bare "Play" is a
+// real English word (e.g. "Childs.Play...WEB-DL") and needs a narrower
+// rule shape than the generic bounded-token contract. "iTunes"/"Showtime"/
+// "Stan" were removed the same day too: they are not deferred fallback
+// candidates at all -- Jhin's own `.Network` table already recognizes them
+// natively, so a DraCuLa fallback badge for them would be redundant, not
+// merely unimplemented.
+//
+// "Comedy Central" is the one remaining entry: its only evidenced
+// canonical token is bare "CC" (2 letters, no longer distinctive alias
+// exists), which stays too collision-prone to approximate without a real
+// release-name corpus proving safety. Do not "fix" this list by adding it
+// to nonAnimeServiceBadges -- that would be exactly the un-audited
+// shortcut this feature is scoped to avoid.
 var deferredAmbiguousServiceRuleNames = []string{
-	"Google Play",
-	"iTunes",
-	"Showtime",
-	"Stan",
-	"Fandango",
 	"Comedy Central",
-	"TVING",
-	"Viu",
-	"iQIYI",
 }
 
 // evaluateIsolatedRule compiles a single production rule (no Define
-// dependency for any of these 16) and reports whether it matched a given
+// dependency for any of these 20) and reports whether it matched a given
 // release title under the given anime scope -- the isolated-rule layer of
 // this repo's two-layer validation discipline (see CLAUDE.md).
 func evaluateIsolatedRule(t *testing.T, cfg config.RuleConfig, title string, isAnime bool) bool {
@@ -137,8 +153,9 @@ func TestNonAnimeServiceBadgeRuleContract(t *testing.T) {
 			if rule.Name == name {
 				t.Errorf(
 					"deferred/ambiguous service rule %q must not exist in the "+
-						"published profile -- its upstream regex needs a PCRE "+
-						"lookaround-to-RE2 translation this feature did not do",
+						"published profile -- its only evidenced canonical token "+
+						"remains too collision-prone to approximate without a "+
+						"real release-name corpus proving safety",
 					name,
 				)
 			}
@@ -160,6 +177,10 @@ func TestNonAnimeServiceBadgeClassification(t *testing.T) {
 		"DC Universe":       true, // DCU
 		"FOD":               true, // FOD
 		"KOCOWA":            true, // KCW
+		"TVING":             true,
+		"Viu":               true,
+		"iQIYI":             true, // IQIYI
+		"Fandango":          true, // FAND
 	}
 
 	for _, svc := range nonAnimeServiceBadges {
@@ -240,6 +261,35 @@ func TestNonAnimeServiceBadgeClassification(t *testing.T) {
 		}
 	})
 
+	// iQIYI matches both its full spelled-out form and Vidhin's own
+	// canonical short form, but must never match the bare "IQ" alternative
+	// Vidhin's own alternation also lists -- a real, plausible abbreviation
+	// (e.g. "intelligence quotient") this feature deliberately excludes,
+	// the same real-world-token-collision-risk reasoning already applied
+	// to Hotstar's bare "HS" above.
+	t.Run("iQIYI matches IQIYI and IQIY but not bare IQ", func(t *testing.T) {
+		cfg := findProductionRule(t, productionRules, "iQIYI")
+
+		full := "Example.Movie.2026.1080p.IQIYI.WEB-DL.DDP5.1.x264-GROUP"
+		if !evaluateIsolatedRule(t, cfg, full, false) {
+			t.Errorf("iQIYI did not match audited token in %q", full)
+		}
+
+		short := "Example.Movie.2026.1080p.IQIY.WEB-DL.DDP5.1.x264-GROUP"
+		if !evaluateIsolatedRule(t, cfg, short, false) {
+			t.Errorf("iQIYI did not match Vidhin's own short alias in %q", short)
+		}
+
+		bareIQ := "Example.Movie.2026.1080p.IQ.WEB-DL.DDP5.1.x264-GROUP"
+		if evaluateIsolatedRule(t, cfg, bareIQ, false) {
+			t.Errorf(
+				"iQIYI matched bare \"IQ\" in %q; the ambiguous bare IQ "+
+					"alias was deliberately excluded by the audit",
+				bareIQ,
+			)
+		}
+	})
+
 	// Peacock's own spelled-out alias, and DC Universe's/Paramount+'s
 	// multi-word alias with a flexible internal separator, exactly mirroring
 	// the existing DSNP rule's "Disney[ ._-]?Plus" idiom.
@@ -280,7 +330,7 @@ func TestNonAnimeServiceBadgeClassification(t *testing.T) {
 // full-profile pipeline (not just the isolated rule), that a matching
 // service badge rule changes only presentation (MatchedRules / formatter
 // label) and never final score, Fetch/keep state, rejection, or limit
-// behavior. One representative service (Peacock) is sufficient: all 16
+// behavior. One representative service (Peacock) is sufficient: all 20
 // share the identical zero-point rule shape.
 func TestNonAnimeServiceBadgeScoringInvariance(t *testing.T) {
 	productionRules := loadProductionRules(t)

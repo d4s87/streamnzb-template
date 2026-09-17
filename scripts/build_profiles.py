@@ -40,10 +40,10 @@ EXPECTED_PRESENTATION_RULES = {
     # 2026-09-09): zero-point, presentation-only, scoped `not isAnime`,
     # covering only the 16 services proven to have no Jhin v0.6.2 native
     # `.Network` coverage and no PCRE-lookaround-dependent Vidhin regex.
-    # Do not add any of the 9 remaining deferred/ambiguous services
-    # (Google Play, iTunes, Showtime, Stan, Fandango, Comedy Central,
-    # TVING, Viu, iQIYI) to this set without a dedicated RE2
-    # boolean-translation + fixture pass first.
+    # Do not add Comedy Central to this set -- the only evidenced
+    # canonical token is bare "CC" (2 letters, no longer distinctive
+    # alias exists), which remains too collision-prone without a real
+    # release-name corpus proving safety.
     "Peacock",
     "Paramount+",
     "Criterion Channel",
@@ -70,6 +70,20 @@ EXPECTED_PRESENTATION_RULES = {
     # other upstream-documented `matchesExcept` worked example -- bare
     # "MAX" vs. the "HBO Max" branding prefix -- resolved the same way.
     "Max",
+    # Google Play, Fandango, TVING, Viu, iQIYI (remaining-badges audit,
+    # 2026-09-17): plain `matches`, no `matchesExcept` needed -- Vidhin's
+    # own regex data confirms none of these five have a genuine
+    # containment-collision partner in Jhin's parser vocabulary. Google
+    # Play is the one exception requiring a narrower shape: bare "Play"
+    # anywhere is unsafe (e.g. "Childs.Play.<year>...WEB-DL"), so its
+    # rule requires "Play" immediately adjacent to the WEB marker itself
+    # rather than the usual bounded-anywhere pattern. Comedy Central
+    # remains deliberately excluded -- see the comment above.
+    "Google Play",
+    "Fandango",
+    "TVING",
+    "Viu",
+    "iQIYI",
 }
 
 # High-impact audio normalization contract (post scoring-ceiling audit):
@@ -327,9 +341,9 @@ def validate_registry(payload: dict):
     if not isinstance(entries, list):
         raise ValueError("rules source must contain a rules array")
 
-    if len(entries) != 154:
+    if len(entries) != 159:
         raise ValueError(
-            f"expected 154 source rules, found {len(entries)}"
+            f"expected 159 source rules, found {len(entries)}"
         )
 
     names = []
@@ -374,7 +388,7 @@ def validate_registry(payload: dict):
 
     expected_counts = {
     "core": 130,
-    "presentation": 23,
+    "presentation": 28,
     "device:samsung-qn90a": 1,
 }
 
@@ -967,7 +981,7 @@ def validate_variants(payload: dict):
                 "presentation",
                 "device:samsung-qn90a",
             ],
-            "expected_rules": 154,
+            "expected_rules": 159,
         },
         "profile-neutral.txt": {
             "name": "DraCuLa Neutral",
@@ -976,7 +990,7 @@ def validate_variants(payload: dict):
                 "core",
                 "presentation",
             ],
-            "expected_rules": 153,
+            "expected_rules": 158,
         },
     }
 

@@ -202,7 +202,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 		target := "Example.Movie.2026.HDTV.x264-GRP"
 		titles := append([]string{target}, knownMovieAlternatives(7)...)
 		req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if !rejectedBy(t, explanations, target, adaptiveLowQualityFilteringRuleName) {
 			t.Fatal("dense HDTV Movie was not rejected")
 		}
@@ -212,7 +212,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 		target := "Example.Movie.2026.HDTV.x264-GRP"
 		titles := append([]string{target}, knownMovieAlternatives(3)...)
 		req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, adaptiveLowQualityFilteringRuleName) {
 			t.Fatal("sparse HDTV Movie was unexpectedly rejected")
 		}
@@ -225,7 +225,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 			Kind: ranking.KindMovie, Title: "Example Movie",
 			Sample: &ranking.Sample{IndexerData: true, Library: true},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, adaptiveLowQualityFilteringRuleName) {
 			t.Fatal("Library HDTV release was rejected")
 		}
@@ -240,7 +240,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 		target := "Example.Movie.2026.HDTV.x264-GRP"
 		titles := append([]string{target}, knownMovieAlternatives(7)...)
 		req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"} // Seadex left nil
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if !rejectedBy(t, explanations, target, adaptiveLowQualityFilteringRuleName) {
 			t.Fatal("dense Movie HDTV pool was not rejected under realistic nil-Seadex wiring")
 		}
@@ -259,7 +259,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 			Title:  "Example Anime",
 			Seadex: &rules.SeadexContext{Known: false},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if !rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("dense Anime HDTV release with SeaDex checked/no-match was not rejected")
 		}
@@ -277,7 +277,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 			Title: "Example Anime",
 			// Seadex intentionally left nil.
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("dense Anime HDTV release with no SeaDex lookup was rejected instead of failing open")
 		}
@@ -294,7 +294,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 			Title:  "Example Anime",
 			Seadex: &rules.SeadexContext{Known: false},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("sparse Anime HDTV release was unexpectedly rejected")
 		}
@@ -311,7 +311,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 				Best:  map[string]bool{"bestgrp": true},
 			},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("SeaDex Best HDTV release was rejected")
 		}
@@ -333,7 +333,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 				Alt:   map[string]bool{"altgrp": true},
 			},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("SeaDex Alternative HDTV release was rejected")
 		}
@@ -356,7 +356,7 @@ func TestAdaptiveLowQualityFilteringProductionPolicy(t *testing.T) {
 			Sample: &ranking.Sample{IndexerData: true, Library: true},
 			Seadex: &rules.SeadexContext{Known: false},
 		}
-		explanations, _ := profile.Explain(titles, req, jhinrank.RankOptions{})
+		explanations, _ := profile.Explain(ranking.TitleFixtures(titles...), req, jhinrank.RankOptions{})
 		if rejectedBy(t, explanations, target, animeAdaptiveLowQualityFilteringRuleName) {
 			t.Fatal("Library Anime HDTV release was rejected")
 		}

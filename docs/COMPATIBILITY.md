@@ -6,9 +6,31 @@ This document contains the technical compatibility and validation details for Dr
 
 Current published compatibility baseline:
 
-- StreamNZB 6.1.0 (commit `2ff93449e59a6597f25fd008e3440920772578c3`)
-- Jhin 0.7.1
+- StreamNZB 6.2.0 (commit `c5aa001b0051c0f866768e30c97292c7d1a6c216`)
+- Jhin 0.8.0
 - StreamNZB profile payload schema v2
+
+The move from StreamNZB 6.1.0/Jhin 0.7.1 to 6.2.0/0.8.0 is a **compatibility
+pin update only**. A full real-engine regression audit (source diff of every
+commit in the `v6.1.0...v6.2.0` range plus a control-vs-candidate run of the
+entire compatibility harness against the exact tagged v6.2.0 source) found no
+production rule, formatter, or scoring behavior change — DraCuLa does not
+newly implement, depend on, or require any of the following upstream
+additions present in this baseline, they are simply compatible with it:
+
+- Jhin 0.8.0's missing-tier evaluation semantics (a rule referencing an
+  absent tier settles wherever the answerable side of `and`/`or` is enough
+  by itself, rather than skipping the whole rule unconditionally);
+- `matchesExcept`, a lookaround-equivalent rule-DSL function;
+- formatter `union`/`without` list helpers;
+- complete ISO 639-1 language resolution;
+- `GET /api/capabilities` and dropped-release diagnostics;
+- ffprobe 6.1 / improved Dolby Vision Profile 8 detection (this one does
+  improve DraCuLa's real-world accuracy for already-downloaded Library
+  candidates — see the Dolby Vision section below — without requiring any
+  rule change);
+- corrected newznab password-status ingestion (an indexer-side filter
+  DraCuLa's rules do not reference).
 
 StreamNZB v6.0.0 also carries an upstream season-handling fix (`Gaisberg/streamnzb#275`): season is literal end-to-end, so season `0` addresses only the Specials season and no longer doubles as a "no season named" sentinel. Anime absolute-episode/seasonless matching goes through `SeasonlessEpisodeMatchRank`/`TargetMatchRank(Seasonless: true)`; literal Season 0/Specials matching is a separate, still-covered path through `EpisodeMatchRank(0, episode)` — the two are exercised as independent fixtures so they cannot be conflated again.
 
@@ -59,9 +81,22 @@ Pinned real-StreamNZB formatter regressions cover user-facing behaviors such as:
 
 Jhin exposes parsed `Languages` separately from the boolean `Subbed` flag. DraCuLa therefore displays the metadata that Jhin actually exports and does not invent subtitle-language identities that are not present in the formatter context.
 
-As of pinned StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, deduplicated language-code list StreamNZB assembles by merging release-name subtitle parsing, indexer-reported subtitle metadata and probed subtitle tracks. Source attribution does not survive that merge. The production formatter renders mapped `.Subtitles` codes through StreamNZB's own `flags` template helper — which already dedupes codes and silently skips any code with no unambiguous flag mapping — placed immediately adjacent to the existing `sᴜʙ` marker (e.g. `sᴜʙ 🇫🇷 🇩🇪`) rather than as a separate badge; DraCuLa adds no release-title regexes, no local language normalization, and no alias tables of its own. The formatter shows `sᴜʙ` when either `.Subbed` is true or `.Subtitles` yields at least one mapped flag — a presentation inference from explicit subtitle metadata, not a mutation or reinterpretation of StreamNZB's own `.Subbed` field, which is read and displayed exactly as reported. The only claim the presentation makes is that subtitle metadata contains these language codes — it does not imply forced/default status, embedded-vs-external, SDH, track count, track identity, source provenance, or a language-to-track binding, and a subtitle code is never treated as an audio-language claim even when it also appears in `.Languages`.
+Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, deduplicated language-code list StreamNZB assembles by merging release-name subtitle parsing, indexer-reported subtitle metadata and probed subtitle tracks. Source attribution does not survive that merge. The production formatter renders mapped `.Subtitles` codes through StreamNZB's own `flags` template helper — which already dedupes codes and silently skips any code with no unambiguous flag mapping — placed immediately adjacent to the existing `sᴜʙ` marker (e.g. `sᴜʙ 🇫🇷 🇩🇪`) rather than as a separate badge; DraCuLa adds no release-title regexes, no local language normalization, and no alias tables of its own. The formatter shows `sᴜʙ` when either `.Subbed` is true or `.Subtitles` yields at least one mapped flag — a presentation inference from explicit subtitle metadata, not a mutation or reinterpretation of StreamNZB's own `.Subbed` field, which is read and displayed exactly as reported. The only claim the presentation makes is that subtitle metadata contains these language codes — it does not imply forced/default status, embedded-vs-external, SDH, track count, track identity, source provenance, or a language-to-track binding, and a subtitle code is never treated as an audio-language claim even when it also appears in `.Languages`.
 
-Known upstream limitation: StreamNZB v6.1.0's formatter-facing language normalization (`pttoptions`) currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.2.0 baseline. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+
+## Dolby Vision Profile 8
+
+StreamNZB 6.2.0 bundles ffprobe 6.1, which corrects Profile 8 Dolby Vision
+detection for already-probed releases (an older ffprobe rejected the option
+that exposes the DOVI side-data record Profile 8 relies on, so such a
+release could measure as plain HDR10). The rule-engine logic that merges a
+probe's Dolby Vision reading into the plain `dolbyVision` field DraCuLa's
+rules read (`DV without HDR fallback`, `Neutralize Dolby Vision`,
+`Generated Dynamic HDR Penalty`) is unchanged between 6.1.0 and 6.2.0 — it
+only activates for already-downloaded Library candidates. No DraCuLa rule
+change is required: DraCuLa's existing rules simply see more accurate input
+for Library candidates than before.
 
 ## Parser-sensitive behavior
 

@@ -50,13 +50,12 @@ type AggregateCaseFixture struct {
 }
 
 type CaseFixture struct {
-	Name             string      `json:"name"`
-	Release          string      `json:"release"`
-	Kind             string      `json:"kind"`
-	Anime            bool        `json:"anime"`
-	Library          bool        `json:"library,omitempty"`
-	IndexerDataKnown bool        `json:"indexerDataKnown,omitempty"`
-	Expected         Expectation `json:"expected"`
+	Name     string      `json:"name"`
+	Release  string      `json:"release"`
+	Kind     string      `json:"kind"`
+	Anime    bool        `json:"anime"`
+	Library  bool        `json:"library,omitempty"`
+	Expected Expectation `json:"expected"`
 }
 
 type Expectation struct {
@@ -416,9 +415,8 @@ func buildEnv(c CaseFixture) rules.Env {
 		cand,
 		jhin.Parse(c.Release),
 		rules.Context{
-			Kind:             c.Kind,
-			IsAnime:          c.Anime,
-			IndexerDataKnown: c.IndexerDataKnown,
+			Kind:    c.Kind,
+			IsAnime: c.Anime,
 		},
 	)
 }
@@ -3124,7 +3122,7 @@ func TestIntelligentUnknownResolutionProductionPolicy(t *testing.T) {
 			}
 
 			explanations, aggregates := profile.Explain(
-				titles,
+				ranking.TitleFixtures(titles...),
 				req,
 				jhinrank.RankOptions{},
 			)

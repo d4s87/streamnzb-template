@@ -997,6 +997,46 @@
       }
     },
     {
+      "owner": "presentation",
+      "rule": {
+        "name": "Google Play",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])Play[ ._-]web(?:[ ._-]?(?:dl|rip))?(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Fandango",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])FAND(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "TVING",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])TVING(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "Viu",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])Viu(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
+      "owner": "presentation",
+      "rule": {
+        "name": "iQIYI",
+        "points": 0,
+        "when": "not isAnime\nand (\"webdl\" in traits or \"webrip\" in traits or \"webmux\" in traits or \"web\" in traits)\nand releaseName matches \"(?i)(?:^|[. _\\[\\]-])(?:IQIYI|IQIY)(?:$|[. _\\[\\]-])\""
+      }
+    },
+    {
       "owner": "core",
       "rule": {
         "name": "Seadex Best",

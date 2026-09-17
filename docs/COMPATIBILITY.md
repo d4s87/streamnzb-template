@@ -123,6 +123,28 @@ Both badges remain zero-point, `presentation`-owned, `not isAnime`-scoped,
 and gated by the same WEB-family traits as every other non-Anime service
 badge — only the collision guard on the bare token is new in each case.
 
+## Google Play's WEB-adjacency-gated fallback
+
+The `Google Play` non-Anime streaming-service formatter badge does **not**
+use `matchesExcept` — its collision shape is different in kind, not just in
+detail, from Movies Anywhere/Max. Its canonical token is the bare English
+word `Play`, which real, unrelated titles legitimately use as their own
+last word (the *Child's Play* franchise renders as
+`Childs.Play.<year>.1080p.WEB-DL...` in scene convention). A plain
+bounded-anywhere match — the shape every other simple badge uses — would
+false-positive on titles like that.
+
+The rule instead requires `Play` to sit immediately adjacent to the
+`WEB`/`WEBDL`/`WEBRip` marker itself, mirroring the same adjacency real
+scene naming already uses to place a service tag directly in front of the
+source-type tag (`AMZN.WEB-DL`, `NF.WEBRip`). In `Childs.Play.<year>...
+WEB-DL`, the year/resolution intervene between `Play` and `WEB`, so the
+rule correctly does not fire. No new DSL feature is required for this —
+it is a narrower *positive* pattern, not an exclusion of a covering match.
+`.Network` remains authoritative; the badge is a formatter fallback only,
+rendered exactly like every other non-Anime service badge when `.Network`
+is empty.
+
 ## Parser-sensitive behavior
 
 Several production rules depend on exact StreamNZB/Jhin parser semantics. These are protected with permanent compatibility fixtures rather than reimplemented parsers.

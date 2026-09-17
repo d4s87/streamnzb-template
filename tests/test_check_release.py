@@ -160,10 +160,10 @@ print("PASS: parse_changelog / find_changelog_section / changelog_section_body")
 
 counts = cr.load_current_counts()
 assert counts == {
-    "samsung": 154,
-    "neutral": 153,
+    "samsung": 159,
+    "neutral": 158,
     "core": 130,
-    "presentation": 23,
+    "presentation": 28,
     "device": 1,
     "defines": 62,
 }, f"unexpected baseline counts: {counts}"

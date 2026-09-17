@@ -620,6 +620,206 @@
       }
     },
     {
+      "name": "Google Play service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Google Play", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɢᴏᴏɢʟᴇ ᴘʟᴀʏ"
+      ],
+      "counts": {
+        "♛ ɢᴏᴏɢʟᴇ ᴘʟᴀʏ": 1
+      }
+    },
+    {
+      "name": "Network wins over Google Play fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "Google Play", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ɢᴏᴏɢʟᴇ ᴘʟᴀʏ"
+      ]
+    },
+    {
+      "name": "Google Play is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Google Play", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ɢᴏᴏɢʟᴇ ᴘʟᴀʏ": 1
+      }
+    },
+    {
+      "name": "Fandango service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Fandango", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ꜰᴀɴᴅᴀɴɢᴏ"
+      ],
+      "counts": {
+        "♛ ꜰᴀɴᴅᴀɴɢᴏ": 1
+      }
+    },
+    {
+      "name": "Network wins over Fandango fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "Fandango", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ꜰᴀɴᴅᴀɴɢᴏ"
+      ]
+    },
+    {
+      "name": "Fandango is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Fandango", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ꜰᴀɴᴅᴀɴɢᴏ": 1
+      }
+    },
+    {
+      "name": "TVING service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "TVING", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴛᴠɪɴɢ"
+      ],
+      "counts": {
+        "♛ ᴛᴠɪɴɢ": 1
+      }
+    },
+    {
+      "name": "Network wins over TVING fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "TVING", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ᴛᴠɪɴɢ"
+      ]
+    },
+    {
+      "name": "TVING is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "TVING", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ᴛᴠɪɴɢ": 1
+      }
+    },
+    {
+      "name": "Viu service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Viu", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴠɪᴜ"
+      ],
+      "counts": {
+        "♛ ᴠɪᴜ": 1
+      }
+    },
+    {
+      "name": "Network wins over Viu fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "Viu", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ᴠɪᴜ"
+      ]
+    },
+    {
+      "name": "Viu is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Viu", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ᴠɪᴜ": 1
+      }
+    },
+    {
+      "name": "iQIYI service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "iQIYI", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɪǫɪʏɪ"
+      ],
+      "counts": {
+        "♛ ɪǫɪʏɪ": 1
+      }
+    },
+    {
+      "name": "Network wins over iQIYI fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "iQIYI", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ɪǫɪʏɪ"
+      ]
+    },
+    {
+      "name": "iQIYI is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "iQIYI", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ɪǫɪʏɪ": 1
+      }
+    },
+    {
       "name": "Network still wins over new non-Anime fallback",
       "context": {
         "Network": "Netflix",

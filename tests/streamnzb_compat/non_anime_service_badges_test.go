@@ -60,14 +60,14 @@ var nonAnimeServiceBadges = []struct {
 // nonAnimeServiceBadges -- that would be exactly the un-audited shortcut
 // the feature was scoped to avoid.
 //
-// "Movies Anywhere"/"MA" were removed from this list once the StreamNZB
-// v6.2.0 pin-readiness audit's classification-A finding was implemented --
-// see movies_anywhere_service_badge_test.go for its own dedicated
-// matchesExcept-based real-engine regression, kept separate from this
-// file's generic bounded-token contract because its collision-safety shape
-// is genuinely different.
+// "Movies Anywhere"/"MA" and "Max" were removed from this list once the
+// StreamNZB v6.2.0 pin-readiness audit's classification-A findings were
+// implemented -- see movies_anywhere_service_badge_test.go and
+// max_service_badge_test.go for their own dedicated matchesExcept-based
+// real-engine regressions, kept separate from this file's generic
+// bounded-token contract because their collision-safety shapes are
+// genuinely different.
 var deferredAmbiguousServiceRuleNames = []string{
-	"Max",
 	"Google Play",
 	"iTunes",
 	"Showtime",

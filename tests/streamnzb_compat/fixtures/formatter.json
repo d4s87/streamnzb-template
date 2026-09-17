@@ -580,6 +580,46 @@
       }
     },
     {
+      "name": "Max service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Max", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴍᴀx"
+      ],
+      "counts": {
+        "♛ ᴍᴀx": 1
+      }
+    },
+    {
+      "name": "Network wins over Max fallback",
+      "context": {
+        "Network": "HBO Max",
+        "MatchedRules": [
+          { "Name": "Max", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ʜʙᴏ ᴍᴀx"
+      ],
+      "excludes": [
+        "♛ ᴍᴀx"
+      ]
+    },
+    {
+      "name": "Max is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Max", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ᴍᴀx": 1
+      }
+    },
+    {
       "name": "Network still wins over new non-Anime fallback",
       "context": {
         "Network": "Netflix",

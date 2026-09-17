@@ -540,6 +540,46 @@
       }
     },
     {
+      "name": "Movies Anywhere service fallback (non-Anime)",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Movies Anywhere", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ᴍᴏᴠɪᴇꜱ ᴀɴʏᴡʜᴇʀᴇ"
+      ],
+      "counts": {
+        "♛ ᴍᴏᴠɪᴇꜱ ᴀɴʏᴡʜᴇʀᴇ": 1
+      }
+    },
+    {
+      "name": "Network wins over Movies Anywhere fallback",
+      "context": {
+        "Network": "Netflix",
+        "MatchedRules": [
+          { "Name": "Movies Anywhere", "Score": 0 }
+        ]
+      },
+      "contains": [
+        "♛ ɴᴇᴛꜰʟɪx"
+      ],
+      "excludes": [
+        "♛ ᴍᴏᴠɪᴇꜱ ᴀɴʏᴡʜᴇʀᴇ"
+      ]
+    },
+    {
+      "name": "Movies Anywhere is not duplicated",
+      "context": {
+        "MatchedRules": [
+          { "Name": "Movies Anywhere", "Score": 0 }
+        ]
+      },
+      "counts": {
+        "ᴍᴏᴠɪᴇꜱ ᴀɴʏᴡʜᴇʀᴇ": 1
+      }
+    },
+    {
       "name": "Network still wins over new non-Anime fallback",
       "context": {
         "Network": "Netflix",

@@ -18,17 +18,23 @@ package streamnzb_compat
 //     stale allowlist entry for one that's gone) fails the build, forcing a
 //     deliberate decision instead of an accidental skip-prone rule shipping
 //     unreviewed;
-//  2. a handful of named capabilities DraCuLa's own rule/formatter design
-//     depends on by name (the confidence tiers behind the SeaDex split-rule
-//     pattern, matchesExcept, the formatter helpers the published templates
-//     call) still exist in the pinned vocabulary.
+//  2. a handful of named capabilities DraCuLa's own rule design depends on
+//     by name (the confidence tiers behind the SeaDex split-rule pattern,
+//     matchesExcept) still exist in the pinned vocabulary.
+//
+// Formatter helper/field vocabulary is deliberately not checked here: it
+// would need streamnzb/pkg/server/stremio, which pulls in the full
+// application's unrelated dependency graph (Postgres/SQLite drivers,
+// archive/yEnc libs) just to read a helper-name list, and formatter helper
+// compatibility is already exercised end-to-end by the real-engine
+// production/debug formatter render tests (./scripts/test_formatter.sh) --
+// a genuinely missing helper fails loudly and precisely there.
 
 import (
 	"regexp"
 	"testing"
 
 	"streamnzb/pkg/search/rules"
-	"streamnzb/pkg/server/stremio"
 )
 
 // tierGatedReference is one shipped rule's reference to one tier-gated
@@ -77,14 +83,6 @@ var tierGatedFunctionAllowlist = []tierGatedReference{}
 // when the "seadex" tier is absent -- a rename would silently invalidate
 // that reasoning without touching a single line of profiles/rules.json.
 var knownTierNames = []string{"avail", "indexer", "measured", "seadex", "tracks"}
-
-// formatterHelperAllowlist is every result-template helper DraCuLa's
-// published formatter/debug-formatter sources call today (union of
-// tests/streamnzb_compat/formatter.source.json and formatter-debug.source.json).
-var formatterHelperAllowlist = []string{
-	"contains", "flags", "join", "length", "replace", "score", "size",
-	"smallcaps", "stars", "sub", "title", "translate", "truncate", "upper",
-}
 
 // referencedTierGatedPairs walks every shipped rule and every tier-gated
 // capability name in tierByCapability, returning the (capability, rule)
@@ -224,33 +222,6 @@ func TestRuleVocabularyCarriesKnownCapabilities(t *testing.T) {
 	}
 	if !hasMatchesExcept {
 		t.Error("pinned vocabulary no longer reports matchesExcept, which the Movies Anywhere/Max service badges depend on")
-	}
-}
-
-// TestFormatterHelpersExistInVocabulary confirms every helper the published
-// formatter/debug-formatter sources call is still in stremio.FormatHelpers().
-// Field-path existence is deliberately not checked here: Go template
-// {{range}}/{{with}} blocks reassign "." to a loop/branch-local value, so a
-// blind ".Field" text scan over the template source cannot reliably tell a
-// top-level FormatContext field from a per-variant loop-local one without
-// actually parsing the template -- exactly the "generic schema-diff
-// framework" this file is meant to avoid becoming. A genuinely missing
-// formatter field already fails loudly and precisely at
-// ./scripts/test_formatter.sh's real-engine render, which is the authoritative
-// check for that.
-func TestFormatterHelpersExistInVocabulary(t *testing.T) {
-	available := make(map[string]bool)
-	for _, h := range stremio.FormatHelpers() {
-		available[h.Name] = true
-	}
-	for _, name := range formatterHelperAllowlist {
-		if !available[name] {
-			t.Errorf(
-				"formatterHelperAllowlist lists helper %q, which the pinned vocabulary no longer "+
-					"reports -- formatter.source.json/formatter-debug.source.json needs review",
-				name,
-			)
-		}
 	}
 }
 

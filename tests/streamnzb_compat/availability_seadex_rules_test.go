@@ -202,8 +202,12 @@ func TestRecentlyConfirmed_ScoresJustUnderThirtyDays(t *testing.T) {
 	if len(kept) != 1 {
 		t.Fatalf("expected 1 kept result, got %d", len(kept))
 	}
-	if !matchedBy(kept[0].Matched, "Recently confirmed") {
-		t.Errorf("expected Recently confirmed to match a 29-day-old check, matched=%v", kept[0].Matched)
+	score, ok := matchScore(kept[0].Matched, "Recently confirmed")
+	if !ok {
+		t.Fatalf("expected Recently confirmed to match a 29-day-old check, matched=%v", kept[0].Matched)
+	}
+	if score != 10 {
+		t.Errorf("expected rule score 10, got %d", score)
 	}
 }
 

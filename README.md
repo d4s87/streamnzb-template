@@ -23,6 +23,7 @@ Both profiles use the same shared Define Library and formatter architecture.
 - Tier-safe handling of HDR, audio and video-codec metadata so ordinary metadata does not override release-group authority.
 - Availability-aware tie-breaking, Library priority, a bounded Library Best-N reservation and same-release failover.
 - Anime-specific service, revision, uncensored, 10-bit and Dual/Multi Audio handling.
+- Non-Anime streaming-service badges on supported WEB releases, preferring Network metadata with collision-safe release-name fallback when unavailable, with no effect on scoring.
 - Linked formatter with language/subtitle metadata, corrected-release labels and NZB availability indicators.
 
 For detailed scoring policy and compatibility behavior, see [Scoring Reference](docs/SCORING.md) and [Compatibility and Validation](docs/COMPATIBILITY.md).

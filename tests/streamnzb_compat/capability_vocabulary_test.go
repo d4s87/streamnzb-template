@@ -31,26 +31,45 @@ import (
 	"streamnzb/pkg/server/stremio"
 )
 
-// tierGatedFieldAllowlist maps every tier-gated rule field a shipped rule
-// references to the rule name(s) that reference it. Checking profile.txt
-// (Samsung) alone is sufficient: profile-neutral.txt's core+presentation
-// rule set is a strict subset of it, and the one Samsung-only rule ("DV
-// without HDR fallback") references neither avail.* nor seadex.*.
-var tierGatedFieldAllowlist = map[string]string{
-	"avail.checkedDaysAgo": "Recently confirmed",
-	"avail.onMyBackbone":   "Alive on our backbone",
-	"avail.status":         "Known unavailable",
-	"seadex.best": "Seadex Best, At most 1 SeaDex Best, Anime Unknown Resolution, " +
-		"Anime Adaptive Low-Quality Filtering, Anime LQ Penalty, Reject bad 4K Anime",
-	"seadex.alternative": "Seadex Alternative, At most 1 SeaDex Alternative, Anime Unknown Resolution, " +
-		"Anime Adaptive Low-Quality Filtering, Anime LQ Penalty, Reject bad 4K Anime",
+// tierGatedReference is one shipped rule's reference to one tier-gated
+// field/function. Tracked per (capability, rule) pair rather than per
+// capability alone: a bare capability allowlist would stop reviewing new
+// references the moment the *first* rule using a given field was approved,
+// silently waving through every later rule that reuses the same
+// already-allowlisted field without its own review.
+type tierGatedReference struct {
+	Capability string
+	Rule       string
+}
+
+// tierGatedFieldAllowlist is every (field, rule) pair a shipped rule
+// currently forms. Checking profile.txt (Samsung) alone is sufficient:
+// profile-neutral.txt's core+presentation rule set is a strict subset of it,
+// and the one Samsung-only rule ("DV without HDR fallback") references
+// neither avail.* nor seadex.*.
+var tierGatedFieldAllowlist = []tierGatedReference{
+	{Capability: "avail.checkedDaysAgo", Rule: "Recently confirmed"},
+	{Capability: "avail.onMyBackbone", Rule: "Alive on our backbone"},
+	{Capability: "avail.status", Rule: "Known unavailable"},
+	{Capability: "seadex.best", Rule: "Seadex Best"},
+	{Capability: "seadex.best", Rule: "At most 1 SeaDex Best"},
+	{Capability: "seadex.best", Rule: "Anime Unknown Resolution"},
+	{Capability: "seadex.best", Rule: "Anime Adaptive Low-Quality Filtering"},
+	{Capability: "seadex.best", Rule: "Anime LQ Penalty"},
+	{Capability: "seadex.best", Rule: "Reject bad 4K Anime"},
+	{Capability: "seadex.alternative", Rule: "Seadex Alternative"},
+	{Capability: "seadex.alternative", Rule: "At most 1 SeaDex Alternative"},
+	{Capability: "seadex.alternative", Rule: "Anime Unknown Resolution"},
+	{Capability: "seadex.alternative", Rule: "Anime Adaptive Low-Quality Filtering"},
+	{Capability: "seadex.alternative", Rule: "Anime LQ Penalty"},
+	{Capability: "seadex.alternative", Rule: "Reject bad 4K Anime"},
 }
 
 // tierGatedFunctionAllowlist mirrors tierGatedFieldAllowlist for functions.
 // Empty today: no function in the pinned vocabulary carries a Tier. Declared
 // (rather than omitted) so a future tier-gated function fails this test the
 // same way a field does, instead of silently passing.
-var tierGatedFunctionAllowlist = map[string]string{}
+var tierGatedFunctionAllowlist = []tierGatedReference{}
 
 // knownTierNames are the confidence tiers DraCuLa's own rule design depends
 // on existing by name: the SeaDex split-rule pattern (project_context.md §8)
@@ -67,60 +86,95 @@ var formatterHelperAllowlist = []string{
 	"smallcaps", "stars", "sub", "title", "translate", "truncate", "upper",
 }
 
-// TestTierGatedFieldReferencesMatchAllowlist is the primary tripwire: a
-// shipped rule referencing a tier-gated field must have that field listed in
-// tierGatedFieldAllowlist, and every allowlist entry must still be
-// referenced by a shipped rule -- drift fails in either direction.
+// referencedTierGatedPairs walks every shipped rule and every tier-gated
+// capability name in tierByCapability, returning the (capability, rule)
+// pairs that actually occur -- the ground truth an allowlist is checked
+// against, in both directions.
+func referencedTierGatedPairs(t *testing.T, tierByCapability map[string]string) map[tierGatedReference]bool {
+	t.Helper()
+
+	productionRules := loadProductionRules(t)
+	referenced := make(map[tierGatedReference]bool)
+	for _, r := range productionRules {
+		for capability := range tierByCapability {
+			if wordReferenced(r.When, capability) {
+				referenced[tierGatedReference{Capability: capability, Rule: r.Name}] = true
+			}
+		}
+	}
+	return referenced
+}
+
+// checkTierGatedAllowlist is shared by the field and function tripwires: a
+// referenced (capability, rule) pair not in allowlist fails (an unreviewed
+// reference), and an allowlist entry no longer referenced, or naming a
+// capability the vocabulary no longer reports as tier-gated, also fails (a
+// stale entry) -- drift fails in either direction.
+func checkTierGatedAllowlist(
+	t *testing.T,
+	kind string,
+	tierByCapability map[string]string,
+	allowlist []tierGatedReference,
+	sawTraceForDoc string,
+) {
+	t.Helper()
+
+	referenced := referencedTierGatedPairs(t, tierByCapability)
+
+	allowed := make(map[tierGatedReference]bool, len(allowlist))
+	for _, entry := range allowlist {
+		allowed[entry] = true
+	}
+
+	for ref := range referenced {
+		if !allowed[ref] {
+			t.Errorf(
+				"rule %q references tier-gated %s %q (tier %q), which is not in the allowlist -- "+
+					"this %s silently skips its rule whenever the %q tier is absent (%s); review the "+
+					"new reference, then add {Capability: %q, Rule: %q} to the allowlist deliberately",
+				ref.Rule, kind, ref.Capability, tierByCapability[ref.Capability],
+				kind, tierByCapability[ref.Capability], sawTraceForDoc, ref.Capability, ref.Rule,
+			)
+		}
+	}
+
+	for _, entry := range allowlist {
+		tier, stillTierGated := tierByCapability[entry.Capability]
+		if !stillTierGated {
+			t.Errorf(
+				"allowlist entry {Capability: %q, Rule: %q} names a %s the pinned vocabulary no "+
+					"longer reports as tier-gated, or no longer reports at all -- update or remove the entry",
+				entry.Capability, entry.Rule, kind,
+			)
+			continue
+		}
+		if !referenced[entry] {
+			t.Errorf(
+				"allowlist entry {Capability: %q, Rule: %q} (tier %q) no longer holds -- either rule "+
+					"%q no longer exists in profile.txt, or it no longer references %q -- remove the stale entry",
+				entry.Capability, entry.Rule, tier, entry.Rule, entry.Capability,
+			)
+		}
+	}
+}
+
+// TestTierGatedFieldReferencesMatchAllowlist is the primary tripwire: every
+// shipped rule that references a tier-gated field must have that exact
+// (field, rule) pair in tierGatedFieldAllowlist -- reusing an
+// already-allowlisted field from a *different*, unreviewed rule still fails,
+// since the pair tracks which rule earned the review, not just which field.
 func TestTierGatedFieldReferencesMatchAllowlist(t *testing.T) {
 	vocab := rules.Describe()
-
 	tierByField := make(map[string]string)
 	for _, f := range vocab.Fields {
 		if f.Tier != "" {
 			tierByField[f.Name] = f.Tier
 		}
 	}
-
-	productionRules := loadProductionRules(t)
-	referenced := make(map[string]bool)
-	for _, r := range productionRules {
-		for name := range tierByField {
-			if wordReferenced(r.When, name) {
-				referenced[name] = true
-			}
-		}
-	}
-
-	for name := range referenced {
-		if _, ok := tierGatedFieldAllowlist[name]; !ok {
-			t.Errorf(
-				"a shipped rule references tier-gated field %q (tier %q), which is not in "+
-					"tierGatedFieldAllowlist -- this field silently skips its rule whenever the %q "+
-					"tier is absent (see project_context.md §8's SeaDex trap); review the new "+
-					"reference, then add it to the allowlist deliberately",
-				name, tierByField[name], tierByField[name],
-			)
-		}
-	}
-
-	for name, owner := range tierGatedFieldAllowlist {
-		tier, stillTierGated := tierByField[name]
-		if !stillTierGated {
-			t.Errorf(
-				"tierGatedFieldAllowlist lists %q (for %s), but the pinned vocabulary no longer "+
-					"reports it as tier-gated, or no longer reports it at all -- update or remove the entry",
-				name, owner,
-			)
-			continue
-		}
-		if !referenced[name] {
-			t.Errorf(
-				"tierGatedFieldAllowlist lists %q (tier %q, for %s), but no shipped rule references "+
-					"it any more -- remove the stale entry",
-				name, tier, owner,
-			)
-		}
-	}
+	checkTierGatedAllowlist(
+		t, "field", tierByField, tierGatedFieldAllowlist,
+		"see project_context.md §8's SeaDex trap",
+	)
 }
 
 // TestTierGatedFunctionReferencesMatchAllowlist is the function-side
@@ -129,43 +183,16 @@ func TestTierGatedFieldReferencesMatchAllowlist(t *testing.T) {
 // is empty) but fails immediately the day either side changes.
 func TestTierGatedFunctionReferencesMatchAllowlist(t *testing.T) {
 	vocab := rules.Describe()
-
 	tierByFunc := make(map[string]string)
 	for _, fn := range vocab.Functions {
 		if fn.Tier != "" {
 			tierByFunc[fn.Name] = fn.Tier
 		}
 	}
-
-	productionRules := loadProductionRules(t)
-	referenced := make(map[string]bool)
-	for _, r := range productionRules {
-		for name := range tierByFunc {
-			if wordReferenced(r.When, name) {
-				referenced[name] = true
-			}
-		}
-	}
-
-	for name := range referenced {
-		if _, ok := tierGatedFunctionAllowlist[name]; !ok {
-			t.Errorf(
-				"a shipped rule references tier-gated function %q (tier %q), which is not in "+
-					"tierGatedFunctionAllowlist -- review the new reference, then add it deliberately",
-				name, tierByFunc[name],
-			)
-		}
-	}
-
-	for name, owner := range tierGatedFunctionAllowlist {
-		if !referenced[name] {
-			t.Errorf(
-				"tierGatedFunctionAllowlist lists %q (for %s), but no shipped rule references it "+
-					"any more -- remove the stale entry",
-				name, owner,
-			)
-		}
-	}
+	checkTierGatedAllowlist(
+		t, "function", tierByFunc, tierGatedFunctionAllowlist,
+		"see project_context.md §8's SeaDex trap",
+	)
 }
 
 // TestRuleVocabularyCarriesKnownCapabilities asserts a handful of named

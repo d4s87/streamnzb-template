@@ -191,21 +191,37 @@ func TestRecentlyConfirmed_ScoresWithinThirtyDays(t *testing.T) {
 	}
 }
 
-func TestRecentlyConfirmed_DoesNotScoreBeyondThirtyDays(t *testing.T) {
+func TestRecentlyConfirmed_ScoresJustUnderThirtyDays(t *testing.T) {
 	profile := availabilitySeadexProfile(t, "Recently confirmed")
 
-	// Status is set (tier present) so this genuinely exercises the rule's
-	// own "< 30" boundary, not the separate tier-absent fail-open path.
+	// 29 days ago: the last value the rule's "< 30" upper bound admits.
 	title := "Example.Movie.2020.2160p.WEB-DL.A-GROUP"
-	old := time.Now().AddDate(0, 0, -35)
-	avail := triage.AvailState{Status: triage.AvailAvailable, CheckedAt: old}
+	avail := triage.AvailState{Status: triage.AvailAvailable, CheckedAt: time.Now().AddDate(0, 0, -29)}
+	kept, _ := applyAvail(t, profile, availCandidate(title, avail))
+
+	if len(kept) != 1 {
+		t.Fatalf("expected 1 kept result, got %d", len(kept))
+	}
+	if !matchedBy(kept[0].Matched, "Recently confirmed") {
+		t.Errorf("expected Recently confirmed to match a 29-day-old check, matched=%v", kept[0].Matched)
+	}
+}
+
+func TestRecentlyConfirmed_DoesNotScoreAtExactlyThirtyDays(t *testing.T) {
+	profile := availabilitySeadexProfile(t, "Recently confirmed")
+
+	// Exactly 30 days ago: the first value the rule's "< 30" upper bound
+	// excludes. Status is set (tier present) so this genuinely exercises the
+	// rule's own boundary, not the separate tier-absent fail-open path.
+	title := "Example.Movie.2020.2160p.WEB-DL.A-GROUP"
+	avail := triage.AvailState{Status: triage.AvailAvailable, CheckedAt: time.Now().AddDate(0, 0, -30)}
 	kept, _ := applyAvail(t, profile, availCandidate(title, avail))
 
 	if len(kept) != 1 {
 		t.Fatalf("expected 1 kept result, got %d", len(kept))
 	}
 	if matchedBy(kept[0].Matched, "Recently confirmed") {
-		t.Error("did not expect Recently confirmed to match a 35-day-old check")
+		t.Error("did not expect Recently confirmed to match a check exactly 30 days old")
 	}
 }
 

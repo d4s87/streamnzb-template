@@ -8,8 +8,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"testing"
+
+	"streamnzb/pkg/release"
+	"streamnzb/pkg/search/parser"
+	"streamnzb/pkg/search/triage"
 )
 
 const draculaFormatterPrefix = "SNZBF1:"
@@ -377,4 +382,85 @@ func TestDraculaFormatterFixtures(
 			},
 		)
 	}
+
+	// The fixtures above inject FormatContext.Subtitles directly, which
+	// proves template rendering but says nothing about StreamNZB's own
+	// subtitle-source merge/dedup path. This exercises the real
+	// construction path instead: newFormatContext -> releaseSubtitleCodes
+	// -> language.MergeLanguageCodes, across all three supported
+	// sources -- the release name (parsed via the real jhin-backed
+	// parser), the indexer's own Release.Subtitles tag, and a probed
+	// file's tagged MediaCaps.SubtitleLanguages -- with a deliberate
+	// cross-source normalization/dedup overlap ("FR" from the indexer,
+	// "fr" from the probe) rather than a same-source repeat.
+	t.Run(
+		"real StreamNZB subtitle source merge (newFormatContext)",
+		func(t *testing.T) {
+			title := "Example.Movie.2026.1080p.WEB-DL.Arabic.Subs-GROUP"
+
+			meta := parser.ParseReleaseTitle(title)
+			if len(meta.Subtitles) == 0 {
+				t.Fatal(
+					"release-name parse produced no subtitle language; " +
+						"fixture title no longer exercises the parsed-subtitle source",
+				)
+			}
+
+			cand := triage.Candidate{
+				Release: &release.Release{
+					Title:     title,
+					Subtitles: []string{"FR"},
+				},
+				Metadata: meta,
+				Verdict: triage.Verdict{
+					Probed: &release.MediaCaps{
+						TracksProbed:      true,
+						SubtitleLanguages: []string{"de", "fr"},
+					},
+				},
+			}
+
+			ctx := newFormatContext(
+				cand, 1, 1, 0, "", "", "Example Movie", "", false, 0,
+			)
+
+			want := []string{"ar", "fr", "de"}
+			if !slices.Equal(ctx.Subtitles, want) {
+				t.Fatalf(
+					"newFormatContext merged .Subtitles = %v, want %v "+
+						"(parsed=%v reported=%v probed=%v)",
+					ctx.Subtitles,
+					want,
+					meta.Subtitles,
+					cand.Release.Subtitles,
+					cand.Verdict.Probed.SubtitleLanguages,
+				)
+			}
+
+			if !strings.Contains(
+				payload.ResultDescriptionTemplate,
+				"SUBS ",
+			) {
+				// Only the debug formatter (DraCuLa Debug) carries the
+				// SUBS diagnostic line; production intentionally does
+				// not, so there is nothing further to render here.
+				return
+			}
+
+			rendered := renderDraculaFormatter(
+				t,
+				payload.ResultDescriptionTemplate,
+				ctx,
+			)
+
+			wantLine := "SUBS raw=ar,fr,de | mapped=\U0001F1F8\U0001F1E6,\U0001F1EB\U0001F1F7,\U0001F1E9\U0001F1EA"
+			if !strings.Contains(rendered, wantLine) {
+				t.Errorf(
+					"expected debug output to contain %q\nrendered:\n%s",
+					wantLine,
+					rendered,
+				)
+			}
+		},
+	)
 }

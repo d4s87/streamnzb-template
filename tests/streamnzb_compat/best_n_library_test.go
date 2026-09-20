@@ -400,3 +400,317 @@ func TestLibraryReservation_DoubleMatchControl(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Best-N per-resolution ceiling audit (2026-09-20, backlog-roadmap.md "Best-N
+// per-resolution ceiling audit") -- permanent regression coverage.
+//
+// The audit found "Best 3 per R/Q"/"Best 1 Library per R/Q"/"Best 1 Season
+// Pack per R/Q" all group by `resolution + " " + quality`, and the pinned
+// Jhin parser (parser/table.go, v0.8.0) resolves `quality` to one of ~28
+// distinct literal strings (BluRay REMUX, BluRay, WEB-DL, WEBRip, BDRip,
+// HDTV, ...), each its own independent bucket at a given resolution -- so a
+// single resolution's ordinary survivor total multiplies with the number of
+// populated quality variants rather than being capped in aggregate. The
+// audit concluded this is bounded and ordering-safe (no policy change --
+// see backlog-roadmap.md), specifically because ApplyWithRejected
+// (pkg/search/ranking/service.go) sorts kept results by final score
+// *before* applying caps, so a weak-quality-bucket survivor is always
+// ordered below stronger candidates, never displacing them. These tests
+// lock that audited-and-accepted behavior in permanently, against the exact
+// published rules (via bestNLibraryProfile, same production-decode pattern
+// as the rest of this file).
+
+// bnQualityToken pairs a release-name token with the exact `quality` string
+// the pinned Jhin parser (parser/table.go) resolves it to.
+type bnQualityToken struct {
+	token   string
+	quality string
+}
+
+// bnQualityBuckets are six realistic, mutually distinct 1080p quality
+// variants -- the same set the audit's real-engine probe used -- spanning
+// the native Jhin quality-attr score range (rank/profile.go, pinned "4k"
+// preset): BluRay REMUX=10000, WEB-DL=200, BluRay=100, WEBRip=-1000,
+// HDTV=-5000. None of DraCuLa's own rules score on `quality` directly
+// (confirmed via the audit's grep of profiles/rules.json); only Jhin's
+// native ranker differentiates these, and only within-bucket comparisons
+// ever see that differentiation, because each quality string is its own
+// group_by bucket.
+var bnQualityBuckets = []bnQualityToken{
+	{"BluRay.REMUX", "BluRay REMUX"},
+	{"BluRay", "BluRay"},
+	{"WEB-DL", "WEB-DL"},
+	{"WEBRip", "WEBRip"},
+	{"BDRip", "BDRip"},
+	{"HDTV", "HDTV"},
+}
+
+func bnMovieQualityTitle(qualityToken, group string) string {
+	return fmt.Sprintf("Example.Movie.2020.1080p.%s.X264-%s", qualityToken, group)
+}
+func bnSeriesQualityTitle(qualityToken, group string) string {
+	return fmt.Sprintf("Example.Show.S02E04.1080p.%s.X264-%s", qualityToken, group)
+}
+func bnAnimeQualityTitle(qualityToken, group string) string {
+	return fmt.Sprintf("Example.Anime.S01E01.1080p.%s.X264-%s", qualityToken, group)
+}
+func bnSeasonPackQualityTitle(qualityToken, group string) string {
+	return fmt.Sprintf("Example.Show.S02.COMPLETE.1080p.%s.X264-%s", qualityToken, group)
+}
+
+// bnKeptBucketCounts groups kept results by their real parsed
+// "resolution quality" env key (rules.BuildEnv), the exact key
+// `group_by: resolution + " " + quality` evaluates against -- independent
+// of test bookkeeping, so a bucketing regression in the rule itself would
+// still be caught even if the release-name helpers above changed.
+func bnKeptBucketCounts(t *testing.T, kept []ranking.Result, ctx rules.Context) map[string]int {
+	t.Helper()
+	counts := map[string]int{}
+	for _, r := range kept {
+		env := rules.BuildEnv(r.Candidate, r.Torrent.Data, ctx)
+		counts[env.Resolution+" "+env.Quality]++
+	}
+	return counts
+}
+
+// 11: at one resolution, ordinary survivors multiply with the number of
+// populated quality buckets rather than being capped in aggregate --
+// exactly 3 per bucket, 18 total across the 6 realistic buckets above, for
+// Movie, Series episode and Anime Show alike ("Best 3 per R/Q" carries no
+// content-kind condition beyond the season-pack exclusion, so the same
+// multiplication applies uniformly).
+func TestBestNPerResolutionQuality_MultiplyAcrossQualityBuckets(t *testing.T) {
+	profile := bestNLibraryProfile(t)
+
+	cases := []struct {
+		name string
+		req  ranking.Request
+		mk   func(qualityToken, group string) string
+	}{
+		{
+			name: "Movie",
+			req:  ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"},
+			mk:   bnMovieQualityTitle,
+		},
+		{
+			name: "SeriesEpisode",
+			req:  ranking.Request{Kind: ranking.KindSeries, Season: 2, Episode: 4, Title: "Example Show"},
+			mk:   bnSeriesQualityTitle,
+		},
+		{
+			name: "AnimeShow",
+			req:  ranking.Request{Kind: ranking.KindAnimeShow, IsAnime: true, Season: 1, Episode: 1, Title: "Example Anime"},
+			mk:   bnAnimeQualityTitle,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var ts []bnTitle
+			for _, b := range bnQualityBuckets {
+				for i := 0; i < 5; i++ {
+					ts = append(ts, notLib(tc.mk(b.token, fmt.Sprintf("G%d", i))))
+				}
+			}
+
+			kept, _ := profile.ApplyWithRejected(tc.req, bnCandidates(ts), jhinrank.RankOptions{})
+
+			if len(kept) != 18 {
+				t.Errorf("total 1080p ordinary survivors = %d, want 18 (6 quality buckets x 3, no per-resolution cap)", len(kept))
+			}
+
+			ctx := rules.Context{Kind: tc.req.Kind, Season: tc.req.Season, Episode: tc.req.Episode, Title: tc.req.Title}
+			counts := bnKeptBucketCounts(t, kept, ctx)
+			if len(counts) != len(bnQualityBuckets) {
+				t.Fatalf("expected survivors spread across all %d quality buckets, got buckets=%v", len(bnQualityBuckets), counts)
+			}
+			// Check each fixture's own declared `quality` against the real
+			// parsed bucket key directly (not just the aggregate bucket
+			// count) -- a remapping to a different but still-distinct
+			// quality value would otherwise preserve every count here.
+			for _, b := range bnQualityBuckets {
+				key := "1080p " + b.quality
+				if n := counts[key]; n != 3 {
+					t.Errorf("bucket %q survivors = %d, want exactly 3", key, n)
+				}
+			}
+		})
+	}
+}
+
+// 12: Library reservation multiplies per bucket exactly like the ordinary
+// cap -- each populated quality bucket gets its own independent +1 Library
+// slot (4 total per bucket), not a single Library slot shared across the
+// whole resolution.
+func TestBestNPerResolutionQuality_LibraryReservationMultipliesPerBucket(t *testing.T) {
+	profile := bestNLibraryProfile(t)
+	req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"}
+
+	var ts []bnTitle
+	for _, b := range bnQualityBuckets {
+		for i := 0; i < 5; i++ {
+			ts = append(ts, notLib(bnMovieQualityTitle(b.token, fmt.Sprintf("G%d", i))))
+		}
+		ts = append(ts, lib(bnMovieQualityTitle(b.token, "LIBGRP")))
+	}
+
+	kept, _ := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+	if len(kept) != 24 {
+		t.Errorf("total 1080p survivors incl. Library = %d, want 24 (6 buckets x 4)", len(kept))
+	}
+
+	counts := bnKeptBucketCounts(t, kept, rules.Context{Kind: req.Kind, Title: req.Title})
+	for _, b := range bnQualityBuckets {
+		key := "1080p " + b.quality
+		if n := counts[key]; n != 4 {
+			t.Errorf("bucket %q survivors incl. Library = %d, want exactly 4 (3 ordinary + 1 Library)", key, n)
+		}
+	}
+}
+
+// 13: season-pack capacity is the same per-bucket-not-per-resolution shape
+// -- 1 survivor per populated quality bucket, multiplying to 6 total across
+// the 6 realistic buckets at one resolution, not a single pack slot shared
+// resolution-wide.
+func TestBestNPerResolutionQuality_SeasonPackCapacityPerBucket(t *testing.T) {
+	profile := bestNLibraryProfile(t)
+	req := ranking.Request{Kind: ranking.KindSeries, Season: 2, Episode: 4, Title: "Example Show"}
+
+	var ts []bnTitle
+	for _, b := range bnQualityBuckets {
+		for i := 0; i < 3; i++ {
+			ts = append(ts, notLib(bnSeasonPackQualityTitle(b.token, fmt.Sprintf("G%d", i))))
+		}
+	}
+
+	kept, _ := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+	if len(kept) != len(bnQualityBuckets) {
+		t.Errorf("total 1080p season-pack survivors = %d, want %d (1 per quality bucket)", len(kept), len(bnQualityBuckets))
+	}
+
+	counts := bnKeptBucketCounts(t, kept, rules.Context{Kind: req.Kind, Season: req.Season, Episode: req.Episode, Title: req.Title})
+	for _, b := range bnQualityBuckets {
+		key := "1080p " + b.quality
+		if n := counts[key]; n != 1 {
+			t.Errorf("bucket %q season-pack survivors = %d, want exactly 1", key, n)
+		}
+	}
+}
+
+// 14: SeaDex caps remain a genuine global cap with no group_by at all --
+// the contrast case proving the multiplication above is specific to the
+// group_by'd Best-N rules, not a universal DraCuLa pattern. Across 4
+// distinct resolution+quality buckets at the same resolution, still only 1
+// SeaDex Best candidate survives.
+func TestBestNPerResolutionQuality_SeaDexBestGlobalCapAcrossBuckets(t *testing.T) {
+	profile := bestNLibraryProfile(t, "At most 1 SeaDex Best")
+
+	buckets := bnQualityBuckets[:4] // BluRay REMUX / BluRay / WEB-DL / WEBRip
+	groups := []string{"SDX0", "SDX1", "SDX2", "SDX3"}
+	seadexBest := map[string]bool{}
+	for _, g := range groups {
+		seadexBest[strings.ToLower(g)] = true
+	}
+
+	req := ranking.Request{
+		Kind: ranking.KindAnimeShow, IsAnime: true, Season: 1, Episode: 1, Title: "Example Anime",
+		Seadex: &rules.SeadexContext{Known: true, Best: seadexBest},
+	}
+
+	var ts []bnTitle
+	for i, b := range buckets {
+		ts = append(ts, notLib(bnAnimeQualityTitle(b.token, groups[i])))
+	}
+
+	kept, rejected := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+
+	// Verify the 4 offered candidates genuinely parse into 4 distinct
+	// resolution+quality buckets before trusting the global-cap collapse
+	// below -- otherwise a broken group_by that accidentally collapsed them
+	// into fewer buckets could produce the same "1 survivor" result for the
+	// wrong reason (an ordinary per-bucket cap, not a real global one).
+	ctx := rules.Context{Kind: req.Kind, Season: req.Season, Episode: req.Episode, Title: req.Title}
+	offeredBuckets := map[string]int{}
+	for _, r := range append(append([]ranking.Result{}, kept...), rejected...) {
+		env := rules.BuildEnv(r.Candidate, r.Torrent.Data, ctx)
+		offeredBuckets[env.Resolution+" "+env.Quality]++
+	}
+	for _, b := range buckets {
+		key := "1080p " + b.quality
+		if offeredBuckets[key] != 1 {
+			t.Fatalf("test setup invalid: expected exactly 1 offered candidate in bucket %q, got %d (buckets seen=%v)", key, offeredBuckets[key], offeredBuckets)
+		}
+	}
+	if len(offeredBuckets) != len(buckets) {
+		t.Fatalf("test setup invalid: expected exactly %d distinct resolution+quality buckets among the offered candidates, got %v", len(buckets), offeredBuckets)
+	}
+
+	if len(kept) != 1 {
+		t.Errorf("SeaDex Best survivors across %d distinct resolution/quality buckets = %d, want 1 (unconditional global cap, no group_by)", len(buckets), len(kept))
+	}
+}
+
+// 15: the final kept-result order is global score order -- ApplyWithRejected
+// sorts kept results by final score before caps run (see
+// pkg/search/ranking/service.go's own doc comment: "Score is the only
+// ordering currency there is"), so a weak-quality-bucket survivor never
+// displaces a stronger one, it is simply ordered below it. Native Jhin
+// quality-attr scoring (rank/profile.go) gives BluRay REMUX a native score
+// of 10000 against HDTV's -5000, so every REMUX survivor must sort strictly
+// ahead of the lone HDTV survivor despite both surviving the same
+// resolution's Best-3 cap independently.
+func TestBestNPerResolutionQuality_GlobalScoreOrderNeverDisplacedByWeakBucket(t *testing.T) {
+	profile := bestNLibraryProfile(t)
+	req := ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"}
+
+	var ts []bnTitle
+	for i := 0; i < 5; i++ {
+		ts = append(ts, notLib(bnMovieQualityTitle("BluRay.REMUX", fmt.Sprintf("REMUXG%d", i))))
+	}
+	hdtvTitle := bnMovieQualityTitle("HDTV", "HDTVGRP")
+	ts = append(ts, notLib(hdtvTitle))
+
+	kept, _ := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+
+	if len(kept) != 4 {
+		t.Fatalf("expected 4 total survivors (3 REMUX + 1 HDTV, independent buckets), got %d", len(kept))
+	}
+
+	// Monotonic non-increasing final score across the whole returned order
+	// -- the general "global order" property, not just this scenario's
+	// specific shape.
+	for i := 1; i < len(kept); i++ {
+		if kept[i].Torrent.Rank > kept[i-1].Torrent.Rank {
+			t.Errorf("kept[%d].Torrent.Rank (%d) > kept[%d].Torrent.Rank (%d): kept results must be in non-increasing global score order",
+				i, kept[i].Torrent.Rank, i-1, kept[i-1].Torrent.Rank)
+		}
+	}
+
+	// The lone HDTV survivor must be present (not evicted by REMUX
+	// abundance) but must sort strictly behind every REMUX survivor --
+	// never displacing, only trailing.
+	hdtvIndex := -1
+	for i, r := range kept {
+		if r.Candidate.Release.Title == hdtvTitle {
+			hdtvIndex = i
+		}
+	}
+	if hdtvIndex == -1 {
+		t.Fatalf("expected the lone HDTV candidate to survive despite 5 REMUX alternatives at the same resolution (buckets do not compete), but it did not survive")
+	}
+	if hdtvIndex != len(kept)-1 {
+		t.Errorf("expected the HDTV survivor to sort last (weakest global score) in the returned kept order, got index %d of %d", hdtvIndex, len(kept))
+	}
+	for i := 0; i < hdtvIndex; i++ {
+		if !strings.Contains(kept[i].Candidate.Release.Title, "REMUXG") {
+			t.Errorf("expected every candidate ahead of the HDTV survivor to be a REMUX candidate, got %q at index %d", kept[i].Candidate.Release.Title, i)
+		}
+		// Non-increasing order alone permits an equal-rank regression that
+		// still happens to keep HDTV last; require the real native score
+		// gap (REMUX 10000 vs HDTV -5000) to hold strictly.
+		if kept[i].Torrent.Rank <= kept[hdtvIndex].Torrent.Rank {
+			t.Errorf("REMUX rank %d must be strictly greater than HDTV rank %d", kept[i].Torrent.Rank, kept[hdtvIndex].Torrent.Rank)
+		}
+	}
+}

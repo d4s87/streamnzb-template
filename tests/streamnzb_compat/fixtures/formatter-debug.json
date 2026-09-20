@@ -201,7 +201,7 @@
       ]
     },
     {
-      "name": "SUBS line exposes merged raw subtitles, mapped flags, languages, and subbed state",
+      "name": "SUBS line renders raw subtitles, mapped flags, languages, and subbed state together",
       "context": {
         "Subtitles": [
           "fr",
@@ -218,7 +218,7 @@
       ]
     },
     {
-      "name": "SUBS line dedupes mapped flags while raw keeps the duplicate source codes",
+      "name": "SUBS line dedupes mapped flags from a directly-injected duplicate code (not a source-merge proof)",
       "context": {
         "Subtitles": [
           "EN",

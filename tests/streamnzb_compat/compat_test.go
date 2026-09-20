@@ -798,6 +798,15 @@ func TestSAOSeasonOneExclusionCompatibility(t *testing.T) {
 // the exact same fuzzy-similarity mechanism (2026-09-20 title-matcher
 // ambiguity audit). Both rules are independent, title-scoped exact matches
 // and never fire on each other's request.
+//
+// The exemption's separator class was widened from "[. _-]" to "[. _\[-]"
+// (matching the positive match's own boundary class exactly) after a
+// pre-merge review caught it rejecting a genuine bracket-delimited SAO II
+// release ("Sword.Art.Online.[II].S01E01..."): the positive match accepts
+// "[" as the boundary right after "Online", but the original exemption did
+// not, so a real SAO II/Alicization/Progressive release using that
+// delimiter style would satisfy the reject condition without being
+// exempted. See the bracket-delimited cases below.
 func TestSAOReverseExclusionCompatibility(t *testing.T) {
 	const ruleName = "Reject SAO from SAO II"
 
@@ -875,6 +884,33 @@ func TestSAOReverseExclusionCompatibility(t *testing.T) {
 			isAnime:      true,
 			kind:         "anime_show",
 			release:      "Sword.Art.Online.Progressive.2021.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "keep bracket-delimited SAO II release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.[II].S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "keep bracket-delimited Alicization release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.[Alicization].S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "keep bracket-delimited Progressive release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.[Progressive].2021.1080p.WEB-DL-GROUP",
 			wantReject:   false,
 		},
 		{

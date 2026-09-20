@@ -160,9 +160,9 @@ print("PASS: parse_changelog / find_changelog_section / changelog_section_body")
 
 counts = cr.load_current_counts()
 assert counts == {
-    "samsung": 159,
-    "neutral": 158,
-    "core": 130,
+    "samsung": 160,
+    "neutral": 159,
+    "core": 131,
     "presentation": 28,
     "device": 1,
     "defines": 62,

@@ -199,6 +199,84 @@
         "dynamicRange=",
         "hdrFallback="
       ]
+    },
+    {
+      "name": "SUBS line exposes merged raw subtitles, mapped flags, languages, and subbed state",
+      "context": {
+        "Subtitles": [
+          "fr",
+          "de"
+        ],
+        "Languages": [
+          "en",
+          "ja"
+        ],
+        "Subbed": true
+      },
+      "contains": [
+        "SUBS raw=fr,de | mapped=🇫🇷,🇩🇪 | languages=en,ja | subbed=true"
+      ]
+    },
+    {
+      "name": "SUBS line dedupes mapped flags while raw keeps the duplicate source codes",
+      "context": {
+        "Subtitles": [
+          "EN",
+          "en"
+        ],
+        "Subbed": false
+      },
+      "contains": [
+        "raw=EN,en",
+        "mapped=🇬🇧"
+      ],
+      "excludes": [
+        "🇬🇧,🇬🇧"
+      ]
+    },
+    {
+      "name": "SUBS line suppresses an unknown subtitle code from mapped but keeps it visible in raw",
+      "context": {
+        "Subtitles": [
+          "fr",
+          "tr",
+          "de"
+        ],
+        "Subbed": false
+      },
+      "contains": [
+        "raw=fr,tr,de",
+        "mapped=🇫🇷,🇩🇪"
+      ]
+    },
+    {
+      "name": "SUBS line exposes every mapped subtitle flag uncapped, unlike production's 3+N overflow cap",
+      "context": {
+        "Subtitles": [
+          "fr",
+          "de",
+          "es",
+          "it",
+          "pt"
+        ],
+        "Subbed": false
+      },
+      "contains": [
+        "mapped=🇫🇷,🇩🇪,🇪🇸,🇮🇹,🇵🇹"
+      ],
+      "excludes": [
+        "+1",
+        "+2"
+      ]
+    },
+    {
+      "name": "SUBS line renders empty raw and mapped with subbed false when no subtitle metadata exists",
+      "context": {
+        "Subbed": false
+      },
+      "contains": [
+        "SUBS raw= | mapped= | languages= | subbed=false"
+      ]
     }
   ]
 }

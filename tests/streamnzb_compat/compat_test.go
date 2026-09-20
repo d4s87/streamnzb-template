@@ -211,9 +211,9 @@ func loadNeutralRules(t *testing.T) []config.RuleConfig {
 func TestNeutralProfileSchemaCompatibility(t *testing.T) {
 	neutralRules := loadNeutralRules(t)
 
-	if len(neutralRules) != 158 {
+	if len(neutralRules) != 159 {
 		t.Fatalf(
-			"neutral profile contains %d rules; want 158",
+			"neutral profile contains %d rules; want 159",
 			len(neutralRules),
 		)
 	}
@@ -769,6 +769,180 @@ func TestSAOSeasonOneExclusionCompatibility(t *testing.T) {
 			if gotReject != tt.wantReject {
 				t.Fatalf(
 					"production SAO exclusion rejected = %v, want %v\n"+
+						"request title: %s\n"+
+						"season: %d\n"+
+						"release: %s\n"+
+						"condition: %s\n"+
+						"rejections: %+v",
+					gotReject,
+					tt.wantReject,
+					tt.requestTitle,
+					tt.season,
+					tt.release,
+					cfg.When,
+					out.Rejections,
+				)
+			}
+		})
+	}
+}
+
+// TestSAOReverseExclusionCompatibility is the permanent real-engine proof for
+// the "Reject SAO from SAO II" rule (profiles/rules.json) -- the mirror-image
+// guard for TestSAOSeasonOneExclusionCompatibility above. That rule protects
+// a base "Sword Art Online" request from being satisfied by an "SAO II"
+// release (jhin's tolerant indel-ratio similarity re-admits it); this one
+// protects the reverse direction: a "Sword Art Online II" request (its own
+// Kitsu-style catalog entry, always requested as season 1) being satisfied
+// by a bare "Sword Art Online" release, real-engine-confirmed vulnerable to
+// the exact same fuzzy-similarity mechanism (2026-09-20 title-matcher
+// ambiguity audit). Both rules are independent, title-scoped exact matches
+// and never fire on each other's request.
+func TestSAOReverseExclusionCompatibility(t *testing.T) {
+	const ruleName = "Reject SAO from SAO II"
+
+	productionRules := loadProductionRules(t)
+	cfg := findProductionRule(t, productionRules, ruleName)
+
+	if cfg.EffectiveAction() != config.RuleActionReject {
+		t.Fatalf(
+			"production rule %q action = %q, want reject",
+			ruleName,
+			cfg.EffectiveAction(),
+		)
+	}
+
+	neutralRules := loadNeutralRules(t)
+	neutralMatches := 0
+	for _, rule := range neutralRules {
+		if rule.Name == ruleName {
+			neutralMatches++
+		}
+	}
+	if neutralMatches != 1 {
+		t.Fatalf(
+			"neutral profile contains %d copies of %q; want 1",
+			neutralMatches,
+			ruleName,
+		)
+	}
+
+	set, err := rules.Compile([]config.RuleConfig{cfg})
+	if err != nil {
+		t.Fatalf("compile production rule %q: %v", ruleName, err)
+	}
+
+	tests := []struct {
+		name         string
+		requestTitle string
+		season       int
+		isAnime      bool
+		kind         string
+		release      string
+		wantReject   bool
+	}{
+		{
+			name:         "reject bare SAO from SAO II request season 1",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   true,
+		},
+		{
+			name:         "keep genuine SAO II release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.II.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "keep Alicization release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.Alicization.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "keep Progressive release for SAO II request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.Progressive.2021.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect base SAO request (forward guard's own scope)",
+			requestTitle: "Sword Art Online",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect SAO II season 2 request",
+			requestTitle: "Sword Art Online II",
+			season:       2,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not affect non anime request",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      false,
+			kind:         "series",
+			release:      "Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+		{
+			name:         "do not catch bare SAO title when not anchored at the start",
+			requestTitle: "Sword Art Online II",
+			season:       1,
+			isAnime:      true,
+			kind:         "anime_show",
+			release:      "Something.Sword.Art.Online.S01E01.1080p.WEB-DL-GROUP",
+			wantReject:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		t.Run(tt.name, func(t *testing.T) {
+			cand := triage.Candidate{
+				Release: &release.Release{
+					Title: tt.release,
+				},
+			}
+
+			env := rules.BuildEnv(
+				cand,
+				jhin.Parse(tt.release),
+				rules.Context{
+					Kind:    tt.kind,
+					IsAnime: tt.isAnime,
+					Season:  tt.season,
+					Episode: 1,
+					Title:   tt.requestTitle,
+				},
+			)
+
+			out := set.Evaluate(env, tt.kind)
+			gotReject := ruleRejected(out, ruleName)
+
+			if gotReject != tt.wantReject {
+				t.Fatalf(
+					"production SAO reverse exclusion rejected = %v, want %v\n"+
 						"request title: %s\n"+
 						"season: %d\n"+
 						"release: %s\n"+

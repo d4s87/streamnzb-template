@@ -39,6 +39,14 @@
     {
       "owner": "core",
       "rule": {
+        "action": "reject",
+        "name": "Reject SAO from SAO II",
+        "when": "isAnime\nand kind == \"anime_show\"\nand title == \"Sword Art Online II\"\nand season == 1\nand releaseName matches \"(?i)^Sword[. _-]+Art[. _-]+Online(?:[. _\\[-]|$)\"\nand not releaseName matches \"(?i)^Sword[. _-]+Art[. _-]+Online[. _-]+(?:II|Alicization|Progressive)\\b\""
+      }
+    },
+    {
+      "owner": "core",
+      "rule": {
         "name": "Neutralize Dolby Vision",
         "points": -3000,
         "when": "dolbyVision"

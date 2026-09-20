@@ -1305,7 +1305,7 @@
       "rule": {
         "name": "Anime Version v0 Preference",
         "points": -1,
-        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v0\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+        "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))"
       }
     },
     {
@@ -1313,7 +1313,7 @@
       "rule": {
         "name": "Anime Version v1 Preference",
         "points": 1,
-        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v1\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+        "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))"
       }
     },
     {
@@ -1321,7 +1321,7 @@
       "rule": {
         "name": "Anime Version v2 Preference",
         "points": 2,
-        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v2\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+        "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))"
       }
     },
     {
@@ -1329,7 +1329,7 @@
       "rule": {
         "name": "Anime Version v3 Preference",
         "points": 3,
-        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v3\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")"
+        "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))"
       }
     },
     {
@@ -1337,7 +1337,7 @@
       "rule": {
         "name": "Anime Version v4 Preference",
         "points": 4,
-        "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v4\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\")"
+        "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\"))"
       }
     },
     {

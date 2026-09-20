@@ -525,9 +525,14 @@ func TestBestNPerResolutionQuality_MultiplyAcrossQualityBuckets(t *testing.T) {
 			if len(counts) != len(bnQualityBuckets) {
 				t.Fatalf("expected survivors spread across all %d quality buckets, got buckets=%v", len(bnQualityBuckets), counts)
 			}
-			for bucket, n := range counts {
-				if n != 3 {
-					t.Errorf("bucket %q survivors = %d, want exactly 3", bucket, n)
+			// Check each fixture's own declared `quality` against the real
+			// parsed bucket key directly (not just the aggregate bucket
+			// count) -- a remapping to a different but still-distinct
+			// quality value would otherwise preserve every count here.
+			for _, b := range bnQualityBuckets {
+				key := "1080p " + b.quality
+				if n := counts[key]; n != 3 {
+					t.Errorf("bucket %q survivors = %d, want exactly 3", key, n)
 				}
 			}
 		})
@@ -556,9 +561,10 @@ func TestBestNPerResolutionQuality_LibraryReservationMultipliesPerBucket(t *test
 	}
 
 	counts := bnKeptBucketCounts(t, kept, rules.Context{Kind: req.Kind, Title: req.Title})
-	for bucket, n := range counts {
-		if n != 4 {
-			t.Errorf("bucket %q survivors incl. Library = %d, want exactly 4 (3 ordinary + 1 Library)", bucket, n)
+	for _, b := range bnQualityBuckets {
+		key := "1080p " + b.quality
+		if n := counts[key]; n != 4 {
+			t.Errorf("bucket %q survivors incl. Library = %d, want exactly 4 (3 ordinary + 1 Library)", key, n)
 		}
 	}
 }
@@ -584,9 +590,10 @@ func TestBestNPerResolutionQuality_SeasonPackCapacityPerBucket(t *testing.T) {
 	}
 
 	counts := bnKeptBucketCounts(t, kept, rules.Context{Kind: req.Kind, Season: req.Season, Episode: req.Episode, Title: req.Title})
-	for bucket, n := range counts {
-		if n != 1 {
-			t.Errorf("bucket %q season-pack survivors = %d, want exactly 1", bucket, n)
+	for _, b := range bnQualityBuckets {
+		key := "1080p " + b.quality
+		if n := counts[key]; n != 1 {
+			t.Errorf("bucket %q season-pack survivors = %d, want exactly 1", key, n)
 		}
 	}
 }
@@ -616,7 +623,29 @@ func TestBestNPerResolutionQuality_SeaDexBestGlobalCapAcrossBuckets(t *testing.T
 		ts = append(ts, notLib(bnAnimeQualityTitle(b.token, groups[i])))
 	}
 
-	kept, _ := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+	kept, rejected := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+
+	// Verify the 4 offered candidates genuinely parse into 4 distinct
+	// resolution+quality buckets before trusting the global-cap collapse
+	// below -- otherwise a broken group_by that accidentally collapsed them
+	// into fewer buckets could produce the same "1 survivor" result for the
+	// wrong reason (an ordinary per-bucket cap, not a real global one).
+	ctx := rules.Context{Kind: req.Kind, Season: req.Season, Episode: req.Episode, Title: req.Title}
+	offeredBuckets := map[string]int{}
+	for _, r := range append(append([]ranking.Result{}, kept...), rejected...) {
+		env := rules.BuildEnv(r.Candidate, r.Torrent.Data, ctx)
+		offeredBuckets[env.Resolution+" "+env.Quality]++
+	}
+	for _, b := range buckets {
+		key := "1080p " + b.quality
+		if offeredBuckets[key] != 1 {
+			t.Fatalf("test setup invalid: expected exactly 1 offered candidate in bucket %q, got %d (buckets seen=%v)", key, offeredBuckets[key], offeredBuckets)
+		}
+	}
+	if len(offeredBuckets) != len(buckets) {
+		t.Fatalf("test setup invalid: expected exactly %d distinct resolution+quality buckets among the offered candidates, got %v", len(buckets), offeredBuckets)
+	}
+
 	if len(kept) != 1 {
 		t.Errorf("SeaDex Best survivors across %d distinct resolution/quality buckets = %d, want 1 (unconditional global cap, no group_by)", len(buckets), len(kept))
 	}
@@ -676,6 +705,12 @@ func TestBestNPerResolutionQuality_GlobalScoreOrderNeverDisplacedByWeakBucket(t 
 	for i := 0; i < hdtvIndex; i++ {
 		if !strings.Contains(kept[i].Candidate.Release.Title, "REMUXG") {
 			t.Errorf("expected every candidate ahead of the HDTV survivor to be a REMUX candidate, got %q at index %d", kept[i].Candidate.Release.Title, i)
+		}
+		// Non-increasing order alone permits an equal-rank regression that
+		// still happens to keep HDTV last; require the real native score
+		// gap (REMUX 10000 vs HDTV -5000) to hold strictly.
+		if kept[i].Torrent.Rank <= kept[hdtvIndex].Torrent.Rank {
+			t.Errorf("REMUX rank %d must be strictly greater than HDTV rank %d", kept[i].Torrent.Rank, kept[hdtvIndex].Torrent.Rank)
 		}
 	}
 }

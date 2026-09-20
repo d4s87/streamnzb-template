@@ -5454,6 +5454,13 @@ func TestVideoCodecNeutrality(t *testing.T) {
 // "01v2"), which is why it also accepts being preceded by a bare digit and
 // not only a word boundary. That behavior is deliberate and preserved here,
 // not something this test should weaken.
+//
+// Since the ameNZB-style {Tags:...} false-positive fix, each vN predicate is
+// wrapped in matchesExcept(releaseName, vN pattern, "{Tags:...}" pattern) so
+// a version marker living inside a structured {Tags:...} metadata block (see
+// the closed "Anime subtitle-quality L0-L4 audit" backlog entry for the same
+// ameNZB {Tags:...} syntax) is not mistaken for a real release-version
+// token. See the "Tags block ..." subtests below.
 func TestAnimeVersionPreferenceRegression(t *testing.T) {
 	productionRules := loadProductionRules(t)
 	defineLibrary := loadDefineLibrary(t)
@@ -5659,6 +5666,84 @@ func TestAnimeVersionPreferenceRegression(t *testing.T) {
 				if got := fused - plain; got != 0 {
 					t.Errorf(
 						"FakeGroupv2 vs FakeGroup delta=%+d, want 0", got,
+					)
+				}
+			})
+
+			// ameNZB-style {Tags:...} false-positive fix: a version marker
+			// living inside a structured {Tags:...} block (Tamtaro-style
+			// metadata, distinct from an actual scene release-version
+			// token) must not trigger Anime Version scoring. Proves the
+			// production "matchesExcept(releaseName, vN pattern, "{Tags:...}"
+			// pattern)" rules (profiles/rules.json) reject a match whose
+			// only hit is covered by a tag block, for both a normal
+			// space-separated block and a bracket-adjacent/boundary form,
+			// across all five v0-v4 rules. The tag block is placed before
+			// the trailing resolution/source/group tail, not after the
+			// group -- a token placed immediately after the release group
+			// zeroes Jhin's parsed group entirely (documented "group is the
+			// terminal filename token" trap), which would corrupt the
+			// group-tier bonus and produce an unrelated score delta having
+			// nothing to do with this fix.
+			tagsBlockForms := []struct {
+				label string
+				build func(v int) string
+			}{
+				{
+					"space-separated",
+					func(v int) string {
+						return fmt.Sprintf(
+							"%s {Tags: V%d; Source-Improved}.1080p.WEB-DL.x264-%s",
+							prefix, v, fam.group,
+						)
+					},
+				},
+				{
+					"bracket-adjacent",
+					func(v int) string {
+						return fmt.Sprintf(
+							"%s{Tags:v%d}.1080p.WEB-DL.x264-%s",
+							prefix, v, fam.group,
+						)
+					},
+				},
+			}
+
+			for _, form := range tagsBlockForms {
+				form := form
+
+				for v := 0; v <= 4; v++ {
+					v := v
+
+					t.Run(fmt.Sprintf(
+						"Tags block (%s) V%d marker must not match v%d",
+						form.label, v, v,
+					), func(t *testing.T) {
+						title := form.build(v)
+						if got := score(title) - clean; got != 0 {
+							t.Errorf(
+								"Tags-block (%s) V%d delta=%+d, want 0 (clean=%d)\n  title=%s",
+								form.label, v, got, clean, title,
+							)
+						}
+					})
+				}
+			}
+
+			// A real version marker elsewhere in the release name must
+			// still score normally even when an unrelated {Tags:...} block
+			// naming a different version is also present -- proves
+			// matchesExcept only excludes the tag-block span, not the
+			// whole releaseName.
+			t.Run("real v3 marker still matches beside an unrelated Tags block", func(t *testing.T) {
+				title := fmt.Sprintf(
+					"%s.v3 {Tags: V1; Source-Improved}.1080p.WEB-DL.x264-%s",
+					prefix, fam.group,
+				)
+				if got := score(title) - clean; got != 3 {
+					t.Errorf(
+						"delta=%+d, want +3 (clean=%d)\n  title=%s",
+						got, clean, title,
 					)
 				}
 			})

@@ -3255,7 +3255,7 @@
     {
       "name": "Anime Version v0 Preference",
       "productionRule": "Anime Version v0 Preference",
-      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v0\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))",
       "points": -1,
       "cases": [
         {
@@ -3374,13 +3374,31 @@
           "expected": {
             "match": false
           }
+        },
+        {
+          "name": "tags_block_space_separated_v0_excluded",
+          "release": "Anime.Title {Tags: V0; Source-Improved}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_bracket_adjacent_v0_excluded",
+          "release": "Anime.Title{Tags:v0}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
         }
       ]
     },
     {
       "name": "Anime Version v1 Preference",
       "productionRule": "Anime Version v1 Preference",
-      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v1\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))",
       "points": 1,
       "cases": [
         {
@@ -3499,13 +3517,31 @@
           "expected": {
             "match": false
           }
+        },
+        {
+          "name": "tags_block_space_separated_v1_excluded",
+          "release": "Anime.Title {Tags: V1; Source-Improved}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_bracket_adjacent_v1_excluded",
+          "release": "Anime.Title{Tags:v1}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
         }
       ]
     },
     {
       "name": "Anime Version v2 Preference",
       "productionRule": "Anime Version v2 Preference",
-      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v2\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))",
       "points": 2,
       "cases": [
         {
@@ -3624,13 +3660,31 @@
           "expected": {
             "match": false
           }
+        },
+        {
+          "name": "tags_block_space_separated_v2_excluded",
+          "release": "Anime.Title {Tags: V2; Source-Improved}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_bracket_adjacent_v2_excluded",
+          "release": "Anime.Title{Tags:v2}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
         }
       ]
     },
     {
       "name": "Anime Version v3 Preference",
       "productionRule": "Anime Version v3 Preference",
-      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v3\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v4\\b\")",
+      "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\"))",
       "points": 3,
       "cases": [
         {
@@ -3749,13 +3803,31 @@
           "expected": {
             "match": false
           }
+        },
+        {
+          "name": "tags_block_space_separated_v3_excluded",
+          "release": "Anime.Title {Tags: V3; Source-Improved}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_bracket_adjacent_v3_excluded",
+          "release": "Anime.Title{Tags:v3}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
         }
       ]
     },
     {
       "name": "Anime Version v4 Preference",
       "productionRule": "Anime Version v4 Preference",
-      "when": "isAnime and releaseName matches \"(?i)(?:\\b|\\d)v4\\b\" and not (releaseName matches \"(?i)(?:\\b|\\d)v0\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v1\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v2\\b\") and not (releaseName matches \"(?i)(?:\\b|\\d)v3\\b\")",
+      "when": "isAnime and matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v4\\b\", \"(?i)\\{Tags:[^}]*\\}\") and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v0\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v1\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v2\\b\", \"(?i)\\{Tags:[^}]*\\}\")) and not (matchesExcept(releaseName, \"(?i)(?:\\b|\\d)v3\\b\", \"(?i)\\{Tags:[^}]*\\}\"))",
       "points": 4,
       "cases": [
         {
@@ -3869,6 +3941,24 @@
         {
           "name": "v4_plus_v3_nonstack",
           "release": "Anime.Title.01v4.v3.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_space_separated_v4_excluded",
+          "release": "Anime.Title {Tags: V4; Source-Improved}.1080p.WEB-DL-GROUP",
+          "kind": "anime_show",
+          "anime": true,
+          "expected": {
+            "match": false
+          }
+        },
+        {
+          "name": "tags_block_bracket_adjacent_v4_excluded",
+          "release": "Anime.Title{Tags:v4}.1080p.WEB-DL-GROUP",
           "kind": "anime_show",
           "anime": true,
           "expected": {

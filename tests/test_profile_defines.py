@@ -1281,8 +1281,17 @@ def validate_anime_version_preferences(
         4: 4,
     }
 
+    tags_block_exception = r"(?i)\{Tags:[^}]*\}"
+
     def version_marker(version: int) -> str:
         return rf"(?i)(?:\b|\d)v{version}\b"
+
+    def version_match(version: int) -> str:
+        return (
+            "matchesExcept(releaseName, "
+            f'"{version_marker(version)}", '
+            f'"{tags_block_exception}")'
+        )
 
     for version, points in expected_points.items():
         name = f"Anime Version v{version} Preference"
@@ -1302,17 +1311,14 @@ def validate_anime_version_preferences(
         rule = matches[0]
 
         exclusions = [
-            (
-                "not (releaseName matches "
-                f'"{version_marker(other)}")'
-            )
+            f"not ({version_match(other)})"
             for other in range(5)
             if other != version
         ]
 
         expected_when = (
-            "isAnime and releaseName matches "
-            f'"{version_marker(version)}" and '
+            "isAnime and "
+            f"{version_match(version)} and "
             + " and ".join(exclusions)
         )
 
@@ -1363,7 +1369,7 @@ def validate_anime_version_preferences(
         # supported revision markers so supported versions
         # cannot stack.
         exclusion_count = when.count(
-            "not (releaseName matches "
+            "not (matchesExcept(releaseName, "
         )
 
         if exclusion_count != 4:

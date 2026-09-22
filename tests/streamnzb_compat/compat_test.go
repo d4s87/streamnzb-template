@@ -4488,11 +4488,11 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 		},
 		ranking.KindSeries: {
 			SizeTargetGB: 6,
-			SizeWeight:   500,
+			SizeWeight:   150,
 		},
 		ranking.KindAnimeShow: {
 			SizeTargetGB: 6,
-			SizeWeight:   500,
+			SizeWeight:   150,
 		},
 	}
 

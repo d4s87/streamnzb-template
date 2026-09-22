@@ -317,11 +317,11 @@ def validate_registry(payload: dict):
         },
         "series": {
             "size_target_gb": 6,
-            "size_weight": 500,
+            "size_weight": 150,
         },
         "anime_show": {
             "size_target_gb": 6,
-            "size_weight": 500,
+            "size_weight": 150,
         },
     }
 

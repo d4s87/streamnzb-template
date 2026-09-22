@@ -144,13 +144,19 @@ func TestSeriesSizeWeightReduction_TriggeringCaseFlips(t *testing.T) {
 // pts/GB), a lone HDR10+ +25 preference survives just under 1GB of size
 // disadvantage, and HDR10+ + Atmos +50 survives just under 2GB, holding the
 // SDR candidate fixed at the 6GB peak (its own maximum size score) in both
-// cases -- the worst case for the decorated candidate. The exact algebraic
-// break-even points (bonusPoints * target / weight) are precisely 1.0GB and
-// 2.0GB respectively -- real ties, not margins -- so this test asserts
-// "still ahead" at 0.9GB/1.9GB (comfortably inside the intended "roughly
-// <=1GB"/"roughly <=2GB" survival claim) and separately confirms the exact
-// tie at the 1.0GB/2.0GB boundary itself, matching the audit's derived
-// thresholds byte-for-byte.
+// cases -- the worst case for the decorated candidate. The decorated
+// candidate's size is placed above the 6GB peak (the realistic direction:
+// HDR10+/Atmos/DV genuinely costs bitrate, as in the triggering Slow Horses
+// case where the decorated candidate was the larger file) -- sizeFactor's
+// linear falloff is symmetric around the target, so a disadvantage placed
+// below the peak instead would produce byte-identical scores, but above
+// matches the real-world shape this test exists to protect. The exact
+// algebraic break-even points (bonusPoints * target / weight) are precisely
+// 1.0GB and 2.0GB respectively -- real ties, not margins -- so this test
+// asserts "still ahead" at 0.9GB/1.9GB (comfortably inside the intended
+// "roughly <=1GB"/"roughly <=2GB" survival claim) and separately confirms
+// the exact tie at the 1.0GB/2.0GB boundary itself, matching the audit's
+// derived thresholds byte-for-byte.
 func TestSeriesSizeWeightReduction_ThresholdsHold(t *testing.T) {
 	profile := seriesSizeScoringProfile(t)
 	const base = "Slow.Horses.S02E04.2160p.WEB-DL"
@@ -164,8 +170,8 @@ func TestSeriesSizeWeightReduction_ThresholdsHold(t *testing.T) {
 	cases := []struct {
 		label             string
 		tag               string
-		aheadDisadvantage float64 // GB below the SDR candidate's 6GB peak, expected strictly ahead
-		tieDisadvantage   float64 // GB below the peak, expected exact algebraic tie
+		aheadDisadvantage float64 // GB above the SDR candidate's 6GB peak, expected strictly ahead
+		tieDisadvantage   float64 // GB above the peak, expected exact algebraic tie
 	}{
 		{"HDR10+ only (+25 bonus)", "HDR10Plus.DDP5.1", 0.9, 1.0},
 		{"HDR10+ + Atmos (+50 bonus)", "HDR10Plus.Atmos.DDP5.1", 1.9, 2.0},

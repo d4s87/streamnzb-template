@@ -157,12 +157,12 @@ Ordinary (non-season-pack) results are capped per `resolution + quality` bucket:
 
 ## Bounded preset size scoring
 
-The built-in 4K preset can give size a very large ranking contribution. DraCuLa publishes explicit shared size scoring in both profiles with the same upstream target sizes but a maximum contribution of +500:
+The built-in 4K preset can give size a very large ranking contribution. DraCuLa publishes explicit shared size scoring in both profiles with the same upstream target sizes, bounded well below that native contribution:
 
 - Movie / Anime Movie: 20 GB target, max +500
-- Series / Anime Show: 6 GB per episode target, max +500
+- Series / Anime Show: 6 GB per episode target, max +150
 
-This keeps efficient encodes relevant without allowing file size to dominate the quality hierarchy.
+This keeps efficient encodes relevant without allowing file size to dominate the quality hierarchy. Series/Anime Show carries a lower maximum than Movie/Anime Movie: a 2026-09-22 real-engine audit found the size term's slope around the 6 GB target (previously also +500, an 83.3 points/GB slope) could outweigh deliberate technical preferences like HDR10+ (+25) and Atmos (+25) for size differences as small as a few hundred MB — a real, observed inversion where a smaller SDR episode outranked a larger HDR10+/Atmos episode of the same release. Size is intended to be a secondary streaming-cost preference, not a same-tier technical-quality selector; +150 (25 points/GB) keeps that inversion from happening within roughly 1-2 GB of ordinary episode-to-episode size variance while still rewarding an efficient encode meaningfully near the target.
 
 ## Anime-specific preferences
 

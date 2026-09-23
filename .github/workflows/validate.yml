@@ -45,6 +45,9 @@ jobs:
       - name: Run Vidhin sync tests
         run: python tests/test_vidhin_sync.py
 
+      - name: Test Vidhin sync workflow PR governance
+        run: ./tests/test_vidhin_workflow_pr_metadata.sh
+
       - name: Test shared Discord payload helpers
         run: python tests/test_discord_common.py
 

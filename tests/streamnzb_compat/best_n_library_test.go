@@ -714,3 +714,251 @@ func TestBestNPerResolutionQuality_GlobalScoreOrderNeverDisplacedByWeakBucket(t 
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Library / SeaDex / season-pack retention overlap audit (2026-09-23,
+// backlog-roadmap.md "Library / SeaDex / season-pack retention overlap
+// audit") -- permanent regression coverage.
+//
+// The audit found the three per-resolution+quality caps ("Best 3 per R/Q",
+// "Best 1 Library per R/Q", "Best 1 Season Pack per R/Q") are mutually
+// exclusive by construction (each `when` clause excludes the other two
+// classes), but SeaDex's global caps ("At most 1 SeaDex Best"/"Alternative")
+// carry no such exclusion at all -- a release can and does belong to one of
+// the three per-bucket classes *and* the global SeaDex cap simultaneously,
+// by design (applyCaps, pkg/search/ranking/service.go, checks every
+// LimitMatch a result carries; surviving requires room in all of them). The
+// audit's own real-engine probe (scratch, deleted after) confirmed this
+// holds for season packs (not previously exercised) exactly as it already
+// did for Library (TestLibraryReservation_SeaDexCapUnaffected, above). These
+// tests lock that audited-and-accepted behavior in permanently, against the
+// exact published rules (via bestNLibraryProfile, same production-decode
+// pattern as the rest of this file).
+
+// 16: a season pack that is also SeaDex Best consumes *both* its own
+// season-pack bucket slot and the global SeaDex-Best cap -- proven two ways
+// in one fixture: a competing (non-SeaDex) pack in the same bucket loses the
+// season-pack cap, and an unrelated ordinary SeaDex-Best candidate in a
+// different resolution bucket loses the global cap, even though nothing
+// about it competes with the season-pack bucket at all.
+func TestSeasonPackSeaDexBest_ConsumesGlobalCapAcrossBuckets(t *testing.T) {
+	profile := bestNLibraryProfile(t, "Seadex Best", "At most 1 SeaDex Best")
+	req := ranking.Request{
+		Kind: ranking.KindAnimeShow, IsAnime: true, Season: 1, Episode: 1, Title: "Example Anime",
+		Seadex: &rules.SeadexContext{Known: true, Best: map[string]bool{"packgrp": true, "othergrp": true}},
+	}
+
+	packSeadexBest := "Example.Anime.S01.COMPLETE.2160p.WEB-DL.A-PACKGRP"
+	competingPack := "Example.Anime.S01.COMPLETE.2160p.WEB-DL.B-COMPETE"
+	ordinaryElsewhere := "Example.Anime.S01E01.1080p.WEB-DL.C-OTHERGRP"
+
+	o := bnApply(t, profile, req, notLib(packSeadexBest), notLib(competingPack), notLib(ordinaryElsewhere))
+
+	if !o.kept[packSeadexBest] {
+		t.Fatalf("expected the season-pack+SeaDex-Best candidate to survive, rejected=%v", o.rejected[packSeadexBest])
+	}
+	if o.kept[competingPack] {
+		t.Error("expected the competing non-SeaDex pack in the same bucket to lose the season-pack cap")
+	}
+	if !bnRejectedBy(o, competingPack, "Best 1 Season Pack per R/Q") {
+		t.Errorf("expected the competing pack rejected specifically by the season-pack cap, got %v", o.rejected[competingPack])
+	}
+	if o.kept[ordinaryElsewhere] {
+		t.Error("expected the unrelated ordinary SeaDex-Best candidate in a different resolution bucket to lose the global SeaDex cap")
+	}
+	if !bnRejectedBy(o, ordinaryElsewhere, "At most 1 SeaDex Best") {
+		t.Errorf("expected the unrelated candidate rejected specifically by the global SeaDex cap (proving the season pack's SeaDex flag reached it), got %v", o.rejected[ordinaryElsewhere])
+	}
+
+	total := 0
+	for _, title := range []string{packSeadexBest, competingPack, ordinaryElsewhere} {
+		if o.kept[title] {
+			total++
+		}
+	}
+	if total != 1 {
+		t.Errorf("expected exactly 1 survivor across both caps combined, got %d", total)
+	}
+}
+
+// 17: three-way overlap -- a Library season pack that is also SeaDex Best.
+// Proves all four audited properties in one fixture: (a) the native Library
+// bonus is added exactly once (isolated as a strict +500 score delta against
+// an otherwise-identical non-Library twin carrying the same SeaDex-Best
+// flag and season-pack shape); (b) it draws no dedicated Library
+// reservation -- its bucket's survivor count stays at 1, not the 4 a
+// qualifying "Best 1 Library per R/Q" match would allow, because that rule
+// structurally excludes season packs; (c) it still wins its season-pack
+// bucket against a genuinely competing pack; (d) it still consumes the
+// global SeaDex-Best cap, rejecting an unrelated ordinary SeaDex-Best
+// candidate elsewhere -- exactly like the two-way case above, with Library
+// layered on top and contributing only its own scalar bonus, nothing more.
+func TestThreeWay_LibrarySeasonPackSeaDexBest_DeterministicOverlap(t *testing.T) {
+	profile := bestNLibraryProfile(t, "Seadex Best", "At most 1 SeaDex Best")
+	req := ranking.Request{
+		Kind: ranking.KindAnimeShow, IsAnime: true, Season: 1, Episode: 1, Title: "Example Anime",
+		Seadex: &rules.SeadexContext{Known: true, Best: map[string]bool{
+			"trigrp": true, "trigrp2": true, "othergrp2": true,
+		}},
+	}
+
+	threeWay := "Example.Anime.S01.COMPLETE.2160p.WEB-DL.A-TRIGRP"
+	// twinNonLibrary is structurally identical (same resolution/quality/
+	// completeness, its own SeaDex-Best-flagged group) except it is not a
+	// Library result -- isolates the Library bonus as a pure score delta,
+	// uncontaminated by any other rule's contribution.
+	twinNonLibrary := "Example.Anime.S01.COMPLETE.2160p.WEB-DL.B-TRIGRP2"
+	competingPack := "Example.Anime.S01.COMPLETE.2160p.WEB-DL.C-COMPETE"
+	ordinaryElsewhere := "Example.Anime.S01E01.1080p.WEB-DL.D-OTHERGRP2"
+
+	ts := []bnTitle{lib(threeWay), notLib(twinNonLibrary), notLib(competingPack), notLib(ordinaryElsewhere)}
+	kept, rejected := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+
+	byTitle := map[string]ranking.Result{}
+	for _, r := range append(append([]ranking.Result{}, kept...), rejected...) {
+		byTitle[r.Candidate.Release.Title] = r
+	}
+
+	threeWayResult, ok := byTitle[threeWay]
+	if !ok {
+		t.Fatalf("three-way candidate missing from results entirely")
+	}
+	twinResult, ok := byTitle[twinNonLibrary]
+	if !ok {
+		t.Fatalf("non-Library twin candidate missing from results entirely")
+	}
+	if !threeWayResult.Torrent.Fetch {
+		t.Fatalf("expected the three-way candidate to survive, rejected=%v", threeWayResult.Torrent.Rejections)
+	}
+
+	// (a) Library bonus applied exactly once: a strict +500 delta against the
+	// otherwise-identical non-Library twin, nothing more and nothing less.
+	if delta := threeWayResult.Torrent.Rank - twinResult.Torrent.Rank; delta != 500 {
+		t.Errorf("expected exactly +500 Library bonus delta over the non-Library twin, got %d (three-way=%d, twin=%d)",
+			delta, threeWayResult.Torrent.Rank, twinResult.Torrent.Rank)
+	}
+
+	// (b) no dedicated Library reservation for a season pack: its bucket
+	// keeps exactly 1 survivor (itself), not 2 -- the twin and the competing
+	// pack both lose the single season-pack slot.
+	ctx := rules.Context{Kind: req.Kind, IsAnime: req.IsAnime, Season: req.Season, Episode: req.Episode, Title: req.Title}
+	counts := bnKeptBucketCounts(t, kept, ctx)
+	if n := counts["2160p WEB-DL"]; n != 1 {
+		t.Errorf("expected exactly 1 survivor in the season-pack bucket (no extra Library slot), got %d", n)
+	}
+	if twinResult.Torrent.Fetch {
+		t.Error("expected the non-Library twin to lose the single season-pack slot to the higher-scoring three-way candidate")
+	}
+	if !rejectedBy(twinResult.Torrent.Rejections, "Best 1 Season Pack per R/Q") {
+		t.Errorf("expected the twin rejected specifically by the season-pack cap, got %v", twinResult.Torrent.Rejections)
+	}
+
+	// (c) the genuinely competing (unflagged) pack also loses the same slot.
+	competingResult, ok := byTitle[competingPack]
+	if !ok || competingResult.Torrent.Fetch {
+		t.Errorf("expected the competing pack to lose the season-pack slot too")
+	}
+	if ok && !rejectedBy(competingResult.Torrent.Rejections, "Best 1 Season Pack per R/Q") {
+		t.Errorf("expected the competing pack rejected specifically by the season-pack cap, got %v", competingResult.Torrent.Rejections)
+	}
+
+	// (d) the global SeaDex-Best cap is still consumed by the three-way
+	// candidate, rejecting an unrelated ordinary SeaDex-Best candidate in a
+	// different resolution bucket that never touches the season-pack bucket.
+	elsewhereResult, ok := byTitle[ordinaryElsewhere]
+	if !ok || elsewhereResult.Torrent.Fetch {
+		t.Errorf("expected the unrelated ordinary SeaDex-Best candidate elsewhere to lose the global SeaDex cap")
+	}
+	if ok && !rejectedBy(elsewhereResult.Torrent.Rejections, "At most 1 SeaDex Best") {
+		t.Errorf("expected rejection specifically by the global SeaDex cap, got %v", elsewhereResult.Torrent.Rejections)
+	}
+
+	if len(kept) != 1 || kept[0].Candidate.Release.Title != threeWay {
+		t.Errorf("expected the three-way candidate to be the sole overall survivor, got kept=%v", overlapTitles(kept))
+	}
+}
+
+// overlapTitles renders a result slice's titles for a failure message.
+func overlapTitles(results []ranking.Result) []string {
+	out := make([]string, 0, len(results))
+	for _, r := range results {
+		out = append(out, r.Candidate.Release.Title)
+	}
+	return out
+}
+
+// 18: DEFENSIVE BEHAVIOR LOCK, not a policy endorsement. Proves current,
+// deterministic behavior if upstream SeaDex data ever flags the same
+// release group both Best and Alternative for the same title simultaneously
+// -- structurally possible today because SeadexContext's Best/Alt maps
+// (pkg/search/rules/env.go) are independent with no mutual exclusion
+// anywhere in this repo or the engine, and "Seadex Best"/"Seadex
+// Alternative" are two independent `when: seadex.best`/`seadex.alternative`
+// scoring rules with no cross-exclusion in profiles/rules.json. Whether this
+// shape is ever actually produced depends entirely on the upstream SeaDex
+// data source, outside this repo's scope -- DraCuLa only reads the two
+// booleans at face value. This test locks in what happens *if* it occurs:
+// both rules fire (score sums, not overrides), and the one candidate
+// consumes both global caps, at the expense of two otherwise-independent
+// legitimate Best/Alternative candidates elsewhere. If this behavior is
+// ever deliberately changed, update this test alongside that change rather
+// than treating a failure here as a regression to revert.
+func TestSeaDexBestAndAlternative_SameGroupBothFlags_LocksCurrentBehavior(t *testing.T) {
+	profile := bestNLibraryProfile(t, "Seadex Best", "Seadex Alternative", "At most 1 SeaDex Best", "At most 1 SeaDex Alternative")
+	req := ranking.Request{
+		Kind: ranking.KindAnimeShow, IsAnime: true, Season: 1, Episode: 1, Title: "Example Anime",
+		Seadex: &rules.SeadexContext{
+			Known: true,
+			Best:  map[string]bool{"bothgrp": true, "onlybestgrp": true},
+			Alt:   map[string]bool{"bothgrp": true, "onlyaltgrp": true},
+		},
+	}
+
+	both := "Example.Anime.S01E01.2160p.WEB-DL.A-BOTHGRP"
+	onlyBest := "Example.Anime.S01E01.1080p.WEB-DL.B-ONLYBESTGRP"
+	onlyAlt := "Example.Anime.S01E01.720p.WEB-DL.C-ONLYALTGRP"
+
+	ts := []bnTitle{notLib(both), notLib(onlyBest), notLib(onlyAlt)}
+	kept, rejected := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
+
+	byTitle := map[string]ranking.Result{}
+	for _, r := range kept {
+		byTitle[r.Candidate.Release.Title] = r
+	}
+	bothResult, ok := byTitle[both]
+	if !ok {
+		t.Fatalf("expected the both-flagged candidate to survive, kept=%v", overlapTitles(kept))
+	}
+
+	bestScore, bestOK := matchScore(bothResult.Matched, "Seadex Best")
+	altScore, altOK := matchScore(bothResult.Matched, "Seadex Alternative")
+	if !bestOK || !altOK {
+		t.Fatalf("expected both Seadex Best and Seadex Alternative to match the same candidate, matched=%v", bothResult.Matched)
+	}
+	if bestScore != 150000 {
+		t.Errorf("expected Seadex Best's own contribution to remain 150000, got %d", bestScore)
+	}
+	if altScore != 75000 {
+		t.Errorf("expected Seadex Alternative's own contribution to remain 75000, got %d", altScore)
+	}
+	if sum := bestScore + altScore; sum != 225000 {
+		t.Errorf("expected the total SeaDex contribution to be the sum of both current rule values (150000+75000=225000), got %d", sum)
+	}
+
+	rejByTitle := map[string][]string{}
+	for _, r := range rejected {
+		rejByTitle[r.Candidate.Release.Title] = r.Torrent.Rejections
+	}
+	if _, stillKept := byTitle[onlyBest]; stillKept {
+		t.Error("expected the legitimate lone-Best candidate to lose the global SeaDex-Best cap to the both-flagged candidate")
+	}
+	if !rejectedBy(rejByTitle[onlyBest], "At most 1 SeaDex Best") {
+		t.Errorf("expected the lone-Best candidate rejected specifically by the global SeaDex-Best cap, got %v", rejByTitle[onlyBest])
+	}
+	if _, stillKept := byTitle[onlyAlt]; stillKept {
+		t.Error("expected the legitimate lone-Alternative candidate to lose the global SeaDex-Alternative cap to the both-flagged candidate")
+	}
+	if !rejectedBy(rejByTitle[onlyAlt], "At most 1 SeaDex Alternative") {
+		t.Errorf("expected the lone-Alternative candidate rejected specifically by the global SeaDex-Alternative cap, got %v", rejByTitle[onlyAlt])
+	}
+}

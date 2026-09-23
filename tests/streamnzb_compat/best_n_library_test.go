@@ -917,8 +917,15 @@ func TestSeaDexBestAndAlternative_SameGroupBothFlags_LocksCurrentBehavior(t *tes
 	both := "Example.Anime.S01E01.2160p.WEB-DL.A-BOTHGRP"
 	onlyBest := "Example.Anime.S01E01.1080p.WEB-DL.B-ONLYBESTGRP"
 	onlyAlt := "Example.Anime.S01E01.720p.WEB-DL.C-ONLYALTGRP"
+	// control shares both's own resolution+quality bucket (so its own native
+	// score is otherwise identical) but matches neither SeaDex rule -- it
+	// survives on the ordinary Best-3-per-R/Q cap (only 2 candidates ever
+	// share that bucket) and gives a real Torrent.Rank to diff against,
+	// rather than re-deriving the total from the two rule scores already
+	// asserted individually below.
+	control := "Example.Anime.S01E01.2160p.WEB-DL.D-CONTROLGRP"
 
-	ts := []bnTitle{notLib(both), notLib(onlyBest), notLib(onlyAlt)}
+	ts := []bnTitle{notLib(both), notLib(onlyBest), notLib(onlyAlt), notLib(control)}
 	kept, rejected := profile.ApplyWithRejected(req, bnCandidates(ts), jhinrank.RankOptions{})
 
 	byTitle := map[string]ranking.Result{}
@@ -928,6 +935,10 @@ func TestSeaDexBestAndAlternative_SameGroupBothFlags_LocksCurrentBehavior(t *tes
 	bothResult, ok := byTitle[both]
 	if !ok {
 		t.Fatalf("expected the both-flagged candidate to survive, kept=%v", overlapTitles(kept))
+	}
+	controlResult, ok := byTitle[control]
+	if !ok {
+		t.Fatalf("expected the unflagged same-bucket control to survive, kept=%v", overlapTitles(kept))
 	}
 
 	bestScore, bestOK := matchScore(bothResult.Matched, "Seadex Best")
@@ -941,8 +952,12 @@ func TestSeaDexBestAndAlternative_SameGroupBothFlags_LocksCurrentBehavior(t *tes
 	if altScore != 75000 {
 		t.Errorf("expected Seadex Alternative's own contribution to remain 75000, got %d", altScore)
 	}
-	if sum := bestScore + altScore; sum != 225000 {
-		t.Errorf("expected the total SeaDex contribution to be the sum of both current rule values (150000+75000=225000), got %d", sum)
+	// The real proof that both contributions actually reached the finished
+	// score: a strict rank delta against the unflagged control, not a
+	// re-derivation of the two matched-score numbers above.
+	if delta := bothResult.Torrent.Rank - controlResult.Torrent.Rank; delta != 225000 {
+		t.Errorf("expected the both-flagged candidate to outrank the unflagged control by exactly 225000 (150000+75000), got %d (both=%d, control=%d)",
+			delta, bothResult.Torrent.Rank, controlResult.Torrent.Rank)
 	}
 
 	rejByTitle := map[string][]string{}

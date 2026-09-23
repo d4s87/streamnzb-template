@@ -5,9 +5,12 @@ on:
     - cron: "0 6 * * 6"
   workflow_dispatch:
 
+# Minimal default GITHUB_TOKEN: this workflow never uses it to push or
+# open a PR -- see the App-token mint below, the same mechanism Prepare/
+# Publish Release already use. Nothing else here needs repo write scope
+# (the generator/suppression steps only touch the local checkout).
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: sync-vidhin-release-groups
@@ -98,21 +101,59 @@ jobs:
               )
           PY
 
+      # Everything above this point ran only trusted `main` code with the
+      # minimal read-only default token above -- this workflow never
+      # checks out or executes any untrusted ref. The mutation step below
+      # (branch push + PR open) reuses the same narrowly scoped GitHub App
+      # installation Prepare/Publish Release already use, rather than the
+      # default GITHUB_TOKEN: a GITHUB_TOKEN-authored PR triggers
+      # pull_request-typed CI (metadata validation, path labels,
+      # CodeRabbit) into GitHub's approval-required state instead of
+      # running normally (see CLAUDE.md's release-automation section) --
+      # PR #64 hit exactly this. An App-token-authored PR does not.
+      - name: Verify GitHub App credentials are configured
+        env:
+          APP_ID: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$APP_ID" || -z "$APP_PRIVATE_KEY" ]]; then
+            echo "ERROR: PREPARE_RELEASE_APP_ID / PREPARE_RELEASE_APP_PRIVATE_KEY secrets are not configured." >&2
+            echo "Sync Vidhin reuses the same GitHub App as Prepare/Publish Release." >&2
+            exit 1
+          fi
+
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.PREPARE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PREPARE_RELEASE_APP_PRIVATE_KEY }}
+          # Contents + Pull requests write only, matching exactly what
+          # peter-evans/create-pull-request needs below -- same pinning
+          # rationale as Prepare Release's own mint step.
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Create or update sync PR
         uses: peter-evans/create-pull-request@v8
         with:
-          branch: automation/vidhin-sync
+          token: ${{ steps.app-token.outputs.token }}
+          branch: chore/vidhin-sync
           delete-branch: true
           add-paths: |
             generated/vidhin-defines.json
             generated/vidhin-sync-report.md
             generated/streamnzb-defines.txt
           commit-message: "chore: sync Vidhin release-group rules"
-          title: "Sync Vidhin release-group rules"
+          title: "chore: sync Vidhin release-group rules"
           body-path: generated/vidhin-sync-report.md
-          labels: |
-            automation
-            streamnzb
+          # No explicit labels: this PR only ever touches generated/vidhin-*
+          # paths, which the path-based labeler (label-pr.yml) already
+          # covers with `vidhin` on its own. Whether a given sync is
+          # release-driving is a human judgment made at review time (see
+          # PR #65 adding `patch` after assessing real behavior impact),
+          # not something this workflow can decide for itself -- it does
+          # not guess a release-impact/skip-changelog label either.
 
       - name: Upload Vidhin sync diagnostics
         if: failure()

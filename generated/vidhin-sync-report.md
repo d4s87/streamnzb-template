@@ -1,12 +1,24 @@
 # Vidhin sync report
 
-## Movies LQ Release Title
+## Movies LQ Groups
 
-Raw upstream regex changed, but the extracted release-group set did not.
+**Added release-group tokens**
+- `+ 126811`
 
-## Shows LQ Release Title
+## Movies WEB T3 Groups
 
-Raw upstream regex changed, but the extracted release-group set did not.
+**Removed release-group tokens**
+- `- HHWEB`
+
+## Shows LQ Groups
+
+**Added release-group tokens**
+- `+ 126811`
+
+## Shows WEB T3 Groups
+
+**Removed release-group tokens**
+- `- HHWEB`
 
 ---
 Tracked StreamNZB Defines: **61**

@@ -2,7 +2,7 @@ name: Sync Vidhin release groups
 
 on:
   schedule:
-    - cron: "0 6 * * 6"
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 # Minimal default GITHUB_TOKEN: this workflow never uses it to push or

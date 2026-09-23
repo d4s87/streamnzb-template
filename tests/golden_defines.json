@@ -14,7 +14,7 @@
   "Movies WEB T3 Groups": {
     "field": "group",
     "must_include": [
-      "HHWEB"
+      "BLOOM"
     ]
   },
   "Shows WEB T2 Groups": {
@@ -30,7 +30,6 @@
   "Shows WEB T3 Groups": {
     "field": "group",
     "must_include": [
-      "HHWEB",
       "DRACULA",
       "ViSiON"
     ]

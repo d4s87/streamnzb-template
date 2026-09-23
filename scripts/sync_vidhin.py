@@ -386,9 +386,14 @@ def obfuscated_regex_pattern(pattern, source):
 # boolean-equivalent translation (the exemption only holds given the
 # real-world "group is the terminal filename token" convention, not as a
 # regex-algebra identity), or represent an open DraCuLa policy question
-# (HHWEB already carries a positive WEB T3 trust-tier score; EVO/PiRaTeS
-# are already unconditionally penalized and the upstream exemption would
-# narrow that) -- see the roadmap audit for the full analysis. Only the
+# (EVO/PiRaTeS are already unconditionally penalized and the upstream
+# exemption would narrow that; HHWEB's conditional Radarr-only branch has
+# an exact RE2-safe translation but no documented upstream rationale and no
+# equivalent Sonarr branch -- as of the 2026-09-23 sync HHWEB also no
+# longer carries any DraCuLa WEB T3 trust-tier score at all, having been
+# removed from Radarr/Sonarr Web T3 upstream, but that was never the reason
+# this branch stayed unconsumed and its removal does not change the
+# analysis) -- see the roadmap audit for the full analysis. Only the
 # uncontested plain-token subset is consumed here.
 #
 # Every top-level branch, including the deliberately-excluded ones, and

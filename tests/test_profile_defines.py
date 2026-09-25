@@ -325,9 +325,11 @@ def validate_anime_bluray_tier_scores(
     tighter 80-point gap (see the Scoring-ceiling audit completed item
     in the project backlog).
 
-    Tier conditions may contain intentional classification logic such
-    as the LazyRemux / UltraRemux exception, so this validation does
-    not simplify or replace their expressions.
+    Anime BluRay tier rules accept bluray or remux releases; the upstream
+    Vidhin BD source gate and PMR/NAN0 remux-only membership live in the
+    generated "... BluRay Tn Groups" Defines (sync_vidhin.py anime_bd
+    mode), so the rule text is pinned exactly and no group bypass
+    (the former LazyRemux / UltraRemux clause) may come back.
     """
 
     expected_web = {
@@ -401,6 +403,17 @@ def validate_anime_bluray_tier_scores(
                         f"{name} must reference "
                         f"{required_match!r}"
                     )
+
+                if family == "BluRay":
+                    expected_when = (
+                        '("bluray" in traits or "remux" in traits)\n'
+                        f"and {required_match}"
+                    )
+
+                    if when != expected_when:
+                        raise AssertionError(
+                            f"{name} condition drifted: {when!r}"
+                        )
 
     min_anime_tier_gap = 80
 
@@ -1967,6 +1980,42 @@ def validate_regressions(defines: dict[str, dict]) -> None:
         if "UltraRemux" in t4:
             raise AssertionError(
                 f"{media} BluRay T4 must not contain UltraRemux"
+            )
+
+        # Every Anime BluRay tier Define keeps Vidhin's BD source gate, so a
+        # remux/WEB release from a BD-tier group is not classified by group
+        # membership alone.
+        for tier in range(1, 9):
+            condition = defines[
+                f"{media} BluRay T{tier} Groups"
+            ]["condition"]
+
+            if not condition.startswith(
+                '(releaseName matches "(?is)(?:BluRay|Blu-Ray|'
+            ):
+                raise AssertionError(
+                    f"{media} BluRay T{tier} Groups lost the "
+                    "Anime BD source gate"
+                )
+
+        # PMR / NAN0 are T3 only under upstream's remux conditions.
+        t3 = defines[f"{media} BluRay T3 Groups"]["condition"]
+
+        for required in (
+            'releaseName matches "(?i)remux.*[-._ ]NAN0$"',
+            '(releaseName matches "(?i)(?:^|[-._ ])PMR$" and '
+            'releaseName matches "(?i)\\bRemux\\b")',
+        ):
+            if required not in t3:
+                raise AssertionError(
+                    f"{media} BluRay T3 lost conditional "
+                    f"membership {required!r}"
+                )
+
+        if re.search(r"[(|](?:PMR|NAN0)[|)]", t3):
+            raise AssertionError(
+                f"{media} BluRay T3 lists PMR/NAN0 as "
+                "unconditional group tokens"
             )
 
 

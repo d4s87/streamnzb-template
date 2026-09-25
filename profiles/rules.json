@@ -470,7 +470,7 @@
         "name": "Anime Shows BluRay T1",
         "points": 560,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T1 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T1 Groups\")"
       }
     },
     {
@@ -479,7 +479,7 @@
         "name": "Anime Shows BluRay T2",
         "points": 480,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T2 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T2 Groups\")"
       }
     },
     {
@@ -488,7 +488,7 @@
         "name": "Anime Shows BluRay T3",
         "points": 400,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T3 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T3 Groups\")"
       }
     },
     {
@@ -497,7 +497,7 @@
         "name": "Anime Shows BluRay T4",
         "points": 320,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T4 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T4 Groups\")"
       }
     },
     {
@@ -506,7 +506,7 @@
         "name": "Anime Shows BluRay T5",
         "points": 240,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T5 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T5 Groups\")"
       }
     },
     {
@@ -515,7 +515,7 @@
         "name": "Anime Shows BluRay T6",
         "points": 160,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T6 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T6 Groups\")"
       }
     },
     {
@@ -524,7 +524,7 @@
         "name": "Anime Shows BluRay T7",
         "points": 80,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T7 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T7 Groups\")"
       }
     },
     {
@@ -533,7 +533,7 @@
         "name": "Anime Shows BluRay T8",
         "points": 0,
         "scope": "anime_show",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Shows BluRay T8 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Shows BluRay T8 Groups\")"
       }
     },
     {
@@ -596,7 +596,7 @@
         "name": "Anime Movies BluRay T1",
         "points": 560,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T1 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T1 Groups\")"
       }
     },
     {
@@ -605,7 +605,7 @@
         "name": "Anime Movies BluRay T2",
         "points": 480,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T2 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T2 Groups\")"
       }
     },
     {
@@ -614,7 +614,7 @@
         "name": "Anime Movies BluRay T3",
         "points": 400,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T3 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T3 Groups\")"
       }
     },
     {
@@ -623,7 +623,7 @@
         "name": "Anime Movies BluRay T4",
         "points": 320,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T4 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T4 Groups\")"
       }
     },
     {
@@ -632,7 +632,7 @@
         "name": "Anime Movies BluRay T5",
         "points": 240,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T5 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T5 Groups\")"
       }
     },
     {
@@ -641,7 +641,7 @@
         "name": "Anime Movies BluRay T6",
         "points": 160,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T6 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T6 Groups\")"
       }
     },
     {
@@ -650,7 +650,7 @@
         "name": "Anime Movies BluRay T7",
         "points": 80,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T7 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T7 Groups\")"
       }
     },
     {
@@ -659,7 +659,7 @@
         "name": "Anime Movies BluRay T8",
         "points": 0,
         "scope": "anime_movie",
-        "when": "(\n  (\"bluray\" in traits and not (\"remux\" in traits))\n  or group matches \"(?i)^(LazyRemux|UltraRemux)$\"\n)\nand matched(\"Anime Movies BluRay T8 Groups\")"
+        "when": "(\"bluray\" in traits or \"remux\" in traits)\nand matched(\"Anime Movies BluRay T8 Groups\")"
       }
     },
     {

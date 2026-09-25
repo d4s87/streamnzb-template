@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import importlib.util, json
+import importlib.util, json, re
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -1401,3 +1401,115 @@ else:
     )
 
 print("Retag Markers union/drift tests passed.")
+
+# ---------------------------------------------------------------------------
+# Anime BD: source gate, per-record case flags and PMR/NAN0/-ZR- conditions
+#
+# anime_bd mode keeps Vidhin's physical-media source gate and remux-only
+# conditional membership inside the generated Anime BluRay tier Defines
+# instead of flattening them to bare group tokens. Fixture rows are the
+# committed baseline's own upstream records, so this runs offline.
+# ---------------------------------------------------------------------------
+
+anime_bd_rows = []
+for tier in range(1, 9):
+    for rec in baseline["defines"][f"Anime Shows BluRay T{tier} Groups"]["records"]:
+        anime_bd_rows.append({"name": rec["source"], "pattern": rec["pattern"]})
+
+m.validate_anime_bd_source(anime_bd_rows)
+
+# Token membership is exactly what standard-mode flattening produced, so tier
+# reporting, collision checks and Trusted Release Groups inputs are unchanged.
+for row in anime_bd_rows:
+    rec = m.anime_bd_record(row["pattern"], row["name"])
+    assert rec["tokens"] == m.semantic_tokens(row["pattern"]), row["name"]
+
+anime_bd_mapping = {
+    "schema_version": 3,
+    "upstream_url": "fixture",
+    "targets": {
+        name: mapping["targets"][name]
+        for name in ("Anime Shows BluRay T1 Groups", "Anime Shows BluRay T3 Groups")
+    },
+}
+assert all(v["mode"] == "anime_bd" for v in anime_bd_mapping["targets"].values())
+anime_bd_lib = m.render(m.resolve(anime_bd_mapping, anime_bd_rows), anime_bd_mapping)
+bd_t1 = next(x for x in anime_bd_lib.splitlines() if x.startswith("Anime Shows BluRay T1 Groups"))
+bd_t3 = next(x for x in anime_bd_lib.splitlines() if x.startswith("Anime Shows BluRay T3 Groups"))
+gate = m.ANIME_BD_SOURCE_GATE_RE2
+
+# /i records keep a case-insensitive gate; T1's sam record stays case-sensitive.
+assert f'releaseName matches "(?is){gate}"' in bd_t1
+assert f'releaseName matches "(?s){gate}" and (releaseName matches "(?:^|[-._ ])(?:sam)$")' in bd_t1
+assert bd_t3.count(f'releaseName matches "(?is){gate}"') == 1
+assert f'releaseName matches "(?s){gate}"' not in bd_t3
+
+# PMR/NAN0 only through their upstream remux conditions; -ZR- kept.
+plain_t3 = re.search(r'\(\?:\^\|\[-\._ \]\)\(\?:([^)]*)\)\$', bd_t3).group(1).split("|")
+assert "ZR" in plain_t3 and "PMR" not in plain_t3 and "NAN0" not in plain_t3
+assert 'releaseName matches "(?i)remux.*[-._ ]NAN0$"' in bd_t3
+assert (
+    '(releaseName matches "(?i)(?:^|[-._ ])PMR$" and '
+    'releaseName matches "(?i)\\bRemux\\b")'
+) in bd_t3
+assert 'releaseName matches "(?i)-ZR-"' in bd_t3
+for unsupported in ("(?=", "(?!", "(?<=", "(?<!"):
+    assert unsupported not in anime_bd_lib, unsupported
+
+# The RE2 gate must be boolean-equivalent to the upstream JS gate.
+up_gate_i = re.compile(m.ANIME_BD_SOURCE_GATE, re.I)
+up_gate_cs = re.compile(m.ANIME_BD_SOURCE_GATE)
+re2_gate_i = re.compile(gate, re.I | re.S)
+re2_gate_cs = re.compile(gate, re.S)
+for title in (
+    "X.1080p.BluRay.REMUX-ZR", "X.1080p.Blu-Ray-ZR", "X.1080p.HDDVD-ZR", "X.BD-ZR",
+    "X.1080p.BDMux-ZR", "X.BD1080p-ZR", "X.bd720-ZR", "X.[bd]-ZR", "X.bd.-ZR",
+    "X.DVDRip-ZR", "X.NTSC-ZR", "X.PAL-ZR", "X.xvidvd-ZR", "X.1080p.bluray-sam",
+    "X.1080p.REMUX-ZR", "X.1080p.WEB-DL.REMUX-ZR", "X.Blu.Ray-ZR", "X-BD",
+    "Abducted.1080p.REMUX-ZR", "X.1080p.WEBRip-bd", "X.bd",
+):
+    assert bool(up_gate_i.match(title)) == bool(re2_gate_i.search(title)), title
+    assert bool(up_gate_cs.match(title)) == bool(re2_gate_cs.search(title)), title
+
+
+def anime_bd_drift(tier, old, new, count=1):
+    rows = json.loads(json.dumps(anime_bd_rows))
+    hits = 0
+    for row in rows:
+        if row["name"] == f"Anime BD T{tier}" and old in row["pattern"]:
+            row["pattern"] = row["pattern"].replace(old, new, count)
+            hits += 1
+    assert hits, (tier, old)
+    return rows
+
+
+def expect_anime_bd_failure(rows, fragment, label):
+    try:
+        m.validate_anime_bd_source(rows)
+    except ValueError as exc:
+        assert fragment in str(exc), (label, str(exc))
+    else:
+        raise AssertionError(f"Anime BD drift not detected: {label}")
+
+
+expect_anime_bd_failure(anime_bd_drift(5, "|NTSC|", "|"), "source gate changed", "gate term removed")
+expect_anime_bd_failure(anime_bd_drift(3, ".*/i", ".*/"), "case flags changed", "T3 lost /i")
+expect_anime_bd_failure(anime_bd_drift(1, "-sam\\b)).*/", "-sam\\b)).*/i"), "case flags changed", "T1 sam gained /i")
+expect_anime_bd_failure(
+    anime_bd_drift(3, r"^(?=.*\b(PMR)\b)(?=.*\b(Remux)\b)", r"\b(PMR)\b"),
+    "no longer contains conditional branch", "PMR flattened to a plain token",
+)
+expect_anime_bd_failure(
+    anime_bd_drift(3, r"(?<=remux).*\b(NAN0)\b", r"\b(NAN0)\b"),
+    "no longer contains conditional branch", "NAN0 flattened to a plain token",
+)
+expect_anime_bd_failure(
+    anime_bd_drift(4, "|Virtuality)\\b", "|Virtuality)\\b|(?<=remux).*\\b(FOO)\\b"),
+    "unrecognized conditional branch", "new remux-conditional group",
+)
+expect_anime_bd_failure(
+    anime_bd_drift(6, "^(?=.*(BluRay", "^(?=.*1080p)(?=.*(BluRay"),
+    "changed shape", "extra lookahead",
+)
+
+print("Anime BD source-gate/conditional-membership tests passed.")

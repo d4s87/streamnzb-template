@@ -665,6 +665,128 @@ def validate_retag_source(upstream):
         )
 
 
+# Every Vidhin "Anime BD T1".."T8" record is `^(?=.*SOURCE_GATE)(?=.*GROUPS).*`:
+# a physical-media source gate ANDed with a release-group classifier.
+# Standard-mode token extraction keeps only the group half, which let remux
+# and WEB releases from BD-tier groups look identical to real BD releases
+# and turned PMR/NAN0's remux-only membership into unconditional tokens.
+# anime_bd mode keeps the gate, the per-record /i flag, and the known
+# conditional branches. Anything else fails the sync for manual review.
+ANIME_BD_SOURCE_GATE = (
+    r".*(BluRay|Blu-Ray|HD-?DVD|BDMux|BD(?!$)|bd(?:720|1080|2160)"
+    r"|(?<=[-_. (\[])bd(?=[-_. )\]])|DVD|DVDRip|NTSC|PAL|xvidvd)"
+)
+# RE2 has no lookaround. As a search predicate over the whole release name,
+# BD(?!$) is "BD followed by any character" (hence the s flag), and the
+# delimiter-bound bd can consume its delimiters; the rest is verbatim.
+ANIME_BD_SOURCE_GATE_RE2 = (
+    r"(?:BluRay|Blu-Ray|HD-?DVD|BDMux|BD.|bd(?:720|1080|2160)"
+    r"|[-_. (\[]bd[-_. )\]]|DVD|DVDRip|NTSC|PAL|xvidvd)"
+)
+# Upstream JS flags per record, sorted. T1 `sam` and T2 `[Orphan]` live in
+# separate case-sensitive records; everything else is /i.
+ANIME_BD_RECORD_FLAGS = {
+    "Anime BD T1": ["", "i"],
+    "Anime BD T2": ["", "i"],
+    **{f"Anime BD T{tier}": ["i"] for tier in range(3, 9)},
+}
+# Known conditional branches: exact upstream text -> (group, RE2 regexes that
+# must all match). Group position uses the same end-anchored token model as
+# every other Anime tier token.
+ANIME_BD_CONDITIONAL_BRANCHES = {
+    "Anime BD T3": {
+        r"(?<=remux).*\b(NAN0)\b": ("NAN0", [r"remux.*[-._ ]NAN0$"]),
+        r"^(?=.*\b(PMR)\b)(?=.*\b(Remux)\b)": (
+            "PMR", [r"(?:^|[-._ ])PMR$", r"\bRemux\b"],
+        ),
+        r"-ZR-": ("ZR", [r"-ZR-"]),
+    },
+}
+
+
+def anime_bd_record(pattern, source):
+    """Split one Anime BD record into gate case, group tokens and conditions."""
+    body, flags = js_regex_parts(pattern)
+    if flags not in ("", "i"):
+        raise ValueError(f"{source}: unsupported regex flags {flags!r}: {pattern}")
+
+    la = lookaheads(body)
+    if len(la) != 2 or body != f"^(?={la[0]})(?={la[1]}).*":
+        raise ValueError(
+            f"{source} changed shape; expected ^(?=.*GATE)(?=.*GROUPS).* "
+            f"Manual review required: {pattern}"
+        )
+    if la[0] != ANIME_BD_SOURCE_GATE:
+        raise ValueError(
+            f"{source} source gate changed; review ANIME_BD_SOURCE_GATE_RE2 "
+            f"before syncing.\ngot:  {la[0]}\nwant: {ANIME_BD_SOURCE_GATE}"
+        )
+
+    classifier = la[1]
+    if not classifier.startswith(".*(") or matching_paren(classifier, 2) != len(classifier) - 1:
+        raise ValueError(f"{source} group classifier changed shape: {pattern}")
+
+    known = ANIME_BD_CONDITIONAL_BRANCHES.get(source, {})
+    plain, conditions = [], []
+    for branch in split_top_level(classifier[3:-1]):
+        if branch in known:
+            token, regexes = known[branch]
+            conditions.append({"token": token, "all": list(regexes)})
+        elif any(x in branch for x in ("(?=", "(?<=", "^")) or re.search(
+            # A standalone remux word is context; LazyRemux/UltraRemux are groups.
+            r"(?<![a-z0-9])remux(?![a-z0-9])", branch.casefold().replace("\\b", " "),
+        ):
+            raise ValueError(
+                f"{source} has an unrecognized conditional branch {branch!r}; "
+                "manual review required before syncing."
+            )
+        else:
+            plain.append(branch)
+
+    group_tokens = semantic_tokens("(" + "|".join(plain) + ")") if plain else []
+    return {
+        "case_insensitive": flags == "i",
+        "group_tokens": group_tokens,
+        "conditions": conditions,
+        "tokens": dedupe_casefold(group_tokens + [c["token"] for c in conditions]),
+    }
+
+
+def validate_anime_bd_source(upstream):
+    """
+    Fail closed before resolve() if Anime BD records drift: source gate,
+    per-record case flags, or the known PMR/NAN0/-ZR- conditional branches.
+    """
+    flags, branches = {}, {}
+    for rec in rows(upstream):
+        name = n(rec)
+        if name not in ANIME_BD_RECORD_FLAGS:
+            continue
+        pattern = p(rec)
+        if not isinstance(pattern, str):
+            raise RuntimeError(f"Vidhin {name!r} record has no usable pattern.")
+        anime_bd_record(pattern, name)
+        body, flag = js_regex_parts(pattern)
+        flags.setdefault(name, []).append(flag)
+        branches.setdefault(name, []).append(body)
+
+    for name, want in ANIME_BD_RECORD_FLAGS.items():
+        got = sorted(flags.get(name, []))
+        if got != want:
+            raise ValueError(
+                f"Vidhin {name!r} record case flags changed: got {got}, "
+                f"want {want}. Manual review required."
+            )
+
+    for name, known in ANIME_BD_CONDITIONAL_BRANCHES.items():
+        for branch in known:
+            if not any(branch in body for body in branches.get(name, [])):
+                raise ValueError(
+                    f"Vidhin {name!r} no longer contains conditional branch "
+                    f"{branch!r}; manual review required before syncing."
+                )
+
+
 def resolve(mapping,upstream):
     by={}
     for rec in rows(upstream):
@@ -713,6 +835,12 @@ def resolve(mapping,upstream):
                             pat,
                             src,
                         ),
+                    })
+                elif mode=="anime_bd":
+                    recs.append({
+                        "source":src,
+                        "pattern":pat,
+                        **anime_bd_record(pat,src),
                     })
                 elif mode=="lq_release_title":
                     recs.append({
@@ -1191,6 +1319,42 @@ def render_obfuscated_condition(entry):
 
 
 
+def render_anime_bd_condition(entry):
+    """
+    One (gate and groups) clause per upstream record, each with that record's
+    own case semantics. A case-sensitive record's token already covered by an
+    /i record of the same Define is dropped as redundant.
+    """
+    effective={t.casefold() for t in entry["effective_tokens"]}
+    covered={
+        t.casefold()
+        for rec in entry["records"] if rec["case_insensitive"]
+        for t in rec["group_tokens"]
+    }
+    clauses=[]
+    for rec in entry["records"]:
+        ci=rec["case_insensitive"]
+        flag="(?i)" if ci else ""
+        toks=[
+            t for t in rec["group_tokens"]
+            if t.casefold() in effective and (ci or t.casefold() not in covered)
+        ]
+        members=[]
+        if toks:
+            body="|".join(toks).replace('"','\\"')
+            members.append(f'releaseName matches "{flag}(?:^|[-._ ])(?:{body})$"')
+        for c in rec["conditions"]:
+            parts=[f'releaseName matches "{flag}{rx}"' for rx in c["all"]]
+            members.append(parts[0] if len(parts)==1 else "("+" and ".join(parts)+")")
+        if not members:
+            continue
+        gate=f'releaseName matches "(?{"i" if ci else ""}s){ANIME_BD_SOURCE_GATE_RE2}"'
+        clauses.append(f"({gate} and ({' or '.join(members)}))")
+    if not clauses:
+        raise ValueError("anime_bd Define contains no usable records")
+    return " or ".join(clauses)
+
+
 TRUSTED_RELEASE_GROUPS_DEFINE="Trusted Release Groups"
 
 
@@ -1241,6 +1405,8 @@ def render(current,mapping):
             cond=render_raw_regex_condition(e)
         elif e.get("mode")=="obfuscated":
             cond=render_obfuscated_condition(e)
+        elif e.get("mode")=="anime_bd":
+            cond=render_anime_bd_condition(e)
         else:
             body="|".join(e["effective_tokens"]).replace('"','\\"')
             field=e["field"]
@@ -1633,6 +1799,7 @@ def main():
     validate_anime_upstream_structure(upstream)
     validate_generated_dynamic_hdr_source(upstream)
     validate_retag_source(upstream)
+    validate_anime_bd_source(upstream)
     cur=resolve(mapping,upstream)
     validate_anime_tier_collisions(cur)
     validate_movie_show_tier_collisions(cur)

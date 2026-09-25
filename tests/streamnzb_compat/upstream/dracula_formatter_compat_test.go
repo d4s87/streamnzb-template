@@ -463,4 +463,105 @@ func TestDraculaFormatterFixtures(
 			}
 		},
 	)
+
+	// Source-aware language marker: the .Languages branch shows ✓ only when
+	// .LanguageSource is "measured" AND every displayed language is one of
+	// the probed audio track languages. .Languages is a union of measured,
+	// reported and inferred codes, so "measured" alone can sit next to a
+	// language the file never confirmed. Contexts come from the real
+	// newFormatContext path with real probe data, not fixture injection.
+	t.Run(
+		"source-aware language marker (newFormatContext)",
+		func(t *testing.T) {
+			const measuredFrag = `{{if and (eq .LanguageSource "measured") (not (without .Probed.AudioLanguages .Languages))}}✓{{else}}⛿{{end}} `
+			tpl := payload.ResultDescriptionTemplate
+			if !strings.Contains(tpl, "⛿") {
+				// The debug formatter has no language marker line.
+				return
+			}
+			if !strings.Contains(tpl, measuredFrag) {
+				t.Fatal("production language marker no longer uses the measured-subset condition")
+			}
+			// The formatter as it was before the marker became source-aware.
+			previous := strings.Replace(tpl, measuredFrag, "⛿ ", 1)
+
+			probe := func(audio, subs []string) *release.MediaCaps {
+				return &release.MediaCaps{
+					TracksProbed:      true,
+					AudioStreams:      max(len(audio), 1),
+					AudioLanguages:    audio,
+					SubtitleLanguages: subs,
+					DurationSeconds:   1440,
+				}
+			}
+
+			cases := []struct {
+				name     string
+				title    string
+				reported []string
+				subs     []string
+				probed   *release.MediaCaps
+				source   string
+				line     string // expected language line; "" = none
+			}{
+				{"fully measured", "Example.Anime.S01E01.1080p.BluRay.x264-GRP", nil, nil,
+					probe([]string{"ja", "en"}, nil), "measured", "✓ JA · EN"},
+				{"partially measured merged set", "Example.Anime.S01E01.1080p.BluRay.JPN.ENG.x264-GRP", nil, nil,
+					probe([]string{"ja"}, nil), "measured", "⛿ JA · EN"},
+				{"indexer-reported", "Example.Movie.2026.1080p.WEB-DL.x264-GRP", []string{"English"}, nil,
+					nil, "reported", "⛿ EN"},
+				{"name-only inferred", "Example.Movie.2026.1080p.WEB-DL.German.DL.x264-GRP", nil, nil,
+					nil, "inferred", "⛿ DE"},
+				{"untagged probe audio, inferred fallback", "Example.Movie.2026.1080p.BluRay.German.x264-GRP", nil, nil,
+					probe(nil, nil), "inferred", "⛿ DE"},
+				{"subtitle-only", "Example.Movie.2026.1080p.WEB-DL.x264-GRP", nil, []string{"FR", "DE"},
+					nil, "", "⛿ sᴜʙ 🇫🇷 🇩🇪"},
+				{"no language metadata", "Example.Movie.2026.1080p.WEB-DL.x264-GRP", nil, nil,
+					nil, "", ""},
+				{"fully measured with subtitle overflow", "Example.Movie.2026.1080p.BluRay.x264-GRP", nil, nil,
+					probe([]string{"en"}, []string{"en", "fr", "de", "es", "it"}), "measured", "✓ EN · sᴜʙ 🇬🇧 🇫🇷 🇩🇪 +2"},
+			}
+
+			languageLine := func(rendered string) string {
+				for _, l := range strings.Split(rendered, "\n") {
+					if strings.HasPrefix(l, "✓ ") || strings.HasPrefix(l, "⛿ ") {
+						return l
+					}
+				}
+				return ""
+			}
+
+			for _, tc := range cases {
+				cand := triage.Candidate{
+					Release: &release.Release{
+						Title:     tc.title,
+						Languages: tc.reported,
+						Subtitles: tc.subs,
+					},
+					Metadata: parser.ParseReleaseTitle(tc.title),
+					Verdict:  triage.Verdict{Probed: tc.probed},
+				}
+				ctx := newFormatContext(cand, 1, 1, 0, "", "", "Example", "", false, 0)
+				if ctx.LanguageSource != tc.source {
+					t.Errorf("%s: .LanguageSource = %q, want %q", tc.name, ctx.LanguageSource, tc.source)
+				}
+
+				rendered := renderDraculaFormatter(t, tpl, ctx)
+				if got := languageLine(rendered); got != tc.line {
+					t.Errorf("%s: language line %q, want %q\nrendered:\n%s", tc.name, got, tc.line, rendered)
+				}
+
+				// Only the marker may differ from the previous formatter,
+				// and only where every displayed language was measured.
+				before := renderDraculaFormatter(t, previous, ctx)
+				want := before
+				if strings.HasPrefix(tc.line, "✓ ") {
+					want = strings.Replace(before, "⛿ ", "✓ ", 1)
+				}
+				if rendered != want {
+					t.Errorf("%s: output differs from the previous formatter beyond the marker\nbefore:\n%s\nafter:\n%s", tc.name, before, rendered)
+				}
+			}
+		},
+	)
 }

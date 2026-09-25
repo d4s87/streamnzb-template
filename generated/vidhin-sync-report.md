@@ -1,24 +1,84 @@
 # Vidhin sync report
 
-## Movies LQ Groups
+## Anime Movies BluRay T1 Groups
 
-**Added release-group tokens**
-- `+ 126811`
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
 
-## Movies WEB T3 Groups
+## Anime Movies BluRay T2 Groups
 
-**Removed release-group tokens**
-- `- HHWEB`
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
 
-## Shows LQ Groups
+## Anime Movies BluRay T3 Groups
 
-**Added release-group tokens**
-- `+ 126811`
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
 
-## Shows WEB T3 Groups
+## Anime Movies BluRay T4 Groups
 
-**Removed release-group tokens**
-- `- HHWEB`
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Movies BluRay T5 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Movies BluRay T6 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Movies BluRay T7 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Movies BluRay T8 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T1 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T2 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T3 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T4 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T5 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T6 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T7 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
+
+## Anime Shows BluRay T8 Groups
+
+**Generated metadata changed**
+- `mode`: `"standard"` → `"anime_bd"`
 
 ---
 Tracked StreamNZB Defines: **61**

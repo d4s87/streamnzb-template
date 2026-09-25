@@ -1879,6 +1879,33 @@
       "counts": {
         "💚 ɴᴢʙ": 1
       }
+    },
+    {
+      "name": "Anime BluRay T3 remark on ZR remux",
+      "context": {
+        "ReleaseTitle": "Dragon.Ball.Super.S01E02.1080p.BluRay.REMUX.AVC.FLAC.2.0-ZR",
+        "Kind": "anime_show",
+        "IsAnime": true,
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "Group": "ZR",
+        "MatchedRules": [
+          {
+            "Name": "Neutralize AVC",
+            "Score": -300
+          },
+          {
+            "Name": "Anime Shows BluRay T3",
+            "Score": 400
+          }
+        ]
+      },
+      "contains": [
+        "ʙʟᴜʀᴀʏ ᴛ₃"
+      ],
+      "counts": {
+        "ᴛ₃": 1
+      }
     }
   ]
 }

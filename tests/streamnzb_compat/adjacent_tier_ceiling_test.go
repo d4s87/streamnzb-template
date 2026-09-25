@@ -397,6 +397,29 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 			build: animeShowTitle,
 		},
 		{
+			// Remuxes reach the Anime BluRay tiers through the generated
+			// Define's upstream source gate (anime_bd sync mode); native
+			// remux +1500 stacks with the tier here, so this family is
+			// checked on its own rather than assumed from the encode one.
+			family: family{
+				label:             "Anime Show BluRay REMUX",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeShow,
+				definePrefix:      "Anime Shows BluRay",
+				tierCount:         8,
+				sourceTokens: func(bool) []string {
+					return []string{"1080p", "BluRay", "REMUX"}
+				},
+				ordinaryCodec: "AVC",
+				codecUpgrade:  "AV1",
+				decorations: []string{
+					"S01.COMPLETE", "Dual", "Audio", "Uncensored", "v4", "REPACK3",
+					"TrueHD", "Atmos", "7.1",
+				},
+			},
+			build: animeShowTitle,
+		},
+		{
 			family: family{
 				label:             "Anime Show WEB",
 				editionDecoration: "Theatrical",
@@ -426,6 +449,25 @@ func TestAdjacentTierCeilingMatrix(t *testing.T) {
 					return []string{"1080p", "BluRay"}
 				},
 				ordinaryCodec: "x264",
+				codecUpgrade:  "AV1",
+				decorations: []string{
+					"Dual", "Audio", "Uncensored", "v4", "REPACK3",
+					"TrueHD", "Atmos", "7.1",
+				},
+			},
+			build: animeMovieTitle,
+		},
+		{
+			family: family{
+				label:             "Anime Movie BluRay REMUX",
+				editionDecoration: "Theatrical",
+				kind:              ranking.KindAnimeMovie,
+				definePrefix:      "Anime Movies BluRay",
+				tierCount:         8,
+				sourceTokens: func(bool) []string {
+					return []string{"1080p", "BluRay", "REMUX"}
+				},
+				ordinaryCodec: "AVC",
 				codecUpgrade:  "AV1",
 				decorations: []string{
 					"Dual", "Audio", "Uncensored", "v4", "REPACK3",

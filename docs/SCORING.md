@@ -32,6 +32,8 @@ Anime BluRay tiers:
 - T7: +80
 - T8: +0
 
+Anime BluRay tiers apply to BluRay encodes and to remuxes. The generated `Anime ... BluRay Tn Groups` Defines keep Vidhin's Anime BD source gate (BluRay/Blu-Ray, BD forms, BDMux, HD-DVD/DVD, NTSC/PAL, xvidvd) with each upstream record's own case sensitivity, and keep the remux-only membership of `PMR` and `NAN0`. A remux or WEB release from a BD-tier group with no such source evidence (for example `WEB-DL.REMUX-ZR` or `1080p-LazyRemux`) gets no Anime BluRay tier.
+
 The smallest adjacent Anime tier gap is 80 points. The repository uses real-engine regression tests rather than a hardcoded maximum-bonus assumption to ensure ordinary metadata cannot invert adjacent tiers.
 
 ## Vidhin-backed classifications

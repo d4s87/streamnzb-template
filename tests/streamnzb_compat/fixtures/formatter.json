@@ -1906,6 +1906,43 @@
       "counts": {
         "ᴛ₃": 1
       }
+    },
+    {
+      "name": "Measured language marker when every language was probed",
+      "context": {
+        "Languages": ["ja", "en"],
+        "LanguageSource": "measured",
+        "Verified": true,
+        "Probed": {"TracksProbed": true, "AudioLanguages": ["ja", "en"]}
+      },
+      "contains": ["✓ JA · EN"],
+      "excludes": ["⛿"],
+      "counts": {"✓": 1}
+    },
+    {
+      "name": "Fixed language marker when only part of the set was probed",
+      "context": {
+        "Languages": ["ja", "en"],
+        "LanguageSource": "measured",
+        "Verified": true,
+        "Probed": {"TracksProbed": true, "AudioLanguages": ["ja"]}
+      },
+      "contains": ["⛿ JA · EN"],
+      "excludes": ["✓"],
+      "counts": {"⛿": 1}
+    },
+    {
+      "name": "Measured language marker keeps subtitle overflow",
+      "context": {
+        "Languages": ["en"],
+        "Subtitles": ["en", "fr", "de", "es", "it"],
+        "LanguageSource": "measured",
+        "Verified": true,
+        "Probed": {"TracksProbed": true, "AudioLanguages": ["en"], "SubtitleLanguages": ["en", "fr", "de", "es", "it"]}
+      },
+      "contains": ["✓ EN · sᴜʙ 🇬🇧 🇫🇷 🇩🇪 +2"],
+      "excludes": ["⛿"],
+      "counts": {"✓": 1}
     }
   ]
 }

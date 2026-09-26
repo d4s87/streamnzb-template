@@ -2,7 +2,7 @@
 
 DraCuLa's custom filtering, scoring, Define Library and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
-**Current version: 6.4.4**  
+**Current version: 6.4.5**  
 **Compatibility: StreamNZB 6.2.0 / Jhin 0.8.0**
 
 DraCuLa is designed to keep trusted release-group and source quality at the center of StreamNZB ranking while still accounting for availability, Anime-specific preferences, HDR/audio metadata, corrected releases and device compatibility.

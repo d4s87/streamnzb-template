@@ -15,11 +15,11 @@ import (
 // seriesSizeScoringProfile compiles the exact published production profile
 // (profile.txt, decoded, including its real Scoring map) against the real
 // Define library -- the production-regression half of CLAUDE.md's two-layer
-// validation philosophy, for the Series/Anime Show size-weight reduction
-// (500 -> 150, target unchanged at 6GB) decided by the 2026-09-22
-// size-scoring ranking-influence audit (backlog-roadmap.md). Exercised
-// against the real pinned StreamNZB/Jhin engine, no synthetic scoring
-// reimplementation.
+// validation philosophy. Shared by the Series size regressions (6GB/+150,
+// reduced from +500 by the 2026-09-22 size-scoring audit) and the Anime
+// equal-size technical-neutrality control. Anime size scoring is disabled
+// and tested separately by TestAnimeSizeTierAuthority. Exercised against the
+// real pinned StreamNZB/Jhin engine, no synthetic scoring reimplementation.
 func seriesSizeScoringProfile(t *testing.T) *ranking.Profile {
 	t.Helper()
 

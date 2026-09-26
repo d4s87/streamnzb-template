@@ -306,20 +306,16 @@ def validate_registry(payload: dict):
             "unsupported rules source schema"
         )
 
+    # anime_show/anime_movie are deliberately absent: any Anime size term
+    # large enough to matter inverts adjacent Anime tiers (see
+    # TestAnimeSizeTierAuthority). Absent kinds resolve to no size scoring;
+    # only a nil map falls back to the preset's native +3000.
     expected_scoring = {
         "movie": {
             "size_target_gb": 20,
             "size_weight": 500,
         },
-        "anime_movie": {
-            "size_target_gb": 20,
-            "size_weight": 500,
-        },
         "series": {
-            "size_target_gb": 6,
-            "size_weight": 150,
-        },
-        "anime_show": {
             "size_target_gb": 6,
             "size_weight": 150,
         },

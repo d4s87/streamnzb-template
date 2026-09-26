@@ -15,11 +15,11 @@ import (
 // seriesSizeScoringProfile compiles the exact published production profile
 // (profile.txt, decoded, including its real Scoring map) against the real
 // Define library -- the production-regression half of CLAUDE.md's two-layer
-// validation philosophy, for the Series/Anime Show size-weight reduction
-// (500 -> 150, target unchanged at 6GB) decided by the 2026-09-22
-// size-scoring ranking-influence audit (backlog-roadmap.md). Exercised
-// against the real pinned StreamNZB/Jhin engine, no synthetic scoring
-// reimplementation.
+// validation philosophy. Shared by the Series size regressions (6GB/+150,
+// reduced from +500 by the 2026-09-22 size-scoring audit) and the Anime
+// equal-size technical-neutrality control. Anime size scoring is disabled
+// and tested separately by TestAnimeSizeTierAuthority. Exercised against the
+// real pinned StreamNZB/Jhin engine, no synthetic scoring reimplementation.
 func seriesSizeScoringProfile(t *testing.T) *ranking.Profile {
 	t.Helper()
 
@@ -253,63 +253,44 @@ func TestSeriesSizeWeightReduction_ExcessiveSizeNotRewarded(t *testing.T) {
 	}
 }
 
-// TestAnimeShowSizeWeightReduction_ActiveAndNoTechnicalPreferenceIntroduced
-// proves the published 6GB/+150 scoring map is genuinely active for
-// anime_show (not just series), and that no Anime HDR/Atmos/DDP technical
-// preference was accidentally introduced by this change -- Anime dynamic
-// range/audio-codec preference must remain exactly 0 (project_context.md's
-// hard invariant), so an Anime candidate's rank difference at equal size
-// must come from size alone, never from HDR10+/Atmos/DDP tokens.
-func TestAnimeShowSizeWeightReduction_ActiveAndNoTechnicalPreferenceIntroduced(t *testing.T) {
+// TestAnimeShowTechnicalAttributeNeutralityAtEqualSize proves no Anime
+// HDR/Atmos/DDP technical preference exists -- Anime dynamic range/audio-codec
+// preference must remain exactly 0 (project_context.md's hard invariant), so
+// two Anime candidates of equal size must rank identically regardless of
+// HDR10+/Atmos/DDP tokens. Anime size scoring itself is disabled; that is
+// locked in by TestAnimeSizeTierAuthority.
+func TestAnimeShowTechnicalAttributeNeutralityAtEqualSize(t *testing.T) {
 	profile := seriesSizeScoringProfile(t)
 
 	animeScore := func(title string, size int64) int {
 		return seriesSizeScore(t, profile, ranking.KindAnimeShow, title, size)
 	}
 
-	// Scoring map is active: two different sizes must produce two
-	// different ranks (weight 0 would make them identical).
-	plain5 := animeScore("Anime.Show.S01E01.2160p.WEB-DL.DDP5.1.H.265-A5", seriesSizeGB(5))
-	plain6 := animeScore("Anime.Show.S01E01.2160p.WEB-DL.DDP5.1.H.265-A6", seriesSizeGB(6))
-	if plain5 == plain6 {
-		t.Fatalf("Anime Show size scoring appears inactive: rank(5GB)=%d == rank(6GB)=%d", plain5, plain6)
-	}
-	// Exactly the weight-150 marginal step from 5GB to 6GB: round(150*(1-1/6)) - round(150*1) = 125-150 = -25.
-	if got := plain6 - plain5; got != 25 {
-		t.Fatalf("Anime Show 5GB->6GB marginal size delta = %+d, want +25 (150/6 pts-per-GB slope)", got)
-	}
-
-	// No Anime technical preference introduced: at a fixed size, adding
-	// HDR10+/Atmos/DDP tokens to an Anime Show release must not change its
-	// rank at all (Anime HDR10+/Atmos/DDP preference is a hard 0).
+	// At a fixed size, adding HDR10+/Atmos/DDP tokens to an Anime Show
+	// release must not change its rank at all.
 	bare := animeScore("Anime.Show.S01E01.2160p.WEB-DL.H.265-B1", seriesSizeGB(6))
 	decorated := animeScore("Anime.Show.S01E01.2160p.WEB-DL.DV.HDR10Plus.Atmos.DDP5.1.H.265-B2", seriesSizeGB(6))
 	if bare != decorated {
 		t.Fatalf(
-			"Anime Show technical-attribute neutrality broken by this change: bare@6GB=%d, DV+HDR10+/Atmos/DDP@6GB=%d (want equal)",
+			"Anime Show technical-attribute neutrality broken: bare@6GB=%d, DV+HDR10+/Atmos/DDP@6GB=%d (want equal)",
 			bare, decorated,
 		)
 	}
 }
 
-// TestMovieAnimeMovieSizeScoring_UnchangedControl is the negative control:
-// Movie and Anime Movie keep 20GB/+500 untouched. It re-derives the same
-// production-equivalent absolute scores TestProductionProfileBoundsPresetSizeScoring
-// already locks in for Movie, from the Anime Movie side, and independently
-// re-confirms the exact scoring-map values for both.
-func TestMovieAnimeMovieSizeScoring_UnchangedControl(t *testing.T) {
+// TestMovieSizeScoring_UnchangedControl is the negative control: Movie keeps
+// 20GB/+500 untouched by both the Series/Anime Show weight reduction and the
+// later removal of Anime size scoring. It independently re-confirms the exact
+// scoring-map value and a byte-for-byte behavioral delta.
+func TestMovieSizeScoring_UnchangedControl(t *testing.T) {
 	profile := seriesSizeScoringProfile(t)
 
 	payload := loadProfilePayload(t, "../../profile.txt", "production")
 	movie := config.ResolveScoring(payload.Scoring, ranking.KindMovie)
-	animeMovie := config.ResolveScoring(payload.Scoring, ranking.KindAnimeMovie)
 
 	want := config.ScoringConfig{SizeTargetGB: 20, SizeWeight: 500}
 	if movie != want {
-		t.Fatalf("movie scoring = %+v, want %+v (must be untouched by the Series/Anime Show fix)", movie, want)
-	}
-	if animeMovie != want {
-		t.Fatalf("anime_movie scoring = %+v, want %+v (must be untouched by the Series/Anime Show fix)", animeMovie, want)
+		t.Fatalf("movie scoring = %+v, want %+v (must be untouched)", movie, want)
 	}
 
 	// Behavioral control: the same relative straddle around the 20GB

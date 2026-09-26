@@ -36,14 +36,18 @@ import (
 // immediately regardless of whether anyone remembered to update a
 // constant.
 func TestAdjacentTierCeilingMatrix(t *testing.T) {
-	productionRules := loadProductionRules(t)
+	// Compile the exact published payload (preset, scoring map and rules):
+	// a Rules-only profile silently falls back to the preset's native size
+	// weight, so any sized candidate here would not be scored as shipped.
+	payload := loadProfilePayload(t, "../../profile.txt", "production")
 	defineLibrary := loadDefineLibrary(t)
 
 	profile, err := ranking.Compile(
 		config.FilterProfileConfig{
-			Name:   "Adjacent tier ceiling matrix",
-			Preset: "4k",
-			Rules:  productionRules,
+			Name:    "Adjacent tier ceiling matrix",
+			Preset:  payload.Preset,
+			Scoring: payload.Scoring,
+			Rules:   payload.Rules,
 		},
 		defineLibrary...,
 	)

@@ -34,6 +34,8 @@ Anime BluRay tiers:
 
 Anime BluRay tiers apply to BluRay encodes and to remuxes. The generated `Anime ... BluRay Tn Groups` Defines keep Vidhin's Anime BD source gate (BluRay/Blu-Ray, BD forms, BDMux, HD-DVD/DVD, NTSC/PAL, xvidvd) with each upstream record's own case sensitivity, and keep the remux-only membership of `PMR` and `NAN0`. A remux or WEB release from a BD-tier group with no such source evidence (for example `WEB-DL.REMUX-ZR` or `1080p-LazyRemux`) gets no Anime BluRay tier.
 
+At equal resolution, REMUX source authority intentionally outranks Anime release-group tier differences. StreamNZB's native remux score (+1500, versus +200 WEB-DL and +100 BluRay encode) is not compensated, so an untiered BluRay remux ranks above a clean BluRay T1 encode or WEB T1, and a BluRay T8 remux ranks above a BluRay T1 encode. Tiers still order remuxes among themselves. This is a REMUX decision, not a general rule that source outranks tiers: BluRay encodes and WEB-DLs differ natively by only 100 points and interleave with the Anime tier ladders. `TestAnimeRemuxSourceAuthority` locks this ordering in.
+
 The smallest adjacent Anime tier gap is 80 points. The repository uses real-engine regression tests rather than a hardcoded maximum-bonus assumption to ensure ordinary metadata cannot invert adjacent tiers.
 
 ## Vidhin-backed classifications

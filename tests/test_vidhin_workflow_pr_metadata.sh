@@ -7,6 +7,10 @@
 # non-compliant shape PR #64 shipped with (branch `automation/vidhin-sync`,
 # untyped title) stays rejected, so that governance mismatch can never
 # silently come back.
+#
+# Also pins the sync trigger block exactly: one daily schedule at 06:17
+# Europe/Vienna (off the top of the hour, where GitHub scheduling
+# contention delays runs) plus manual workflow_dispatch.
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sync_workflow="$root/.github/workflows/sync-vidhin.yml"
@@ -72,6 +76,23 @@ run_case "prohibited legacy branch stays rejected: automation/vidhin-sync" \
 run_case "prohibited legacy title stays rejected: untyped 'Sync Vidhin release-group rules'" \
   "chore/placeholder-branch" "Sync Vidhin release-group rules" 1
 
+expected_triggers='on:
+  schedule:
+    - cron: "17 6 * * *"
+      timezone: "Europe/Vienna"
+  workflow_dispatch:'
+actual_triggers="$(awk '/^on:/ { found = 1 } found && /^[^ ]/ && !/^on:/ { exit } found && NF { print }' "$sync_workflow")"
+
+if [ "$actual_triggers" = "$expected_triggers" ]; then
+  echo "ok - sync-vidhin.yml runs daily at 06:17 Europe/Vienna and keeps workflow_dispatch"
+else
+  echo "FAIL - sync-vidhin.yml trigger block drifted; expected:"
+  echo "$expected_triggers"
+  echo "got:"
+  echo "$actual_triggers"
+  failures=$((failures + 1))
+fi
+
 echo "---"
 
 if [ "$failures" -ne 0 ]; then
@@ -79,5 +100,5 @@ if [ "$failures" -ne 0 ]; then
   exit 1
 fi
 
-echo "PASS: sync-vidhin.yml PR branch/title governance tests"
+echo "PASS: sync-vidhin.yml PR branch/title governance and schedule tests"
 exit 0

@@ -163,10 +163,13 @@ Ordinary (non-season-pack) results are capped per `resolution + quality` bucket:
 
 The built-in 4K preset can give size a very large ranking contribution. DraCuLa publishes explicit shared size scoring in both profiles with the same upstream target sizes, bounded well below that native contribution:
 
-- Movie / Anime Movie: 20 GB target, max +500
-- Series / Anime Show: 6 GB per episode target, max +150
+- Movie: 20 GB target, max +500
+- Series: 6 GB per episode target, max +150
+- Anime Show / Anime Movie: no size contribution
 
-This keeps efficient encodes relevant without allowing file size to dominate the quality hierarchy. Series/Anime Show carries a lower maximum than Movie/Anime Movie: a 2026-09-22 real-engine audit found the size term's slope around the 6 GB target (previously also +500, an 83.3 points/GB slope) could outweigh deliberate technical preferences like HDR10+ (+25) and Atmos (+25) for size differences as small as a few hundred MB — a real, observed inversion where a smaller SDR episode outranked a larger HDR10+/Atmos episode of the same release. Size is intended to be a secondary streaming-cost preference, not a same-tier technical-quality selector; +150 (25 points/GB) keeps that inversion from happening within roughly 1-2 GB of ordinary episode-to-episode size variance while still rewarding an efficient encode meaningfully near the target.
+This keeps efficient encodes relevant without allowing file size to dominate the quality hierarchy. Series carries a lower maximum than Movie: a 2026-09-22 real-engine audit found the size term's slope around the 6 GB target (previously also +500, an 83.3 points/GB slope) could outweigh deliberate technical preferences like HDR10+ (+25) and Atmos (+25) for size differences as small as a few hundred MB — a real, observed inversion where a smaller SDR episode outranked a larger HDR10+/Atmos episode of the same release. Size is intended to be a secondary streaming-cost preference, not a same-tier technical-quality selector; +150 (25 points/GB) keeps that inversion from happening within roughly 1-2 GB of ordinary episode-to-episode size variance while still rewarding an efficient encode meaningfully near the target.
+
+Anime Show and Anime Movie deliberately have no size scoring. Both kinds are absent from the published scoring map, which StreamNZB resolves to no size contribution at all (it does not fall back to the preset's native weight). Their size term (25 points/GB) let ordinary file-size differences invert the much tighter Anime release-group tiers: with the ordinary bonuses the tier-authority matrix already allows, a lower tier won with roughly 0.5-1.3 GB more size, and a clean Anime Movie tier flipped at about 3.2 GB. Every Anime 1080p release sits below the 4K targets, so the term only ever rewarded larger files, acting as a bitrate proxy rather than a streaming-cost preference. The largest weight that kept every adjacent Anime tier ordered left about one point of headroom, too small to be useful. The REMUX source-authority policy above is unchanged. `TestAnimeSizeTierAuthority` locks this in.
 
 ## Anime-specific preferences
 

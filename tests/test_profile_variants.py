@@ -87,15 +87,7 @@ EXPECTED_SCORING = {
         "size_target_gb": 20,
         "size_weight": 500,
     },
-    "anime_movie": {
-        "size_target_gb": 20,
-        "size_weight": 500,
-    },
     "series": {
-        "size_target_gb": 6,
-        "size_weight": 150,
-    },
-    "anime_show": {
         "size_target_gb": 6,
         "size_weight": 150,
     },
@@ -626,7 +618,7 @@ print("PASS: universal zero-residual neutralizer structural guards")
 # closed Gaisberg/streamnzb#267: SNZBP1 share codes now carry the
 # profile-level `scoring` map, marked by `streamnzb_profile: 2`. This proves
 # DraCuLa's own encode_payload/decode_share_code round-trip preserves the
-# exact four-entry scoring map byte-for-byte through the real code path, and
+# exact two-entry scoring map (Anime kinds deliberately absent) byte-for-byte through the real code path, and
 # that no stray content kind (e.g. a "default" entry) or stray field sneaks
 # into either direction.
 # ---------------------------------------------------------------------------
@@ -646,9 +638,7 @@ assert _roundtrip_decoded["streamnzb_profile"] == 2
 assert _roundtrip_decoded["scoring"] == EXPECTED_SCORING
 assert set(_roundtrip_decoded["scoring"].keys()) == {
     "movie",
-    "anime_movie",
     "series",
-    "anime_show",
 }
 
 for _kind, _expected_kind_scoring in EXPECTED_SCORING.items():
@@ -663,6 +653,6 @@ for _kind, _expected_kind_scoring in EXPECTED_SCORING.items():
         "size_weight",
     }, f"scoring[{_kind!r}] carries a stray field: {_decoded_kind_scoring!r}"
 
-print("PASS: scoring share-code round-trip (schema v2, all 4 content kinds)")
+print("PASS: scoring share-code round-trip (schema v2, movie + series only)")
 
 print("PASS: profile variant generation tests")

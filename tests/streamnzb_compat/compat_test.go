@@ -4482,25 +4482,22 @@ func TestProductionProfileBoundsPresetSizeScoring(t *testing.T) {
 			SizeTargetGB: 20,
 			SizeWeight:   500,
 		},
-		ranking.KindAnimeMovie: {
-			SizeTargetGB: 20,
-			SizeWeight:   500,
-		},
 		ranking.KindSeries: {
 			SizeTargetGB: 6,
 			SizeWeight:   150,
 		},
-		ranking.KindAnimeShow: {
-			SizeTargetGB: 6,
-			SizeWeight:   150,
-		},
+		// Anime kinds are deliberately absent from the published map and
+		// must resolve to no attribute scoring at all (not the preset's
+		// native size weight) -- see TestAnimeSizeTierAuthority.
+		ranking.KindAnimeMovie: {},
+		ranking.KindAnimeShow:  {},
 	}
 
-	if len(profilePayload.Scoring) != len(expected) {
+	if len(profilePayload.Scoring) != 2 {
 		t.Fatalf(
 			"production scoring contains %d kinds, want %d: %+v",
 			len(profilePayload.Scoring),
-			len(expected),
+			2,
 			profilePayload.Scoring,
 		)
 	}

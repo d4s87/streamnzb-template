@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Shared helpers for building and writing Discord notification payloads.
 
-Used by formatter_discord.py, release_discord.py, and vidhin_discord.py so
-the Discord payload envelope, message-length limit, and truncation helper
-are defined once instead of being reimplemented per notification type.
+Used by release_discord.py and vidhin_discord.py so the Discord payload
+envelope, message-length limit, and truncation helper are defined once
+instead of being reimplemented per notification type.
 """
 
 import json

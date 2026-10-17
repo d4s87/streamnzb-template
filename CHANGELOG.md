@@ -4,6 +4,11 @@
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Fixed
+
+- **vidhin:** sync `SumVision` into `Movies Generated Dynamic HDR Groups` from upstream Vidhin (`Generated Dynamic HDR`, commit `c526ba188f`). SumVision is also a trusted `Movies Remux T3` group (`+100`) and keeps that score. Through the existing `Generated Dynamic HDR Penalty`, a SumVision Movie release with parsed Dolby Vision or HDR10+ now also gets `-10000`, so it ranks below a clean same-tier peer. Ordinary HDR10 and SDR SumVision releases are unchanged. The penalty is additive and does not reject, so a penalized release is still returned when it is the only candidate. No rule, scoring value, gate or StreamNZB/Jhin pin changed, and `profile.txt`/`profile-neutral.txt` are byte-identical. **Define Library refresh required**; no profile refresh.
+- **testing:** `tests/streamnzb_compat/generated_dynamic_hdr_test.go` adds SumVision classification cases (DV, HDR10+, HDR10, SDR, title-only) and `TestGeneratedDynamicHDRSumVisionRemuxT3`. Using the real engine, the published profile and the generated Define Library, it checks: the `+100` Remux T3 score is retained, the exact `-10000` penalty applies for DV/HDR10+ only, the rank delta against a clean `TOA` Remux T3 peer is exactly the penalty (0 otherwise), and a penalized sole result is kept.
+
 ## [6.4.5](https://github.com/d4s87/streamnzb-template/compare/6.4.4...6.4.5) (2026-09-26)
 
 ### Fixed

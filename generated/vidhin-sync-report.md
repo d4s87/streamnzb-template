@@ -1,8 +1,9 @@
 # Vidhin sync report
 
-## Movies LQ Release Title
+## Movies Generated Dynamic HDR Groups
 
-Raw upstream regex changed, but the extracted release-group set did not.
+**Added release-group tokens**
+- `+ SumVision`
 
 ---
 Tracked StreamNZB Defines: **61**

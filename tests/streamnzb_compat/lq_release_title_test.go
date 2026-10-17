@@ -6,10 +6,11 @@ package streamnzb_compat
 // via scripts/sync_vidhin.py's lq_release_title_terms()/
 // render_lq_release_title_condition(). See the roadmap audit for the full
 // provenance/translation analysis this coverage is built on -- in
-// particular why EVO, PiRaTeS, HHWEB, unkn0wn, and BiTOR+2160p are
-// deliberately NOT consumed (an open upstream-policy question, a positive
-// WEB T3 trust-tier conflict for HHWEB, or a lookbehind translation that is
-// only empirically -- not algebraically -- exact).
+// particular why EVO, PiRaTeS, HHWEB, unkn0wn, BiTOR+2160p, and
+// CMv4+SiCFoI are deliberately NOT consumed (an open upstream-policy
+// question, a positive WEB T3 trust-tier conflict for HHWEB, a Remux T2
+// trust-tier overlap for SiCFoI, or a lookbehind translation that is only
+// empirically -- not algebraically -- exact).
 //
 // Two-layer validation, per project_context.md §2/§5:
 //   - TestLQReleaseTitleClassification: the isolated Define fixture layer,
@@ -35,7 +36,7 @@ import (
 // isolation: every approved token fires in its own content-kind scope, the
 // jennaortega translation preserves the audited negative-hyphen semantics,
 // every deliberately-excluded upstream branch (EVO, PiRaTeS, HHWEB,
-// unkn0wn, BiTOR+2160p, and the plain-group duplicates already covered by
+// unkn0wn, BiTOR+2160p, CMv4+SiCFoI, and the plain-group duplicates already covered by
 // the parsed `group` field) stays unmatched, and ordinary adjacent/fused
 // words do not false-positive.
 func TestLQReleaseTitleClassification(t *testing.T) {
@@ -112,6 +113,9 @@ func TestLQReleaseTitleClassification(t *testing.T) {
 			{"HHWEB (excluded, plain WEB-DL)", "Example.Movie.2026.1080p.WEB-DL.H264-HHWEB", false},
 			{"unkn0wn (excluded, remux)", "Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.HDR-unKn0wn", false},
 			{"unkn0wn (excluded, WEB-DL)", "Example.Movie.2026.1080p.WEB-DL.H264-unKn0wn", false},
+			{"CMv4+SiCFoI (excluded, remux)", "Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.CMv4.HDR.HEVC.TrueHD.7.1-SiCFoI", false},
+			{"CMv4.0+SiCFoI (excluded, remux)", "Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.CMv4.0.HDR.HEVC.TrueHD.7.1-SiCFoI", false},
+			{"SiCFoI before CMv4 (excluded)", "SiCFoI.Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.CMv4.HDR.HEVC-SomeGroup", false},
 
 			// Plain group-based duplicates already covered via the parsed
 			// `group` field are not re-added here.
@@ -343,6 +347,61 @@ func TestLQReleaseTitleProductionRegression(t *testing.T) {
 		if rejected[0].Candidate.Release == nil ||
 			rejected[0].Candidate.Release.Title != candidates[len(candidates)-1].Release.Title {
 			t.Fatalf("unexpected pruned candidate: %+v", rejected[0].Candidate.Release)
+		}
+	})
+
+	// Vidhin's Radarr CMv4+SiCFoI branch is recognized by the sync but not
+	// consumed: a SiCFoI DV remux keeps its trusted Movies Remux T2 score
+	// and never reaches the LQ penalty or adaptive pruning.
+	t.Run("CMv4 SiCFoI remux keeps Remux T2 without LQ", func(t *testing.T) {
+		for _, title := range []string{
+			"Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.CMv4.HDR.HEVC.TrueHD.7.1-SiCFoI",
+			"Example.Movie.2026.2160p.UHD.BluRay.REMUX.DV.CMv4.0.HDR.HEVC.TrueHD.7.1-SiCFoI",
+		} {
+			t.Run(title, func(t *testing.T) {
+				candidates := []triage.Candidate{
+					makeCandidate("Example.Movie.2026.2160p.WEB-DL.H265-FLUX", false),
+					makeCandidate("Example.Movie.2026.2160p.WEB-DL.H265-NTb", false),
+					makeCandidate("Example.Movie.2026.1080p.BluRay.REMUX.AVC-HiFi", false),
+					makeCandidate("Example.Movie.2026.1080p.WEB-DL.H264-FLUX", false),
+					makeCandidate("Example.Movie.2026.1080p.WEB-DL.H264-NTb", false),
+					makeCandidate("Example.Movie.2026.720p.WEB-DL.H264-FLUX", false),
+					makeCandidate(title, false),
+				}
+
+				kept, rejected := profile.ApplyWithRejected(
+					ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"},
+					candidates,
+					jhinrank.RankOptions{},
+				)
+
+				if len(rejected) != 0 || len(kept) != len(candidates) {
+					t.Fatalf("kept=%d rejected=%d, want kept=%d rejected=0", len(kept), len(rejected), len(candidates))
+				}
+
+				var result *ranking.Result
+				for i := range kept {
+					if kept[i].Candidate.Release != nil && kept[i].Candidate.Release.Title == title {
+						result = &kept[i]
+					}
+				}
+				if result == nil {
+					t.Fatal("SiCFoI CMv4 remux missing from kept results")
+				}
+
+				remuxT2 := false
+				for _, m := range result.Matched {
+					switch m.Name {
+					case "Movies Remux T2":
+						remuxT2 = m.Score == 300
+					case "Movies LQ Penalty":
+						t.Fatal("Movies LQ Penalty fired for an excluded CMv4+SiCFoI release")
+					}
+				}
+				if !remuxT2 {
+					t.Fatalf("Movies Remux T2 (+300) did not fire; matched=%+v", result.Matched)
+				}
+			})
 		}
 	})
 

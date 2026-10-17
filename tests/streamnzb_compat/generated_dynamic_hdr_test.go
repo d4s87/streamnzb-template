@@ -87,6 +87,14 @@ func TestGeneratedDynamicHDRClassification(t *testing.T) {
 		{"Flights + HDR10+", "Movie.2026.1080p.WEB-DL.x264.HDR10Plus-Flights", true},
 		{"BR-GuyZo + Dolby Vision", "Movie.2026.1080p.WEB-DL.x264.Dolby.Vision-BR-GuyZo", true},
 
+		// SumVision (Vidhin sync, also Movies Remux T3): same DV/HDR10+
+		// gate as every other listed group.
+		{"SumVision + DV", "Movie.2026.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC-SumVision", true},
+		{"SumVision + HDR10+", "Movie.2026.2160p.UHD.BluRay.REMUX.HDR10Plus.HEVC-SumVision", true},
+		{"SumVision + ordinary HDR10", "Movie.2026.2160p.UHD.BluRay.REMUX.HDR10.HEVC-SumVision", false},
+		{"SumVision + SDR", "Movie.2026.1080p.BluRay.REMUX.AVC-SumVision", false},
+		{"SumVision in title only", "SumVision.Movie.2026.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC-TOA", false},
+
 		// Negative: listed group, but no dynamic-HDR evidence at all.
 		{"BiTOR + SDR", "Movie.2026.1080p.WEB-DL.x264-BiTOR", false},
 		{"BiTOR + ordinary HDR10 (not HDR10+)", "Movie.2026.1080p.WEB-DL.x264.HDR10-BiTOR", false},
@@ -456,6 +464,119 @@ func TestGeneratedDynamicHDROverlaps(t *testing.T) {
 		}
 		if contains(matched, generatedDynamicHDRRuleName) {
 			t.Error("Flights without dynamic HDR unexpectedly triggered Generated Dynamic HDR Penalty")
+		}
+	})
+}
+
+// TestGeneratedDynamicHDRSumVisionRemuxT3 covers SumVision, a trusted
+// Movies Remux T3 group (+100) that Vidhin also lists as Generated Dynamic
+// HDR. Against the published profile: the tier score always applies, the
+// -10000 penalty stacks on top only for parsed DV/HDR10+, ordinary HDR10
+// and SDR are untouched, and a penalized sole result is kept, not rejected.
+func TestGeneratedDynamicHDRSumVisionRemuxT3(t *testing.T) {
+	productionRules := loadProductionRules(t)
+	defineLibrary := loadDefineLibrary(t)
+
+	profile, err := ranking.Compile(
+		config.FilterProfileConfig{
+			Name:   "Generated Dynamic HDR SumVision Remux T3",
+			Preset: "4k",
+			Rules:  productionRules,
+		},
+		defineLibrary...,
+	)
+	if err != nil {
+		t.Fatalf("compile production profile: %v", err)
+	}
+
+	// score ranks one candidate alone and returns its rank and rule payouts.
+	score := func(title string) (int, map[string]int) {
+		t.Helper()
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{Kind: ranking.KindMovie, Title: "Example"},
+			[]triage.Candidate{{Release: &release.Release{Title: title}}},
+			jhinrank.RankOptions{},
+		)
+		if len(rejected) != 0 || len(kept) != 1 {
+			t.Fatalf("%q: kept=%d rejected=%d, want kept=1 rejected=0", title, len(kept), len(rejected))
+		}
+		matched := make(map[string]int, len(kept[0].Matched))
+		for _, m := range kept[0].Matched {
+			matched[m.Name] = m.Score
+		}
+		return kept[0].Torrent.Rank, matched
+	}
+
+	const remux = "Example.Movie.2026.2160p.UHD.BluRay.REMUX.%s.HEVC-%s"
+
+	cases := []struct {
+		name    string
+		marker  string
+		penalty bool
+	}{
+		{"DV with HDR fallback", "DV.HDR", true},
+		{"HDR10+", "HDR10Plus", true},
+		{"ordinary HDR10", "HDR10", false},
+		{"SDR", "SDR", false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sumRank, sumMatched := score(fmt.Sprintf(remux, tc.marker, "SumVision"))
+			peerRank, peerMatched := score(fmt.Sprintf(remux, tc.marker, "TOA"))
+
+			if got, ok := sumMatched["Movies Remux T3"]; !ok || got != 100 {
+				t.Fatalf("SumVision Movies Remux T3 = %d (matched=%v), want +100; payouts=%v", got, ok, sumMatched)
+			}
+			if _, ok := peerMatched["Movies Remux T3"]; !ok {
+				t.Fatalf("TOA control lost Movies Remux T3; payouts=%v", peerMatched)
+			}
+			if _, ok := peerMatched[generatedDynamicHDRRuleName]; ok {
+				t.Fatalf("TOA control unexpectedly matched %s", generatedDynamicHDRRuleName)
+			}
+
+			got, ok := sumMatched[generatedDynamicHDRRuleName]
+			if ok != tc.penalty || (ok && got != -10000) {
+				t.Fatalf("SumVision %s = %d (matched=%v), want matched=%v at -10000", generatedDynamicHDRRuleName, got, ok, tc.penalty)
+			}
+
+			// Same tier, same attributes: the only rank difference is the
+			// additive penalty, so tier authority is otherwise unchanged.
+			wantDelta := 0
+			if tc.penalty {
+				wantDelta = -10000
+			}
+			if delta := sumRank - peerRank; delta != wantDelta {
+				t.Errorf("SumVision - TOA rank delta = %+d, want %+d (SumVision=%d TOA=%d)", delta, wantDelta, sumRank, peerRank)
+			}
+		})
+	}
+
+	t.Run("penalized sole result stays kept", func(t *testing.T) {
+		rank, matched := score(fmt.Sprintf(remux, "DV.HDR", "SumVision"))
+		if _, ok := matched[generatedDynamicHDRRuleName]; !ok {
+			t.Fatalf("sole SumVision DV result did not match %s", generatedDynamicHDRRuleName)
+		}
+		t.Logf("sole penalized SumVision result kept with rank %d", rank)
+	})
+
+	t.Run("penalized SumVision ranks below clean Remux T3 peer", func(t *testing.T) {
+		flagged := fmt.Sprintf(remux, "DV.HDR", "SumVision")
+		clean := fmt.Sprintf(remux, "HDR10", "TOA")
+
+		kept, rejected := profile.ApplyWithRejected(
+			ranking.Request{Kind: ranking.KindMovie, Title: "Example"},
+			[]triage.Candidate{
+				{Release: &release.Release{Title: flagged}},
+				{Release: &release.Release{Title: clean}},
+			},
+			jhinrank.RankOptions{},
+		)
+		if len(rejected) != 0 || len(kept) != 2 {
+			t.Fatalf("kept=%d rejected=%d, want kept=2 rejected=0", len(kept), len(rejected))
+		}
+		if kept[0].Candidate.Release.Title != clean {
+			t.Errorf("top result = %q, want clean TOA Remux T3 above penalized SumVision", kept[0].Candidate.Release.Title)
 		}
 	})
 }

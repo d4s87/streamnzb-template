@@ -393,8 +393,13 @@ def obfuscated_regex_pattern(pattern, source):
 # longer carries any DraCuLa WEB T3 trust-tier score at all, having been
 # removed from Radarr/Sonarr Web T3 upstream, but that was never the reason
 # this branch stayed unconsumed and its removal does not change the
-# analysis) -- see the roadmap audit for the full analysis. Only the
-# uncontested plain-token subset is consumed here.
+# analysis) -- see the roadmap audit for the full analysis. The (Radarr)
+# CMv4+SiCFoI co-occurrence branch (added upstream 2026-10-15, no stated
+# rationale) has an exact RE2 translation but is deliberately excluded:
+# SiCFoI is a trusted Movies/Shows Remux T2 group, so consuming it would
+# turn part of a positive tier into a strong LQ penalty. Adopting it needs
+# concrete evidence and a separate policy decision. Only the uncontested
+# plain-token subset is consumed here.
 #
 # Every top-level branch, including the deliberately-excluded ones, and
 # the full inner term list of the plain-token alternation, is pinned
@@ -410,6 +415,7 @@ LQ_RELEASE_TITLE_EXPECTED = {
             r"(?<!\bweb[ ._-]?(dl|rip)?\b.*)-(PiRaTeS)\b",
             r"^(?!.*\bMA\b.*\bWEB-?DL\b).*\b(HHWEB)\b",
             r"(?<!\b(remux).*?)\b(unkn0wn)\b",
+            r"^(?=.*\b(CMv4)\b).*\b(SiCFoI)\b",
         ],
         "word_list_terms": [
             "1XBET", "BEN[ ._-]THE[ ._-]MEN", "Feranki1980", "GalaxyRG",

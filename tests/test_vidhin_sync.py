@@ -1513,3 +1513,46 @@ expect_anime_bd_failure(
 )
 
 print("Anime BD source-gate/conditional-membership tests passed.")
+
+# LQ (Release Title) (Radarr) pinning: the upstream CMv4+SiCFoI branch
+# (Vidhin e43d5803bd) is recognized but deliberately not consumed, so the
+# extracted subset must be unchanged; any further drift must fail closed.
+lq_radarr = "LQ (Release Title) (Radarr)"
+lq_radarr_pattern = next(
+    r["pattern"]
+    for r in baseline["defines"]["Movies LQ Release Title"]["records"]
+    if r["source"] == lq_radarr
+)
+assert lq_radarr_pattern.endswith(r"|^(?=.*\b(CMv4)\b).*\b(SiCFoI)\b/i"), lq_radarr_pattern
+assert m.lq_release_title_terms(lq_radarr_pattern, lq_radarr) == {
+    "plain_terms": [
+        "1XBET", "BEN[ ._-]THE[ ._-]MEN", "R&H", r"READ(\s|\.)+NOTE",
+        "SWTYBLZ", "TeeWee", "Will1869",
+    ],
+    "special_jennaortega": True,
+    "raw_terms": ["(-D3US|D3US-)"],
+}
+
+
+def expect_lq_release_title_failure(pattern, label):
+    try:
+        m.lq_release_title_terms(pattern, lq_radarr)
+    except ValueError as exc:
+        assert "upstream regex structure changed" in str(exc), (label, str(exc))
+    else:
+        raise AssertionError(f"LQ Release Title drift not detected: {label}")
+
+
+expect_lq_release_title_failure(
+    lq_radarr_pattern[:-2] + r"|\b(NEWGRP)\b/i", "unexpected eighth branch",
+)
+expect_lq_release_title_failure(
+    lq_radarr_pattern.replace(r"\b(SiCFoI)\b/i", r"\b(SiCFoI|OTHER)\b/i"),
+    "seventh branch mutated",
+)
+expect_lq_release_title_failure(
+    lq_radarr_pattern.replace(r"|^(?=.*\b(CMv4)\b).*\b(SiCFoI)\b/i", "/i"),
+    "seventh branch removed",
+)
+
+print("LQ Release Title upstream-branch pinning tests passed.")

@@ -6,11 +6,29 @@ This document contains the technical compatibility and validation details for Dr
 
 Current published compatibility baseline:
 
-- StreamNZB 6.2.0 (commit `c5aa001b0051c0f866768e30c97292c7d1a6c216`)
+- StreamNZB 6.3.0 (commit `7e855bd9e60c68ea4971c40f3cee22e8cc26e331`)
 - Jhin 0.8.0
 - StreamNZB profile payload schema v2
 
-The move from StreamNZB 6.1.0/Jhin 0.7.1 to 6.2.0/0.8.0 is a **compatibility
+The move from StreamNZB 6.2.0 to 6.3.0 is a **compatibility pin update
+only**. Jhin stays at 0.8.0. The `v6.2.0...v6.3.0` range does not touch
+`pkg/search` or `pkg/release`, so the parser, rule evaluation, aggregates,
+native scoring, Library/SeaDex handling and formatter context are unchanged,
+and the `SNZBP1`/`SNZBF1` share-code codecs are unchanged. The full harness
+passes against the exact tagged v6.3.0 source with output identical to a
+v6.2.0 control run, including the production and debug formatter
+regressions. The only harness change is `golang.org/x/text` v0.43.0 in
+`tests/streamnzb_compat/go.mod`, which StreamNZB 6.3.0 requires.
+
+StreamNZB 6.3.0 adds a server relay for share-code URLs the browser cannot
+fetch (`Gaisberg/streamnzb#369`). The browser still fetches first, and the
+relay returns the same text for the browser to decode, so linked import and
+refresh behave as before. DraCuLa's published `raw.githubusercontent.com`
+links send CORS headers and use the direct browser path. This is a
+source-based conclusion: the real `SNZBP1` import/refresh path through
+StreamNZB's frontend is not exercised by the Go harness.
+
+The earlier move from StreamNZB 6.1.0/Jhin 0.7.1 to 6.2.0/0.8.0 was also a **compatibility
 pin update only**. A full real-engine regression audit (source diff of every
 commit in the `v6.1.0...v6.2.0` range plus a control-vs-candidate run of the
 entire compatibility harness against the exact tagged v6.2.0 source) found no
@@ -36,6 +54,8 @@ StreamNZB v6.0.0 also carries an upstream season-handling fix (`Gaisberg/streamn
 StreamNZB v6.0.0 also merges indexer-reported language metadata into the rule environment's `languages`/`subtitles` (previously name-parsed only). No current DraCuLa rule consumes either field, so this is a compatibility note, not a behavior change.
 
 The repository keeps this baseline pinned in deterministic compatibility tests while also running a scheduled check against the latest upstream StreamNZB release to provide early warning of regressions.
+
+The check sets `STREAMNZB_REF` for both the rule tests and the formatter regressions, so both run against the selected upstream release.
 
 The scheduled upstream check is advisory. It does not silently move the supported baseline or block ordinary pull requests.
 
@@ -84,7 +104,7 @@ Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, ded
 
 The language marker is source-aware. StreamNZB's `.Languages` is a merge of probed audio-track languages, the indexer's language tag and release-name parsing, and `.LanguageSource` names only the strongest source that contributed (`measured`, `reported`, `inferred`, or empty). So `measured` can sit next to a language the file never confirmed. `.Verified` alone is not enough either: it is true for any probed Library result, even one whose audio tracks were not read. DraCuLa shows `✓` only when `.LanguageSource` is `measured` and every displayed `.Languages` entry is present in `.Probed.AudioLanguages`; otherwise it keeps `⛿`. The subtitle-only line always uses `⛿`. In the current StreamNZB release only Library results carry probe data, so fresh indexer results never show `✓`.
 
-Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.2.0 baseline. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.3.0 baseline. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
 
 ## Dolby Vision Profile 8
 
@@ -97,7 +117,9 @@ rules read (`DV without HDR fallback`, `Neutralize Dolby Vision`,
 `Generated Dynamic HDR Penalty`) is unchanged between 6.1.0 and 6.2.0 — it
 only activates for already-downloaded Library candidates. No DraCuLa rule
 change is required: DraCuLa's existing rules simply see more accurate input
-for Library candidates than before.
+for Library candidates than before. StreamNZB 6.3.0 does not change the probe
+merge or the bundled ffprobe; this is confirmed from source only, not with a
+real Profile 8 file.
 
 ## `matchesExcept` and the Movies Anywhere / Max badges
 

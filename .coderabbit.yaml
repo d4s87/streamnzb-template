@@ -16,7 +16,7 @@ reviews:
       - "dependabot[bot]"
       - "github-actions[bot]"
     ignore_title_keywords:
-      - "chore(main): release"
+      - "docs: prepare"
 
   path_filters:
     - "!generated/**"

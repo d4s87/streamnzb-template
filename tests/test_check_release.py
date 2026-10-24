@@ -169,10 +169,10 @@ assert counts == {
 }, f"unexpected baseline counts: {counts}"
 
 baseline = cr.load_compatibility_baseline()
-assert baseline["streamnzb_version"] == "6.2.0"
+assert baseline["streamnzb_version"] == "6.3.0"
 assert baseline["jhin_version"] == "0.8.0"
 assert baseline["jhin_version_go_mod"] == "0.8.0"
-assert baseline["streamnzb_sha"] == "c5aa001b0051c0f866768e30c97292c7d1a6c216"
+assert baseline["streamnzb_sha"] == "7e855bd9e60c68ea4971c40f3cee22e8cc26e331"
 cr.check_compatibility_internal_consistency(baseline)  # must not raise
 
 print("PASS: load_current_counts / load_compatibility_baseline match the current stable baseline (6.0.1)")

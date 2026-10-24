@@ -2,7 +2,7 @@
   "schema_version": 3,
   "mapping_schema_version": 3,
   "upstream_url": "https://raw.githubusercontent.com/Vidhin05/Releases-Regex/refs/heads/main/English/regexes.json",
-  "generated_at_utc": "2026-10-17T18:42:23+00:00",
+  "generated_at_utc": "2026-10-23T09:20:06+00:00",
   "defines": {
     "Movies UHD BluRay T1 Groups": {
       "sources": [
@@ -353,7 +353,7 @@
       "records": [
         {
           "source": "Radarr Web T1",
-          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:ABBIE|AJP69|BLUTONiUM|BYNDR|CMRG|CRFW|CRUD|GNOME|HONE|Kitsune|MADSKY|NOSiViD|NTb|NTG|PAXA|PEXA|RAWR|SiC|TEPES|TheFarm|XEPA|ZoroSenpai)\\b).*/i",
+          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:ABBIE|AJP69|BLUTONiUM|BYNDR|CMRG|CRFW|CRUD|HONE|Kitsune|MADSKY|NOSiViD|NTb|NTG|PAXA|PEXA|RAWR|SiC|TEPES|TheFarm|XEPA|ZoroSenpai)\\b).*/i",
           "tokens": [
             "ABBIE",
             "AJP69",
@@ -362,7 +362,6 @@
             "CMRG",
             "CRFW",
             "CRUD",
-            "GNOME",
             "HONE",
             "Kitsune",
             "MADSKY",
@@ -377,6 +376,13 @@
             "TheFarm",
             "XEPA",
             "ZoroSenpai"
+          ]
+        },
+        {
+          "source": "Radarr Web T1",
+          "pattern": "/^(?=.*\\b(?:GNOME)\\b).*/",
+          "tokens": [
+            "GNOME"
           ]
         },
         {
@@ -431,12 +437,13 @@
       "records": [
         {
           "source": "Radarr Web T2",
-          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:dB|MiU|MZABI|playWEB|SbR|SMURF|XEBEC|4KBEC|CEBEX)\\b).*/i",
+          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:dB|MiU|monkee|MZABI|playWEB|SbR|SMURF|XEBEC|4KBEC|CEBEX)\\b).*/i",
           "tokens": [
             "4KBEC",
             "CEBEX",
             "dB",
             "MiU",
+            "monkee",
             "MZABI",
             "playWEB",
             "SbR",
@@ -466,6 +473,7 @@
         "dB",
         "Flights",
         "MiU",
+        "monkee",
         "MZABI",
         "PHOENiX",
         "playWEB",
@@ -486,7 +494,7 @@
       "records": [
         {
           "source": "Radarr Web T3",
-          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:BLOOM|Dooky|GNOMiSSiON|NINJACENTRAL|NPMS|ROCCaT|SiGMA|SLiGNOME|SwAgLaNdEr)\\b).*/i",
+          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:BLOOM|Dooky|GNOMiSSiON|NINJACENTRAL|NPMS|ROCCaT|SLiGNOME|SwAgLaNdEr)\\b).*/i",
           "tokens": [
             "BLOOM",
             "Dooky",
@@ -494,9 +502,15 @@
             "NINJACENTRAL",
             "NPMS",
             "ROCCaT",
-            "SiGMA",
             "SLiGNOME",
             "SwAgLaNdEr"
+          ]
+        },
+        {
+          "source": "Radarr Web T3",
+          "pattern": "/^(?=.*\\b(?:SiGMA)\\b).*/",
+          "tokens": [
+            "SiGMA"
           ]
         }
       ],
@@ -721,7 +735,7 @@
       "records": [
         {
           "source": "Sonarr Web T2",
-          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:3cTWeB|4KBEC|BTW|BLUTONiUM|BYNDR|CEBEX|Chotab|Cinefeel|CiT|Coo7|dB|FC|iJP|iKA|iT00NZ|JETIX|KHN|MiU|MZABI|NPMS|NYH|orbitron|playWEB|PSiG|ROCCaT|RTFM|SA89|SbR|SDCC|TEPES|TVSmash|WELP|XEBEC)\\b).*/i",
+          "pattern": "/^(?=.*(WEB[-_. ]DL(?:mux)?|WEBDL|AmazonHD|AmazonSD|iTunesHD|MaxdomeHD|NetflixU?HD|WebHD|HBOMaxHD|DisneyHD|[. ]WEB[. ](?:[xh][ .]?26[45]|AVC|HEVC|DDP?[ .]?5[. ]1)|(?:720|1080|2160)p[-. ]WEB[-. ]|[-. ]WEB[-. ](?:720|1080|2160)p|(?:AMZN|NF|DP)[. -]WEB[. -](?!Rip)|WebRip|Web-Rip|WEBMux))(?=.*\\b(?:3cTWeB|4KBEC|BTW|BLUTONiUM|BYNDR|CEBEX|Chotab|Cinefeel|CiT|CMRG|Coo7|dB|FC|iJP|iKA|iT00NZ|JETIX|KHN|MiU|MZABI|NPMS|NYH|orbitron|playWEB|PSiG|ROCCaT|RTFM|SA89|SbR|SDCC|TEPES|TVSmash|WELP|XEBEC)\\b).*/i",
           "tokens": [
             "3cTWeB",
             "4KBEC",
@@ -732,6 +746,7 @@
             "Chotab",
             "Cinefeel",
             "CiT",
+            "CMRG",
             "Coo7",
             "dB",
             "FC",
@@ -786,6 +801,7 @@
         "Chotab",
         "Cinefeel",
         "CiT",
+        "CMRG",
         "Coo7",
         "dB",
         "DEEP",
@@ -3631,13 +3647,19 @@
       "records": [
         {
           "source": "TrueHD Exclude Groups",
-          "pattern": "/\\b(3L|CtrlHD|DON|HQMUX|W4NK3R)\\b/i",
+          "pattern": "/\\b(3L|CtrlHD|HQMUX|W4NK3R)\\b/i",
           "tokens": [
             "3L",
             "CtrlHD",
-            "DON",
             "HQMUX",
             "W4NK3R"
+          ]
+        },
+        {
+          "source": "TrueHD Exclude Groups",
+          "pattern": "/\\b(DON)\\b/",
+          "tokens": [
+            "DON"
           ]
         }
       ],

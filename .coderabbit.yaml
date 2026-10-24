@@ -15,6 +15,8 @@ reviews:
     ignore_usernames:
       - "dependabot[bot]"
       - "github-actions[bot]"
+    ignore_title_keywords:
+      - "docs: prepare"
 
   path_filters:
     - "!generated/**"
@@ -35,6 +37,33 @@ reviews:
         Focus on correctness, deterministic output, error handling, compatibility with
         repository automation, and regressions affecting StreamNZB profiles, formatter,
         Vidhin synchronization, or Discord payload generation.
+
+    - path: "scripts/sync_vidhin.py"
+      instructions: |
+        Check that upstream Vidhin regexes are translated into Defines that classify
+        correctly: release-group membership, source gates, case sensitivity, conditional
+        matching, and content-kind scope. Flag unintended classification changes and
+        missing real-engine regressions for changed classifications. Vidhin supplies
+        classification, not DraCuLa policy: do not suggest new scoring or filtering
+        policy solely because an upstream classification changed.
+
+    - path: "profiles/**/*.json"
+      instructions: |
+        These are the canonical profile sources. Rule names are the merge key for
+        linked-profile refresh, so flag renames or removals. Preserve established
+        scoring and filtering policy. Check content-kind scope, native-score
+        compensation (Neutralize/Prefer pairs), adjacent-tier authority, and that
+        same-release fallbacks are preserved. Behavioral changes need meaningful
+        real-engine regression coverage. Do not suggest unrelated scoring-policy changes.
+
+    - path: "tests/streamnzb_compat/*formatter*.source.json"
+      instructions: |
+        These are formatter sources. Check that templates use only fields and helpers
+        the pinned StreamNZB formatter API exposes, preserve language provenance (do not
+        claim more than the source fields support), keep tier labels consistent with the
+        profile, and stay backward compatible for existing users. Formatters must read
+        classifications from the profile and Define Library, not duplicate release-group
+        lists. Keep debug-only observability in the debug formatter, out of production.
 
     - path: "tests/**/*.py"
       instructions: |

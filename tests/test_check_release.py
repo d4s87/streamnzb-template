@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -189,9 +190,41 @@ else:
 print("PASS: check_compatibility_internal_consistency fails closed on README/go.mod drift")
 
 readme_version = cr.parse_readme_version()
-assert readme_version == "6.4.5"  # main's real, currently checked-in README version
+# Release preparation bumps README and adds the dated CHANGELOG section together,
+# so the checked-in README version is always the newest dated section.
+newest_dated = re.search(
+    r"^## \[(\d+\.\d+\.\d+)\]\(", (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), re.MULTILINE
+).group(1)
+assert readme_version == newest_dated, (readme_version, newest_dated)
 
 print("PASS: parse_readme_version reads the current stable version")
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    readme = Path(tmpdir) / "README.md"
+
+    def readme_with(*lines):
+        readme.write_text("# Title\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+        return cr.parse_readme_version(root=Path(tmpdir))
+
+    assert readme_with("**Current version: 12.34.567**  ", "**Compatibility: x**") == "12.34.567"
+
+    for label, lines in (
+        ("missing anchor", ["No version here."]),
+        ("duplicate anchor", ["**Current version: 1.2.3**  ", "**Current version: 1.2.4**  "]),
+        ("missing hard line break", ["**Current version: 1.2.3**"]),
+        ("v-prefix", ["**Current version: v1.2.3**  "]),
+        ("prerelease", ["**Current version: 1.2.3-rc1**  "]),
+        ("two components", ["**Current version: 1.2**  "]),
+        ("not at line start", ["See **Current version: 1.2.3**  "]),
+    ):
+        try:
+            readme_with(*lines)
+        except cr.CheckError:
+            pass
+        else:
+            raise AssertionError(f"parse_readme_version accepted a malformed README ({label})")
+
+print("PASS: parse_readme_version requires exactly one well-formed version anchor")
 
 
 # ---------------------------------------------------------------------------

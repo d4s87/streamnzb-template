@@ -55,7 +55,7 @@ StreamNZB v6.0.0 also merges indexer-reported language metadata into the rule en
 
 The repository keeps this baseline pinned in deterministic compatibility tests while also running a scheduled check against the latest upstream StreamNZB release to provide early warning of regressions.
 
-The check sets `STREAMNZB_REF` for both the rule tests and the formatter regressions, so both run against the selected upstream release.
+The check sets `STREAMNZB_REF` for both the rule tests and the formatter regressions, so both run against the selected upstream release. `STREAMNZB_REF` may be a full commit SHA or a lightweight or annotated tag; the formatter harness peels the fetched ref to its commit and fails unless the checkout matches it exactly.
 
 The scheduled upstream check is advisory. It does not silently move the supported baseline or block ordinary pull requests.
 

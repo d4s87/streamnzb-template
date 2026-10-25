@@ -221,6 +221,8 @@ The sync process is designed to fail closed when expected upstream regex structu
 
 Metadata-only changes are ignored so they do not create unnecessary synchronization pull requests.
 
+Each sync PR includes an advisory SAFE / REVIEW_REQUIRED / BLOCKED assessment. It is built from a semantic diff of the generated Defines, their consumers in both published profiles, and old-vs-new real-engine probes. It never merges or approves a PR. See [VIDHIN_SYNC_ASSESSMENT.md](VIDHIN_SYNC_ASSESSMENT.md).
+
 ## Scheduled upstream check
 
 A scheduled workflow checks the latest StreamNZB release against the repository's compatibility suite. If it fails, GitHub records the failure and uploads the diagnostic log as an artifact for inspection.

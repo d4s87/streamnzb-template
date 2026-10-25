@@ -950,7 +950,10 @@ def run(args):
             a, changes = diff(inputs)
         except Exception as exc:  # fail closed on any unforeseen input shape
             a.add("input_unreadable", f"semantic diff failed: {type(exc).__name__}: {exc}")
-        plan = build_plan(inputs, changes)
+        try:
+            plan = build_plan(inputs, changes)
+        except Exception as exc:  # malformed baseline shape: keep the empty plan, fail closed
+            a.add("input_unreadable", f"probe planning failed: {type(exc).__name__}: {exc}")
     plan = plan_paths(plan, args.old_library, args.new_library)
     plan_bytes = canonical_json(plan).encode("utf-8")
     return a, inputs, changes, plan, plan_bytes

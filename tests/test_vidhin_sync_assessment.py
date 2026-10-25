@@ -15,6 +15,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -269,6 +270,11 @@ for rec in emptied["Shows Remux T2 Groups"]["records"]:
 expect(run(BASELINE, LIBRARY, with_defines(emptied), rendered(emptied)), assess.BLOCKED, "define_emptied",
        label="tier Define emptied")
 
+listed = copy.deepcopy(BASELINE)
+listed["defines"] = []
+expect(run(listed, LIBRARY, listed, LIBRARY, engine=False), assess.BLOCKED, "input_unreadable",
+       label="non-object defines")
+
 expect(run(BASELINE, LIBRARY, BASELINE, LIBRARY, compat="failed"), assess.BLOCKED,
        "real_engine_regressions_failed", label="failing real-engine regressions")
 
@@ -286,6 +292,23 @@ def always_changes(probe, library):
 
 expect(run(*pattern_args, outcome=always_changes), assess.BLOCKED, "unexpected_behavior_delta",
        label="behavior delta behind a byte-identical Define")
+
+# ---------------------------------------------------------------- workflow guard
+
+# The post-assessment integrity guard must tolerate the sync job's own log and
+# generated-file edits, and nothing else.
+workflow = (ROOT / ".github/workflows/sync-vidhin.yml").read_text(encoding="utf-8")
+guard = re.search(r"git status --porcelain --untracked-files=all \| grep -v -E '([^']+)'", workflow)
+assert guard, "integrity guard pattern not found in sync-vidhin.yml"
+status = [
+    " M generated/vidhin-defines.json", " M generated/vidhin-sync-report.md",
+    " M generated/streamnzb-defines.txt", "?? vidhin-sync.log",
+    " M profile.txt", "?? evil.sh", "?? generated/vidhin-sync.log", " M vidhin-sync.log",
+]
+left = subprocess.run(["grep", "-v", "-E", guard.group(1)], input="\n".join(status) + "\n",
+                      capture_output=True, text=True).stdout.splitlines()
+assert left == status[4:], left
+print("ok - integrity guard allows only generated edits and vidhin-sync.log")
 
 # ---------------------------------------------------------------- determinism
 

@@ -132,7 +132,7 @@ jobs:
           if [[ -f "$RUNNER_TEMP/vidhin-generated.sha256" ]]; then
             sha256sum --check --quiet "$RUNNER_TEMP/vidhin-generated.sha256"
           fi
-          unexpected="$(git status --porcelain --untracked-files=all | grep -v -E '^ M generated/(vidhin-defines\.json|vidhin-sync-report\.md|streamnzb-defines\.txt)$' || true)"
+          unexpected="$(git status --porcelain --untracked-files=all | grep -v -E '^( M generated/(vidhin-defines\.json|vidhin-sync-report\.md|streamnzb-defines\.txt)|\?\? vidhin-sync\.log)$' || true)"
           hooks="$(find .git/hooks -type f ! -name '*.sample')"
           if [[ -n "$unexpected" || -n "$hooks" ]]; then
             echo "ERROR: unexpected checkout changes after assessment:" >&2

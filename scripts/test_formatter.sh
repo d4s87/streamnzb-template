@@ -98,26 +98,18 @@ rm -f "${TEST_TARGET}"
 
 echo "==> Fetching pinned StreamNZB revision"
 
-git -C "${CHECKOUT}" \
-    fetch \
-    --quiet \
-    origin \
-    "${STREAMNZB_REF}"
+# shellcheck source=scripts/streamnzb_ref.sh
+source "${ROOT}/scripts/streamnzb_ref.sh" || exit 1
 
-FETCH_RC=$?
-
-if [[ "${FETCH_RC}" -ne 0 ]]; then
-    echo \
-        "ERROR: StreamNZB fetch failed" \
-        >&2
-    exit "${FETCH_RC}"
-fi
+EXPECTED_REF="$(
+    resolve_streamnzb_ref "${CHECKOUT}" "${STREAMNZB_REF}"
+)" || exit 1
 
 git -C "${CHECKOUT}" \
     checkout \
     --quiet \
     --detach \
-    "${STREAMNZB_REF}"
+    "${EXPECTED_REF}"
 
 CHECKOUT_RC=$?
 
@@ -128,25 +120,13 @@ if [[ "${CHECKOUT_RC}" -ne 0 ]]; then
     exit "${CHECKOUT_RC}"
 fi
 
-ACTUAL_REF="$(
-    git -C "${CHECKOUT}" rev-parse HEAD
-)"
+verify_streamnzb_checkout \
+    "${CHECKOUT}" \
+    "${STREAMNZB_REF}" \
+    "${EXPECTED_REF}" \
+    || exit 1
 
-REF_RC=$?
-
-if [[ "${REF_RC}" -ne 0 ]]; then
-    echo \
-        "ERROR: could not read StreamNZB checkout revision" \
-        >&2
-    exit "${REF_RC}"
-fi
-
-if [[ "${ACTUAL_REF}" != "${STREAMNZB_REF}" ]]; then
-    echo \
-        "ERROR: expected StreamNZB ${STREAMNZB_REF}, got ${ACTUAL_REF}" \
-        >&2
-    exit 1
-fi
+echo "    commit: ${EXPECTED_REF}"
 
 # StreamNZB's web package embeds pkg/server/web/static. The pinned source
 # revision does not contain the generated frontend assets, but Go still

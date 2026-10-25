@@ -72,5 +72,8 @@ jobs:
       - name: Test release checker
         run: python tests/test_check_release.py
 
+      - name: Test StreamNZB ref resolution
+        run: ./tests/test_streamnzb_ref.sh
+
       - name: Test against StreamNZB engine
         run: ./scripts/test_streamnzb_compat.sh

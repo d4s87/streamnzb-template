@@ -102,6 +102,68 @@ jobs:
               )
           PY
 
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.0"
+          cache-dependency-path: tests/streamnzb_compat/go.sum
+
+      # Advisory only (docs/VIDHIN_SYNC_ASSESSMENT.md): the SAFE /
+      # REVIEW_REQUIRED / BLOCKED decision is attached to the PR body and
+      # uploaded as an artifact. It never merges, approves or labels the PR,
+      # and an assessment failure never stops the sync PR from opening.
+      - name: Assess Vidhin sync (advisory)
+        id: assess
+        continue-on-error: true
+        run: |
+          if git diff --quiet -- generated/; then
+            echo "No generated changes; nothing to assess."
+            exit 0
+          fi
+          sha256sum generated/vidhin-defines.json generated/vidhin-sync-report.md generated/streamnzb-defines.txt \
+            > "$RUNNER_TEMP/vidhin-generated.sha256"
+          ./scripts/assess_vidhin_sync.sh HEAD "$RUNNER_TEMP/vidhin-assessment"
+
+      # The assessment ran pinned StreamNZB engine code. Before the App token
+      # exists, prove it left the generated files and git hooks untouched.
+      - name: Verify assessment left the checkout untouched
+        if: steps.assess.outcome != 'skipped'
+        run: |
+          if [[ -f "$RUNNER_TEMP/vidhin-generated.sha256" ]]; then
+            sha256sum --check --quiet "$RUNNER_TEMP/vidhin-generated.sha256"
+          fi
+          unexpected="$(git status --porcelain --untracked-files=all | grep -v -E '^( M generated/(vidhin-defines\.json|vidhin-sync-report\.md|streamnzb-defines\.txt)|\?\? vidhin-sync\.log)$' || true)"
+          hooks="$(find .git/hooks -type f ! -name '*.sample')"
+          if [[ -n "$unexpected" || -n "$hooks" ]]; then
+            echo "ERROR: unexpected checkout changes after assessment:" >&2
+            printf '%s\n' "$unexpected" "$hooks" >&2
+            exit 1
+          fi
+
+      - name: Compose sync PR body
+        run: |
+          body="$RUNNER_TEMP/vidhin-sync-pr-body.md"
+          assessment="$RUNNER_TEMP/vidhin-assessment/assessment.md"
+          cat generated/vidhin-sync-report.md > "$body"
+          echo >> "$body"
+          if [[ -f "$assessment" ]]; then
+            cat "$assessment" >> "$body"
+          else
+            printf '%s\n' \
+              '## Vidhin sync assessment (advisory)' '' \
+              '**Decision: `BLOCKED`** -- the assessment did not complete; review this sync manually.' \
+              >> "$body"
+          fi
+
+      - name: Upload Vidhin sync assessment
+        if: steps.assess.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: vidhin-sync-assessment-${{ github.run_id }}
+          path: ${{ runner.temp }}/vidhin-assessment/
+          if-no-files-found: ignore
+          retention-days: 14
+
       # Everything above this point ran only trusted `main` code with the
       # minimal read-only default token above -- this workflow never
       # checks out or executes any untrusted ref. The mutation step below
@@ -147,7 +209,7 @@ jobs:
             generated/streamnzb-defines.txt
           commit-message: "chore: sync Vidhin release-group rules"
           title: "chore: sync Vidhin release-group rules"
-          body-path: generated/vidhin-sync-report.md
+          body-path: ${{ runner.temp }}/vidhin-sync-pr-body.md
           # No explicit labels: this PR only ever touches generated/vidhin-*
           # paths, which the path-based labeler (label-pr.yml) already
           # covers with `vidhin` on its own. Whether a given sync is

@@ -322,7 +322,13 @@ func findProductionRule(
 func loadDefineLibrary(t *testing.T) []config.RuleConfig {
 	t.Helper()
 
-	data, err := os.ReadFile("../../generated/streamnzb-defines.txt")
+	return loadDefineLibraryFile(t, "../../generated/streamnzb-defines.txt")
+}
+
+func loadDefineLibraryFile(t *testing.T, path string) []config.RuleConfig {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read generated Define Library: %v", err)
 	}

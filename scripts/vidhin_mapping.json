@@ -533,6 +533,9 @@
       "mode": "lq",
       "release_name_fallbacks": [
         "Feranki1980"
+      ],
+      "case_insensitive_group_overrides": [
+        "GHOSTS"
       ]
     },
     "Movies LQ Release Title": {

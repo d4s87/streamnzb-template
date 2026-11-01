@@ -233,6 +233,22 @@ regex["Retag Markers"]["records"][0]["raw_regex_pattern"] += "|NEWMARKER"
 r = run(BASELINE, LIBRARY, with_defines(regex), rendered(regex))
 expect(r, assess.REVIEW, "regex_or_source_gate_changed", label="raw regex change")
 
+# Vidhin GHOSTS sync with DraCuLa's local Shows LQ override (ce4c279 is main
+# before it): the Movies removal stays REVIEW_REQUIRED, and the override is a
+# recognized, reviewed metadata change rather than an unexpected field.
+ghosts_old_base = json.loads(git_show("ce4c279", "generated/vidhin-defines.json"))
+ghosts_old_lib = git_show("ce4c279", "generated/streamnzb-defines.txt")
+for outcome in (same_outcome, expected_outcome):
+    r = run(ghosts_old_base, ghosts_old_lib, BASELINE, LIBRARY, outcome=outcome)
+    expect(r, assess.REVIEW, "classification_group_removed", "define_metadata_changed",
+           label=f"GHOSTS sync with Shows LQ override ({outcome.__name__})")
+    assert not r["_codes"] & {"unexpected_define_field", "mapping_mismatch", "unexplained_library_change"}, r["_codes"]
+    assert any(x["detail"] == "-GHOSTS" and x["define"] == "Movies LQ Groups" for x in r["reasons"]), r["reasons"]
+unmapped = copy.deepcopy(defines)
+unmapped["Shows LQ Groups"].pop("case_insensitive_group_overrides")
+expect(run(BASELINE, LIBRARY, with_defines(unmapped), LIBRARY), assess.BLOCKED, "mapping_mismatch",
+       label="Shows LQ override missing from baseline")
+
 gate = copy.deepcopy(defines)
 gate["Anime Shows BluRay T1 Groups"]["records"][0]["case_insensitive"] = not gate[
     "Anime Shows BluRay T1 Groups"]["records"][0]["case_insensitive"]

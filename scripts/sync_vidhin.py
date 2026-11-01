@@ -793,6 +793,40 @@ def validate_anime_bd_source(upstream):
                 )
 
 
+def validate_lq_case_overrides(target,cfg,recs):
+    """
+    Local DraCuLa exception to an upstream LQ case flag. Each listed token must
+    appear, spelled exactly, in exactly one case-sensitive upstream record of
+    this Define; render_lq_condition() then matches it as a case-insensitive
+    whole parsed group. Vidhin makes such tokens case-sensitive to avoid
+    title-word false positives from its unanchored \\b regex; DraCuLa's
+    group-anchored form does not have them. Fails closed when upstream no
+    longer has that shape, so the exception is re-reviewed rather than kept.
+    """
+    overrides=cfg["case_insensitive_group_overrides"]
+    if not isinstance(overrides,list) or not overrides:
+        raise ValueError(f"{target}: case_insensitive_group_overrides must be a non-empty list")
+    others={x.casefold() for x in cfg.get("extra_exact_groups",[])+cfg.get("release_name_fallbacks",[])}
+    seen=set()
+    for token in overrides:
+        if not isinstance(token,str) or not re.fullmatch(r"[A-Za-z0-9]+",token):
+            raise ValueError(f"{target}: invalid case-insensitive group override {token!r}")
+        if token.casefold() in seen:
+            raise ValueError(f"{target}: duplicate case-insensitive group override {token!r}")
+        seen.add(token.casefold())
+        if token.casefold() in others:
+            raise ValueError(f"{target}: case-insensitive group override {token!r} conflicts with extra_exact_groups/release_name_fallbacks")
+        hits=[r for r in recs if any(t.casefold()==token.casefold() for t in r["tokens"])]
+        if not hits:
+            raise ValueError(f"{target}: case-insensitive group override {token!r} not found upstream; remove the override")
+        if len(hits)>1:
+            raise ValueError(f"{target}: case-insensitive group override {token!r} appears in {len(hits)} upstream records; re-review")
+        if not hits[0]["case_sensitive"]:
+            raise ValueError(f"{target}: upstream already matches {token!r} case-insensitively; remove the override")
+        if token not in hits[0]["tokens"]:
+            raise ValueError(f"{target}: upstream spelling of case-insensitive group override {token!r} changed; re-review")
+    return list(overrides)
+
 def resolve(mapping,upstream):
     by={}
     for rec in rows(upstream):
@@ -880,6 +914,10 @@ def resolve(mapping,upstream):
         if mode=="lq":
             out[target]["extra_exact_groups"]=cfg.get("extra_exact_groups",[])
             out[target]["release_name_fallbacks"]=cfg.get("release_name_fallbacks",[])
+        if "case_insensitive_group_overrides" in cfg:
+            if mode!="lq":
+                raise ValueError(f"{target}: case_insensitive_group_overrides is only valid for mode 'lq'")
+            out[target]["case_insensitive_group_overrides"]=validate_lq_case_overrides(target,cfg,recs)
     if missing: raise RuntimeError("Mapped upstream rule(s) missing:\n- "+"\n- ".join(missing))
     return out
 
@@ -1076,10 +1114,11 @@ def apply_web_precedence(current,mapping):
 
 def render_lq_condition(entry):
     conditions=[]
+    overrides=entry.get("case_insensitive_group_overrides",[])
     for exact in entry.get("extra_exact_groups",[]):
         conditions.append(f'group == "{exact}"')
     for rec in entry.get("records",[]):
-        rt=rec.get("tokens",[])
+        rt=[t for t in rec.get("tokens",[]) if t not in overrides]
         if not rt: continue
         body="|".join(rt).replace('"','\\"')
         prefix="" if rec.get("case_sensitive",False) else "(?i)"
@@ -1087,6 +1126,8 @@ def render_lq_condition(entry):
             conditions.append(f'group == "{rt[0]}"')
         else:
             conditions.append(f'group matches "{prefix}^({body})$"')
+    if overrides:
+        conditions.append(f'group matches "(?i)^({"|".join(overrides)})$"')
     for fallback in entry.get("release_name_fallbacks",[]):
         esc=re.escape(fallback).replace(r"\.","\\.")
         conditions.append(f'releaseName matches "(?i)(?:^|[-._ ]){esc}$"')
@@ -1718,6 +1759,14 @@ def report(old,new,mapping):
                 lines += [
                     "Raw upstream regex changed, but the extracted "
                     "release-group set did not.",
+                    "",
+                ]
+
+            overrides=new_entry.get("case_insensitive_group_overrides",[])
+            if overrides:
+                lines += [
+                    "**Local override: matched case-insensitively as a whole parsed group**",
+                    *[f"- `{x}`" for x in overrides],
                     "",
                 ]
 

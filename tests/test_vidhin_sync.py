@@ -67,7 +67,7 @@ lq_upstream=[
     },
     {
         "name":"LQ (Sonarr)",
-        "pattern":r"/\b(iVy)\b/",
+        "pattern":r"/\b(GHOSTS|iVy)\b/",
         "score":0
     },
     {
@@ -100,6 +100,57 @@ assert "Shows LQ Groups [series]: define if " in lib
 assert 'group == "iVy"' in lib
 assert 'releaseName matches "(?i)(?:^|[-._ ])Feranki1980$"' in lib
 assert len(lq)==2
+
+# Shows LQ GHOSTS override: upstream's case-sensitive GHOSTS is matched as a
+# case-insensitive whole parsed group; iVy stays case-sensitive, and the
+# override never becomes a release-name match.
+shows_lq_line=next(x for x in lib.splitlines() if x.startswith("Shows LQ Groups"))
+assert mapping["targets"]["Shows LQ Groups"]["case_insensitive_group_overrides"]==["GHOSTS"]
+assert lq["Shows LQ Groups"]["case_insensitive_group_overrides"]==["GHOSTS"]
+assert "case_insensitive_group_overrides" not in lq["Movies LQ Groups"]
+assert 'group == "iVy"' in shows_lq_line
+assert 'group matches "(?i)^(GHOSTS)$"' in shows_lq_line
+assert shows_lq_line.count("GHOSTS")==1, shows_lq_line
+assert "GHOSTS" in lq["Shows LQ Groups"]["tokens"]  # baseline keeps upstream's token set
+assert [r["case_sensitive"] for r in lq["Shows LQ Groups"]["records"]]==[True,False]
+assert sum(
+    "case_insensitive_group_overrides" in cfg for cfg in mapping["targets"].values()
+)==1, "the GHOSTS override is scoped to Shows LQ Groups only"
+
+def expect_override_failure(sonarr_patterns, fragment, label, override=None, **extra):
+    target=dict(mapping["targets"]["Shows LQ Groups"])
+    target.update(extra)
+    if override is not None:
+        target["case_insensitive_group_overrides"]=override
+    up=[{"name":"LQ (Sonarr)","pattern":pat,"score":0} for pat in sonarr_patterns]
+    try:
+        m.resolve({"schema_version":3,"upstream_url":"fixture","targets":{"Shows LQ Groups":target}},up)
+    except ValueError as exc:
+        assert fragment in str(exc), (label, str(exc))
+    else:
+        raise AssertionError(f"GHOSTS override drift not detected: {label}")
+
+ci_rest=r"/\b(BRiNK|FGT)\b/i"
+expect_override_failure([r"/\b(iVy)\b/",ci_rest], "not found upstream", "token removed upstream")
+expect_override_failure([r"/\b(iVy)\b/",r"/\b(BRiNK|GHOSTS)\b/i"], "already matches", "upstream case-insensitive again")
+expect_override_failure([r"/\b(GHOSTS|iVy)\b/",r"/\b(BRiNK|GHOSTS)\b/i"], "upstream records", "token in two records")
+expect_override_failure([r"/\b(Ghosts|iVy)\b/",ci_rest], "spelling", "upstream spelling changed")
+expect_override_failure([r"/\b(GHOSTS|iVy)\b/",ci_rest], "duplicate", "duplicate override", override=["GHOSTS","ghosts"])
+expect_override_failure([r"/\b(GHOSTS|iVy)\b/",ci_rest], "non-empty list", "empty override", override=[])
+expect_override_failure([r"/\b(GHOSTS|iVy)\b/",ci_rest], "invalid", "regex override", override=["GHO.*"])
+expect_override_failure([r"/\b(GHOSTS|iVy)\b/",ci_rest], "conflicts", "fallback conflict",
+                        release_name_fallbacks=["Feranki1980","GHOSTS"])
+try:
+    m.resolve({"schema_version":3,"upstream_url":"fixture","targets":{"X Groups":{
+        "sources":["LQ (Sonarr)"],"scope":"series","field":"group",
+        "case_insensitive_group_overrides":["GHOSTS"]}}},
+        [{"name":"LQ (Sonarr)","pattern":r"/\b(GHOSTS|iVy)\b/","score":0}])
+except ValueError as exc:
+    assert "only valid for mode 'lq'" in str(exc), str(exc)
+else:
+    raise AssertionError("override outside lq mode not rejected")
+
+print("Shows LQ GHOSTS case-insensitive override tests passed.")
 
 # Bad Dual Groups must preserve Vidhin's raw group-regex semantics.
 #

@@ -7,6 +7,9 @@
 
 ## Shows LQ Groups
 
+**Generated metadata changed**
+- `case_insensitive_group_overrides`: `null` → `["GHOSTS"]`
+
 Raw upstream regex changed, but the extracted release-group set did not.
 
 **Local override: matched case-insensitively as a whole parsed group**

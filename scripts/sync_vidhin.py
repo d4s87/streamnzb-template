@@ -285,6 +285,9 @@ def lq_pattern_terms(pattern):
             close_idx=matching_paren(branch,open_idx)
             if close_idx is None:
                 raise ValueError(f"Unbalanced LQ source regex: {pattern}")
+            # Anything but a closing \b would be a condition the token list drops.
+            if branch[close_idx+1:]!=r"\b":
+                raise ValueError(f"Unsupported LQ branch suffix {branch[close_idx+1:]!r}: {pattern}")
             inner=branch[open_idx+1:close_idx]
             terms.extend(normalize_lq_term(x) for x in split_top_level(inner))
         else:
@@ -1598,6 +1601,7 @@ def report(old,new,mapping):
         "tier_family",
         "tier_report_family",
         "tier",
+        "case_insensitive_group_overrides",
     )
 
     for name in sorted(set(old)|set(new)):

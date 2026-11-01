@@ -150,6 +150,24 @@ except ValueError as exc:
 else:
     raise AssertionError("override outside lq mode not rejected")
 
+# An LQ branch whose group is followed by anything but \b carries a condition
+# the token list would drop; parsing must fail closed rather than flatten it.
+for pat in (r"/\b(GHOSTS)(?=.*WEB)\b/", r"/\b(GHOSTS|iVy)/", r"/\b(GHOSTS)\b.*x265/"):
+    try:
+        m.lq_pattern_terms(pat)
+    except ValueError as exc:
+        assert "Unsupported LQ branch suffix" in str(exc), (pat, str(exc))
+    else:
+        raise AssertionError(f"LQ branch suffix not rejected: {pat}")
+
+# A mapping-only override change is still a reported change, so the baseline
+# is rewritten and stays consistent with the mapping.
+no_override=json.loads(json.dumps(lq))
+no_override["Shows LQ Groups"].pop("case_insensitive_group_overrides")
+text,changed=m.report(no_override,lq,lq_mapping)
+assert changed==1, (changed, text)
+assert "## Shows LQ Groups" in text and "`GHOSTS`" in text, text
+
 print("Shows LQ GHOSTS case-insensitive override tests passed.")
 
 # Bad Dual Groups must preserve Vidhin's raw group-regex semantics.

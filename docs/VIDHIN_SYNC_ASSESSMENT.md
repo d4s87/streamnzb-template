@@ -41,7 +41,7 @@ Passing CI or touching only generated files never makes a change SAFE on its own
 | `classification_group_added` / `classification_group_removed` | A non-tier classification (LQ, Bad Dual, Atmos/TrueHD exclusion, …) changed. |
 | `generated_hdr_group_changed` | `Movies Generated Dynamic HDR Groups` changed (the -10000 DV/HDR10+ penalty). |
 | `content_kind_scope_changed` | A Define's content-kind scope changed. |
-| `define_metadata_changed` | Mapping-derived metadata (field, mode, tier, LQ fallbacks, LQ case-insensitive group overrides) changed consistently with the mapping. |
+| `define_metadata_changed` | Mapping-derived metadata (field, mode, tier, LQ exact groups, LQ fallbacks, LQ case-insensitive group overrides) changed consistently with the mapping. |
 | `regex_or_source_gate_changed` | A raw-regex, release-title, obfuscation or Anime BD source-gate/case-flag condition changed. |
 | `indirect_policy_effect` | A published rule consumes a changed Define. The detail names the rule, its score or action, and the profiles it ships in. |
 | `expected_change_not_observed` | A changed group showed no behavior change in any real-engine probe. Check whether the classification is reachable. |

@@ -6,7 +6,8 @@ name: Validate Vidhin sync PR
 # the trusted base commit and reads only the PR head's three generated files
 # as data, so no PR code runs. It never approves, merges or labels.
 #
-# Every PR runs this job and non-sync PRs finish as NOT_APPLICABLE inside it.
+# Every PR runs this job; non-sync PRs finish as NOT_APPLICABLE in its first
+# step.
 # There is deliberately no job-level `if:`: a skipped run reports success,
 # which would mask an earlier failure for the same head commit.
 
@@ -47,7 +48,34 @@ jobs:
       AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
 
     steps:
+      # Needs no base code, so unrelated PRs pass even before main carries
+      # the validator. Check results attach to the head SHA, so a non-sync PR
+      # reusing the live sync head would mask that PR's result: fail it.
+      - name: Classify PR
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$HEAD_REF" == "chore/vidhin-sync" ]]; then
+            echo "applicable=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if sync_head="$(gh api "repos/$BASE_REPO/git/ref/heads/chore/vidhin-sync" --jq .object.sha 2>"$RUNNER_TEMP/gh.err")"; then
+            if [[ "$sync_head" == "$HEAD_SHA" ]]; then
+              echo "ERROR: head $HEAD_SHA is the live chore/vidhin-sync head; validate it in the sync PR." >&2
+              exit 1
+            fi
+          elif ! grep -q "HTTP 404" "$RUNNER_TEMP/gh.err"; then
+            cat "$RUNNER_TEMP/gh.err" >&2
+            echo "ERROR: could not read the chore/vidhin-sync head." >&2
+            exit 1
+          fi
+          echo "applicable=false" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "## Vidhin sync PR validation" "" '**Decision: `NOT_APPLICABLE`**' "" \
+            'Not a `chore/vidhin-sync` PR; nothing to validate.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Check out trusted base commit
+        if: steps.classify.outputs.applicable == 'true'
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.sha }}
@@ -55,16 +83,19 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
+        if: steps.classify.outputs.applicable == 'true'
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
       # Data only: nothing from the head is checked out or executed.
       - name: Fetch PR head commit
+        if: steps.classify.outputs.applicable == 'true'
         run: git fetch --no-tags --quiet origin "$HEAD_SHA" || echo "PR head $HEAD_SHA could not be fetched." >&2
 
       - name: Check identity, scope and generator reproducibility
         id: prepare
+        if: steps.classify.outputs.applicable == 'true'
         run: |
           python3 scripts/validate_vidhin_sync_pr.py prepare \
             --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --head-ref "$HEAD_REF" \
@@ -89,7 +120,7 @@ jobs:
       # run makes this result stale instead of passing.
       - name: Read live PR head and base
         id: live
-        if: always()
+        if: always() && steps.classify.outputs.applicable == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -97,7 +128,7 @@ jobs:
           echo "base=$(gh api "repos/$BASE_REPO/git/ref/heads/$BASE_REF" --jq .object.sha || true)" >> "$GITHUB_OUTPUT"
 
       - name: Decide
-        if: always()
+        if: always() && steps.classify.outputs.applicable == 'true'
         env:
           LIVE_HEAD_SHA: ${{ steps.live.outputs.head }}
           LIVE_BASE_SHA: ${{ steps.live.outputs.base }}
@@ -111,7 +142,7 @@ jobs:
             --summary-out "$GITHUB_STEP_SUMMARY"
 
       - name: Upload validation evidence
-        if: always()
+        if: always() && steps.classify.outputs.applicable == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: vidhin-pr-validation-${{ github.run_id }}-${{ github.run_attempt }}

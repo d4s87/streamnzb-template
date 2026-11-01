@@ -99,7 +99,7 @@ Implementation: `scripts/validate_vidhin_sync_pr.py`, tested by `tests/test_vali
 
 ### What it does
 
-1. **Classify.** Only a PR from the branch `chore/vidhin-sync` is validated. Every other PR finishes inside the job as `NOT_APPLICABLE` and passes. The job has no job-level `if:`, because a skipped run would count as success and could mask an earlier failure for the same commit.
+1. **Classify.** Only a PR from the branch `chore/vidhin-sync` is validated. Every other PR finishes as `NOT_APPLICABLE` and passes. This happens in the job's first step, which needs no base code. The job has no job-level `if:`, because a skipped run would count as success and could mask an earlier failure for the same commit. For the same reason, a non-sync PR fails when its head SHA is the live `chore/vidhin-sync` head: check results attach to commits, so its pass would hide the sync PR's result. A failure to read that head also fails the check.
 2. **Identity and scope.** A `chore/vidhin-sync` PR must be authored by `streamnzb-template-prepare-release[bot]` (type `Bot`) and come from this repository, not a fork. The PR base must be an ancestor of the head, so the PR is up to date. The direct base-to-head tree diff may only modify the three generated files (`generated/vidhin-defines.json`, `generated/vidhin-sync-report.md`, `generated/streamnzb-defines.txt`), in place, with mode `100644`. Any other path, addition, deletion or mode change is `unauthorized_change`. An empty diff is `empty_sync`.
 3. **Reproduce.** The upstream records stored in the head baseline are fed through the base commit's `sync_vidhin.py`, using the base mapping and baseline. The head baseline (apart from a valid `generated_at_utc`), the report and the Define Library must match the output byte for byte. Otherwise the result is `generator_mismatch` or `generator_failed`.
 4. **Assess.** `scripts/assess_vidhin_sync.sh` runs from the base checkout against the base commit. It uses the head's generated files and runs the pinned StreamNZB compatibility suite and real-engine probes.
@@ -127,6 +127,8 @@ The job summary shows the decision. The artifact `vidhin-pr-validation-<run id>-
   - the author and head repository;
   - that the check run belongs to the current head SHA;
   - that `decision.json` names the current head and base SHAs.
+- **Check results belong to commits, not PRs.** For a given name, the newest check run on a SHA is what counts. The classify step blocks the masking route it can see (another PR reusing the live sync head). A future auto-merge must still select the run whose pull request is the sync PR.
+- **Bootstrap.** The validator runs from the base commit. A `chore/vidhin-sync` PR whose base predates this workflow fails the check, and the next sync from `main` validates normally. This PR's own run passes as `NOT_APPLICABLE`.
 - **Time-of-check/time-of-use.** Reruns re-read the live head and base and block when either moved. A new push starts a new run, and `cancel-in-progress` cancels the old one. A base change after a passing run leaves that run's green check in place, so the merge gate must require branches to be up to date (below).
 
 ### Making it a required check (manual)

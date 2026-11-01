@@ -402,6 +402,40 @@ assert "scripts/validate_vidhin_sync_pr.py prepare" in workflow
 assert "./scripts/assess_vidhin_sync.sh \"$BASE_SHA\"" in workflow
 assert "STREAMNZB_REF" not in workflow, "the engine revision comes from the trusted base"
 
+assert f'"$HEAD_REF" == "{v.SYNC_BRANCH}"' in workflow
+for step in ("Check out trusted base commit", "Set up Python", "Fetch PR head commit",
+             "Check identity, scope and generator reproducibility"):
+    assert re.search(rf"- name: {step}\n(?:        id: .*\n)?        if: steps\.classify\.outputs\.applicable == 'true'\n", workflow), step
+
+# Run the real Classify block with a fake gh for the live chore/vidhin-sync head.
+classify = re.search(r"- name: Classify PR\n(?:        .*\n)*?        run: \|\n((?:          .*\n|\n)+?)\n      - name:",
+                     workflow).group(1)
+fake_bin = fresh("fake-gh")
+(fake_bin / "gh").write_text(
+    '#!/usr/bin/env bash\ncase "$FAKE_GH" in\n'
+    '  404) echo "gh: Not Found (HTTP 404)" >&2; exit 1;;\n'
+    '  error) echo "dial tcp: connection refused" >&2; exit 1;;\n'
+    '  *) echo "$FAKE_GH";;\nesac\n', encoding="utf-8")
+(fake_bin / "gh").chmod(0o755)
+
+
+def classify_run(head_ref, fake_gh, head_sha="a" * 40):
+    d = fresh("classify")
+    env = {**os.environ, "PATH": f"{fake_bin}:{os.environ['PATH']}", "FAKE_GH": fake_gh, "HEAD_REF": head_ref,
+           "HEAD_SHA": head_sha, "BASE_REPO": REPO, "RUNNER_TEMP": str(d),
+           "GITHUB_OUTPUT": str(d / "out"), "GITHUB_STEP_SUMMARY": str(d / "summary")}
+    proc = subprocess.run(["bash", "-e", "-c", classify], env=env, capture_output=True, text=True)
+    out = (d / "out").read_text() if (d / "out").exists() else ""
+    return proc.returncode, out
+
+
+assert classify_run(v.SYNC_BRANCH, "error") == (0, "applicable=true\n")
+assert classify_run("feat/x", "404") == (0, "applicable=false\n")
+assert classify_run("feat/x", "b" * 40) == (0, "applicable=false\n")
+assert classify_run("feat/x", "a" * 40)[0] == 1, "a non-sync PR reusing the sync head must fail"
+assert classify_run("feat/x", "error")[0] == 1, "an unreadable sync head must fail closed"
+print("ok - classify step (sync, unrelated, masking, API failure)")
+
 sync = (ROOT / ".github/workflows/sync-vidhin.yml").read_text(encoding="utf-8")
 assert re.search(rf"^\s+branch: {re.escape(v.SYNC_BRANCH)}$", sync, flags=re.MULTILINE)
 add_paths = re.search(r"add-paths: \|\n((?:\s{12}\S.*\n)+)", sync).group(1).split()

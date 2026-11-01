@@ -289,6 +289,18 @@ def add_untracked(repo, adir):
 expect(validate(safe_pr, after_assess=add_untracked), assess.BLOCKED, "checkout_modified",
        label="untracked file left by the engine run")
 
+def plant_hook(repo, adir):
+    hook = repo / ".git/hooks/post-checkout"
+    hook.write_text("#!/bin/sh\n", encoding="utf-8")
+    hook.chmod(0o755)
+r = validate(safe_pr, after_assess=plant_hook)
+(safe_pr[0] / ".git/hooks/post-checkout").unlink()  # hooks are outside the work tree the helper resets
+expect(r, assess.BLOCKED, "checkout_modified", label="git hook planted during the engine run")
+assert any("post-checkout" in x["detail"] for x in r["reasons"]), r["reasons"]
+
+expect(validate(safe_pr, live_base=""), assess.BLOCKED, "stale_base", label="live base unavailable")
+
+
 def remove(name):
     return lambda repo, adir: (adir / name).unlink()
 expect(validate(safe_pr, after_assess=remove("assessment.json")), assess.BLOCKED, "assessment_missing",

@@ -2,7 +2,7 @@
 
 Every Vidhin synchronization PR carries an advisory assessment with a machine-readable decision: **SAFE**, **REVIEW_REQUIRED** or **BLOCKED**.
 
-The assessment never merges, approves or labels a PR, and it does not decide release impact. The copy in the PR body is advisory. The [`Validate Vidhin sync PR` check](#pr-head-validation) re-runs the assessment against the PR head and is the only result to rely on. Human review and human release-impact labeling stay exactly as they were.
+The assessment never merges, approves or labels a PR, and it does not decide release impact. The copy in the PR body is advisory. The [`Validate Vidhin sync PR` check](#pr-head-validation) re-runs the assessment against the exact PR head and is the authoritative assessment result. A passing check is evidence, not authorization: it does not by itself make a PR safe to merge automatically (see [Security model](#security-model)). Human review and human release-impact labeling stay exactly as they were.
 
 ## What is compared
 
@@ -122,18 +122,32 @@ The job summary shows the decision. The artifact `vidhin-pr-validation-<run id>-
 ### Security model
 
 - **No untrusted code.** The trigger is plain `pull_request` (no `pull_request_target`). Permissions are `contents: read` and `pull-requests: read`. The workflow uses no secrets, and the checkout uses `persist-credentials: false`. All code that runs comes from the base commit. The head contributes only three data files. PR-controlled values (branch, author, SHAs) reach scripts only through environment variables.
-- **The workflow file comes from the PR merge ref.** This is how `pull_request` works: a PR that edits the workflow could replace the check with its own. The scope rule rejects any such PR, but only an unmodified workflow enforces that rule. So a passing check is trustworthy only for a PR whose changed files are within the generated scope. Any future auto-merge must therefore verify these points itself, from trusted code, before relying on the check:
-  - the PR's file list;
-  - the author and head repository;
-  - that the check run belongs to the current head SHA;
-  - that `decision.json` names the current head and base SHAs.
-- **Check results belong to commits, not PRs.** For a given name, the newest check run on a SHA is what counts. The classify step blocks the masking route it can see (another PR reusing the live sync head). A future auto-merge must still select the run whose pull request is the sync PR.
+- **The workflow file comes from the PR merge ref.** This is how `pull_request` works: a PR that edits the workflow could replace the check with its own. The scope rule rejects any such PR, but only an unmodified workflow enforces that rule. So a passing check is trustworthy only for a PR whose changed files are within the generated scope. A passing check, a matching branch name and a bot author are not enough to authorize a merge. Any future auto-merge must verify all of these itself, from trusted code, at merge time:
+  - **PR identity:** the PR number, head branch `chore/vidhin-sync` and author `streamnzb-template-prepare-release[bot]`;
+  - **source repository:** the head repository is this repository, not a fork;
+  - **changed-file scope:** the PR's current file list, read from the API, is limited to the three generated files;
+  - **current SHAs:** the PR head and the base-branch tip right now equal the head and base SHAs in `decision.json`;
+  - **trusted evidence:** the check run and `decision.json` come from this workflow's `pull_request` run for that PR (see the next point), and the decision is `SAFE`.
+- **Check results belong to commits, not PRs.** For a given name, the newest check run on a SHA is what counts. The classify step stops another PR that reuses the live sync head from posting a pass over the sync PR's result. It cannot stop the reverse. Anyone can open an unrelated PR, including from a fork, whose head is the sync PR's head commit. That PR's run then fails (as `fork_head` or in the classify step), and it may become the newest result for the commit, turning a valid sync PR's check red. This can delay a merge, but it cannot turn a BLOCKED sync into a pass.
+  - **Diagnose:** in the sync PR's **Checks** tab, open the `Validate Vidhin sync PR` run. Check that its workflow run lists the sync PR as its pull request, for example with `gh run view <run id> --json event,headBranch,headSha`. A failing run whose head branch is not `chore/vidhin-sync`, or whose summary shows the classify error, is interference. So is a run from a fork. `gh api repos/d4s87/streamnzb-template/commits/<sha>/check-runs` lists every run on the commit.
+  - **Recover:** re-run the sync PR's own `Validate Vidhin sync PR` run (**Re-run jobs**, or `gh run rerun <run id>`). Its new result becomes the newest result for the commit. Close the interfering PR if it has no other purpose.
+  - **Merge controller:** a future merge controller must select the check run whose workflow run was triggered by the sync PR's own `pull_request` event (matching PR number, head branch and head SHA). It must verify that run's conclusion and `decision.json`, never just a check with a matching name or SHA. This needs no privileged workflow.
 - **Bootstrap.** The validator runs from the base commit. A `chore/vidhin-sync` PR whose base predates this workflow fails the check, and the next sync from `main` validates normally. This PR's own run passes as `NOT_APPLICABLE`.
 - **Time-of-check/time-of-use.** Reruns re-read the live head and base and block when either moved. A new push starts a new run, and `cancel-in-progress` cancels the old one. A base change after a passing run leaves that run's green check in place, so the merge gate must require branches to be up to date (below).
 
 ### Making it a required check (manual)
 
-The check works on every PR, but **it is not enforced yet**. On 2026-11-01, `main` had no branch protection and no rulesets. A repository administrator must add the rule after this workflow is on `main`:
+The check works on every PR, but **it is not enforced yet**. On 2026-11-01, `main` had no branch protection and no rulesets.
+
+**Dependabot tradeoff: decide before applying.** Strict branch freshness ("Require branches to be up to date before merging") is the recommended security setting, because it stops a sync validated against an older `main` from merging. It changes how the existing Dependabot automation behaves:
+
+- `.github/workflows/dependabot-automerge.yml` merges with a direct `gh pr merge --squash` (not `--auto`) as soon as "Validate StreamNZB Template" passes on a Dependabot PR. Repository auto-merge is disabled (`allow_auto_merge: false`).
+- Dependabot opens one grouped GitHub Actions PR per week. If anything lands on `main` after that PR's branch was created, the PR is out of date. With strict freshness, the direct merge is then rejected, the auto-merge run fails and the PR stays open.
+- Dependabot rebases on its own only when its PR conflicts, not when it is merely behind. To recover, comment `@dependabot rebase` on the PR (or use **Update branch**). The new push re-runs Validate, and its completion triggers the auto-merge again.
+
+Do not apply the ruleset below until the maintainer has either accepted this tradeoff (manual Dependabot rebases when `main` moved) or implemented a separately reviewed Dependabot adaptation. This PR changes neither the Dependabot workflow nor the repository's auto-merge setting.
+
+When that decision is made, a repository administrator adds the rule after this workflow is on `main`:
 
 1. Go to **Settings → Rules → Rulesets → New ruleset → New branch ruleset**.
 2. Name it, for example, `main protection`. Set **Enforcement status** to **Active**.

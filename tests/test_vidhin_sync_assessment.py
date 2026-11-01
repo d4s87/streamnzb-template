@@ -249,6 +249,24 @@ unmapped["Shows LQ Groups"].pop("case_insensitive_group_overrides")
 expect(run(BASELINE, LIBRARY, with_defines(unmapped), LIBRARY), assess.BLOCKED, "mapping_mismatch",
        label="Shows LQ override missing from baseline")
 
+# Mapping-only LQ exact-group/fallback edits: a consistent sync is a reviewed
+# metadata change; a baseline left stale against the edited mapping fails closed.
+for field, target in (("extra_exact_groups", "Movies LQ Groups"), ("release_name_fallbacks", "Shows LQ Groups")):
+    edited_map = copy.deepcopy(MAPPING)
+    edited_map["targets"][target][field] = edited_map["targets"][target].get(field, []) + ["NEWLQ"]
+    synced = copy.deepcopy(defines)
+    synced[target][field] = edited_map["targets"][target][field]
+    r = run(BASELINE, LIBRARY, with_defines(synced), rendered(synced, edited_map), edited_map,
+            outcome=expected_outcome)
+    expect(r, assess.REVIEW, "define_metadata_changed", label=f"mapping-only {field} change")
+    assert not r["_codes"] & {"mapping_mismatch", "library_not_reproducible"}, r["_codes"]
+    expect(run(BASELINE, LIBRARY, BASELINE, rendered(synced, edited_map), edited_map), assess.BLOCKED,
+           "mapping_mismatch", "library_not_reproducible", label=f"stale baseline after {field} edit")
+    expect(run(BASELINE, LIBRARY, BASELINE, LIBRARY, edited_map), assess.BLOCKED, "mapping_mismatch",
+           label=f"{field} edit with stale baseline and library")
+    expect(run(BASELINE, LIBRARY, with_defines(synced), LIBRARY, edited_map), assess.BLOCKED,
+           "library_not_reproducible", label=f"stale library after {field} edit")
+
 gate = copy.deepcopy(defines)
 gate["Anime Shows BluRay T1 Groups"]["records"][0]["case_insensitive"] = not gate[
     "Anime Shows BluRay T1 Groups"]["records"][0]["case_insensitive"]

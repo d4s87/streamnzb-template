@@ -1601,6 +1601,8 @@ def report(old,new,mapping):
         "tier_family",
         "tier_report_family",
         "tier",
+        "extra_exact_groups",
+        "release_name_fallbacks",
         "case_insensitive_group_overrides",
     )
 
@@ -1637,16 +1639,22 @@ def report(old,new,mapping):
                         (field,old_value,new_value)
                     )
 
-        if (
-            not add
-            and not rem
-            and not raw
-            and not metadata_changes
-        ):
+        if old_entry==new_entry:
             continue
+
+        # Any other difference still means the baseline is stale, so it must
+        # be reported and rewritten rather than silently dropped.
+        unrecognized=not(add or rem or raw or metadata_changes)
 
         changed+=1
         lines += [f"## {name}",""]
+
+        if unrecognized:
+            lines += [
+                "**Generated baseline entry changed** "
+                "(no token, regex or metadata difference recognized)",
+                "",
+            ]
 
         old_mode=old_entry.get("mode")
         new_mode=new_entry.get("mode")

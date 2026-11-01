@@ -170,6 +170,68 @@ assert "## Shows LQ Groups" in text and "`GHOSTS`" in text, text
 
 print("Shows LQ GHOSTS case-insensitive override tests passed.")
 
+# Mapping-only LQ field changes are reported like the override, so the
+# baseline is rewritten alongside the library instead of going stale.
+for field in ("extra_exact_groups","release_name_fallbacks"):
+    current_value=lq["Movies LQ Groups"][field]
+    for label,old_value,new_value in (
+        ("added",current_value,current_value+["NEWLQ"]),
+        ("removed",current_value,current_value[1:]),
+        ("changed",current_value,["NEWLQ"]+current_value[1:]),
+    ):
+        old_lq=json.loads(json.dumps(lq)); new_lq=json.loads(json.dumps(lq))
+        old_lq["Movies LQ Groups"][field]=old_value
+        new_lq["Movies LQ Groups"][field]=new_value
+        text,changed=m.report(old_lq,new_lq,lq_mapping)
+        assert changed==1,(field,label,text)
+        assert (f"- `{field}`: `{json.dumps(old_value)}` → `{json.dumps(new_value)}`") in text,(field,label,text)
+text,changed=m.report(lq,json.loads(json.dumps(lq)),lq_mapping)
+assert changed==0 and "No mapped Vidhin changes detected." in text, text
+# Any other entry difference still counts, so the baseline cannot go stale.
+flag_only=json.loads(json.dumps(lq))
+flag_only["Shows LQ Groups"]["records"][0]["case_sensitive"]=False
+text,changed=m.report(lq,flag_only,lq_mapping)
+assert changed==1 and "Generated baseline entry changed" in text, text
+
+# End to end through main(): the committed baseline's records are the upstream
+# input, so an unchanged mapping is a no-op and a mapping-only edit rewrites
+# baseline, library and report consistently and deterministically.
+import sys, tempfile
+def run_sync(d, mapping_obj):
+    (d/"mapping.json").write_text(json.dumps(mapping_obj),encoding="utf-8")
+    argv=sys.argv
+    sys.argv=["sync_vidhin.py","--mapping",str(d/"mapping.json"),"--baseline",str(d/"b.json"),
+              "--report",str(d/"r.md"),"--library",str(d/"l.txt"),"--upstream-file",str(d/"up.json")]
+    try: m.main()
+    finally: sys.argv=argv
+    return [(d/n).read_bytes() for n in ("b.json","l.txt","r.md")]
+
+committed_library=(ROOT/"generated/streamnzb-defines.txt").read_bytes()
+upstream_records=[]
+for entry in baseline["defines"].values():
+    for rec in entry["records"]:
+        item={"name":rec["source"],"pattern":rec["pattern"],"score":0}
+        if item not in upstream_records: upstream_records.append(item)
+for field,target in (("extra_exact_groups","Movies LQ Groups"),("release_name_fallbacks","Shows LQ Groups")):
+    d=Path(tempfile.mkdtemp(prefix="vidhin-sync-test-"))
+    (d/"up.json").write_text(json.dumps(upstream_records),encoding="utf-8")
+    (d/"b.json").write_bytes((ROOT/"generated/vidhin-defines.json").read_bytes())
+    (d/"r.md").write_text("previous report\n",encoding="utf-8")
+    unchanged=run_sync(d,mapping)
+    assert unchanged==[(ROOT/"generated/vidhin-defines.json").read_bytes(),committed_library,b"previous report\n"], field
+
+    edited=json.loads(json.dumps(mapping))
+    edited["targets"][target][field]=edited["targets"][target].get(field,[])+["NEWLQ"]
+    b,l,r=run_sync(d,edited)
+    new_defines=json.loads(b)["defines"]
+    assert new_defines[target][field]==edited["targets"][target][field], field
+    assert {k:v for k,v in new_defines.items() if k!=target}=={k:v for k,v in baseline["defines"].items() if k!=target}
+    assert l==m.render(new_defines,edited).encode() and l!=committed_library, field
+    assert b"NEWLQ" in l and f"## {target}".encode() in r and f"`{field}`".encode() in r, (field, r)
+    assert run_sync(d,edited)==[b,l,r], f"{field}: regeneration is not deterministic"
+
+print("Mapping-only LQ exact-group and fallback change tests passed.")
+
 # Bad Dual Groups must preserve Vidhin's raw group-regex semantics.
 #
 # Unlike the tier regexes, these upstream patterns are simple group regexes

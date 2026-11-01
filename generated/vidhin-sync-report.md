@@ -1,26 +1,19 @@
 # Vidhin sync report
 
-## Movies WEB T1 Groups
+## Movies LQ Groups
+
+**Removed release-group tokens**
+- `- GHOSTS`
+
+## Shows LQ Groups
+
+**Generated metadata changed**
+- `case_insensitive_group_overrides`: `null` → `["GHOSTS"]`
 
 Raw upstream regex changed, but the extracted release-group set did not.
 
-## Movies WEB T2 Groups
-
-**Added release-group tokens**
-- `+ monkee`
-
-## Movies WEB T3 Groups
-
-Raw upstream regex changed, but the extracted release-group set did not.
-
-## Shows WEB T2 Groups
-
-**Added release-group tokens**
-- `+ CMRG`
-
-## TrueHD Exclude Groups
-
-Raw upstream regex changed, but the extracted release-group set did not.
+**Local override: matched case-insensitively as a whole parsed group**
+- `GHOSTS`
 
 ---
 Tracked StreamNZB Defines: **61**

@@ -117,6 +117,7 @@ ENTRY_KEYS = {
     "tier",
     "extra_exact_groups",
     "release_name_fallbacks",
+    "case_insensitive_group_overrides",
 }
 RECORD_KEYS = {
     "source",
@@ -141,6 +142,7 @@ METADATA_FIELDS = (
     "tier",
     "extra_exact_groups",
     "release_name_fallbacks",
+    "case_insensitive_group_overrides",
 )
 # Modes whose rendered Define depends only on the union of record tokens.
 TOKEN_UNION_MODES = {"standard", "generated_dynamic_hdr_groups"}
@@ -347,6 +349,8 @@ def expected_entry_metadata(cfg):
     if want["mode"] == "lq":
         want["extra_exact_groups"] = cfg.get("extra_exact_groups", [])
         want["release_name_fallbacks"] = cfg.get("release_name_fallbacks", [])
+    if "case_insensitive_group_overrides" in cfg:
+        want["case_insensitive_group_overrides"] = cfg["case_insensitive_group_overrides"]
     return want
 
 

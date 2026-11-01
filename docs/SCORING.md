@@ -53,6 +53,8 @@ Important examples:
 - Recognized retag/redistribution markers receive a tiny tie-breaking penalty rather than rejection.
 - Generated Dynamic HDR is a Movie-only strong penalty when a matching release group also carries parsed Dolby Vision or HDR10+ metadata.
 
+LQ group classification matches the parsed release group, not the whole title. One local exception follows from this. `GHOSTS` stays a case-insensitive Series LQ group, although upstream Vidhin matches it only in capitals. Upstream's case rule guards against its title-wide regex flagging titles like "Full of Ghosts", which a group match never does. GHOSTS is not a Movie LQ group, matching both Vidhin and TRaSH.
+
 The Vidhin synchronization workflow fails closed when expected upstream fragments change in ways that require manual review.
 
 ## Adaptive filtering

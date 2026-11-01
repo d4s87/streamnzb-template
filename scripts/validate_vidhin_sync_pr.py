@@ -76,9 +76,30 @@ class Reasons(list):
 # prepare
 
 
+def unique_keys(pairs):
+    keys = [k for k, _ in pairs]
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"{BASELINE}: duplicate JSON keys {sorted({k for k in keys if keys.count(k) > 1})}")
+    return dict(pairs)
+
+
+def baseline_json(payload):
+    # Must match sync_vidhin.py's baseline writer.
+    return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def generator_stamp(stamp):
+    """Whether stamp is in the generator's format: a second-precision UTC ISO 8601 timestamp."""
+    try:
+        parsed = dt.datetime.fromisoformat(stamp)
+    except (TypeError, ValueError):
+        return False
+    return parsed.utcoffset() == dt.timedelta(0) and not parsed.microsecond and parsed.isoformat() == stamp
+
+
 def reproduce(repo, base_sha, head):
     """Re-run the trusted generator on the head baseline's own upstream records."""
-    new = json.loads(head[BASELINE])
+    new = json.loads(head[BASELINE], object_pairs_hook=unique_keys)
     upstream = []
     for entry in new["defines"].values():
         for rec in entry["records"]:
@@ -103,14 +124,16 @@ def reproduce(repo, base_sha, head):
                LIBRARY: (d / "l.txt").read_bytes()}
 
     problems = []
+    stamp = new.get("generated_at_utc")
+    if not generator_stamp(stamp):
+        problems.append(f"{BASELINE}: generated_at_utc {stamp!r} is not a second-precision UTC ISO timestamp")
+    # Byte-exact apart from the top-level stamp: swap only that value in the
+    # parsed generator output, never by text replacement, and re-serialize.
     want = json.loads(out[BASELINE])
-    stamp = new.pop("generated_at_utc", None)
-    want.pop("generated_at_utc", None)
-    try:
-        dt.datetime.fromisoformat(stamp)
-    except (TypeError, ValueError):
-        problems.append(f"{BASELINE}: generated_at_utc {stamp!r} is not an ISO timestamp")
-    if new != want:
+    if baseline_json(want) != out[BASELINE]:
+        raise RuntimeError(f"generator {BASELINE} does not round-trip through its serializer")
+    want["generated_at_utc"] = stamp
+    if head[BASELINE] != baseline_json(want):
         problems.append(f"{BASELINE} differs from the trusted generator output")
     for path in (REPORT, LIBRARY):
         if head[path] != out[path]:

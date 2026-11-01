@@ -267,6 +267,83 @@ def edit_baseline_token(repo):
 expect(validate(make_pr(tamper=edit_baseline_token)), assess.BLOCKED, "generator_mismatch",
        label="baseline token without upstream record")
 
+# Byte-exact baseline: only the top-level generated_at_utc value may differ.
+STAMP_LINE = re.compile(r'^  "generated_at_utc": ("[^"\n]*"),\n', re.MULTILINE)
+
+
+def edit_baseline(fn, same_data=True):
+    """Tamper with the generated baseline text; same_data asserts the edit is JSON-equivalent."""
+    def tamper(repo):
+        path = repo / v.BASELINE
+        old = path.read_text(encoding="utf-8")
+        new = fn(old)
+        assert new != old
+        if same_data:
+            assert json.loads(new) == json.loads(old), "the old dict comparison would have accepted this"
+        path.write_text(new, encoding="utf-8")
+    return tamper
+
+
+def set_stamp(value):
+    return edit_baseline(lambda t: STAMP_LINE.sub(f'  "generated_at_utc": {value},\n', t, count=1), same_data=False)
+
+
+def baseline_case(tamper, *codes, decision=assess.BLOCKED, detail=None, label):
+    r = validate(make_pr(tamper=tamper))
+    expect(r, decision, *codes, label=label)
+    if detail:
+        assert any(detail in x["detail"] for x in r["reasons"]), (label, r["reasons"])
+    return r
+
+
+r = baseline_case(set_stamp('"2020-01-02T03:04:05+00:00"'), decision=assess.SAFE,
+                  label="baseline with only a different valid timestamp")
+assert not r["reasons"], r["reasons"]
+repo, _, head = safe_pr
+assert v.blob(repo, head, v.BASELINE).decode().count("generated_at_utc") == 1
+baseline_case(edit_baseline(lambda t: t.replace('\n  "defines"', '\n   "defines"', 1)), "generator_mismatch",
+              detail=f"{v.BASELINE} differs", label="baseline whitespace change")
+baseline_case(edit_baseline(lambda t: json.dumps(json.loads(t), indent=4, ensure_ascii=False) + "\n"),
+              "generator_mismatch", label="baseline re-indented")
+baseline_case(edit_baseline(lambda t: t.rstrip("\n")), "generator_mismatch", label="baseline trailing newline removed")
+baseline_case(edit_baseline(lambda t: json.dumps(dict(reversed(json.loads(t).items())), indent=2,
+                                                 ensure_ascii=False) + "\n"),
+              "generator_mismatch", label="baseline keys reordered")
+baseline_case(edit_baseline(lambda t: t.replace('"schema_version"', '"\\u0073chema_version"', 1)),
+              "generator_mismatch", label="baseline key escaped differently")
+baseline_case(edit_baseline(lambda t: t.replace("https://", "https:\\/\\/", 1)), "generator_mismatch",
+              label="baseline value escaped differently")
+baseline_case(edit_baseline(lambda t: t.replace('"scope": "movie",', '"scope": "movie",\n      "scope": "movie",', 1)),
+              "generator_failed", detail="duplicate JSON keys ['scope']", label="duplicate nested JSON key")
+baseline_case(edit_baseline(lambda t: STAMP_LINE.sub(lambda m: m.group(0) * 2, t, count=1)),
+              "generator_failed", detail="duplicate JSON keys ['generated_at_utc']",
+              label="duplicate generated_at_utc")
+baseline_case(edit_baseline(lambda t: STAMP_LINE.sub(lambda m: m.group(0) + '  "generated_at_utc": "2020-01-02T03:04:05+00:00",\n',
+                                                     t, count=1), same_data=False),
+              "generator_failed", detail="duplicate JSON keys ['generated_at_utc']",
+              label="duplicate generated_at_utc with a different value")
+baseline_case(edit_baseline(lambda t: STAMP_LINE.sub("", t, count=1), same_data=False), "generator_mismatch",
+              detail="generated_at_utc None", label="missing generated_at_utc")
+for bad in ('"yesterday"', '"2026-11-01"', '"2026-11-01T10:31:54"', '"2026-11-01T10:31:54+02:00"',
+            '"2026-11-01T10:31:54.000001+00:00"', '"2026-11-01T10:31:54Z"', '""', "null", "0", "[]"):
+    baseline_case(set_stamp(bad), "generator_mismatch", detail="is not a second-precision UTC ISO timestamp",
+                  label=f"malformed generated_at_utc {bad}")
+nested_stamp = '"scope": "movie",\n      "generated_at_utc": "2020-01-02T03:04:05+00:00",'
+baseline_case(edit_baseline(lambda t: t.replace('"scope": "movie",', nested_stamp, 1), same_data=False),
+              "generator_mismatch", label="nested generated_at_utc added")
+baseline_case(edit_baseline(lambda t: STAMP_LINE.sub(lambda m: m.group(0) + f'  "generated_at_utc_2": {m.group(1)},\n',
+                                                     t, count=1), same_data=False),
+              "generator_mismatch", label="similarly named timestamp key added")
+# The stamp text elsewhere must not be mistaken for the stamp field.
+baseline_case(edit_baseline(lambda t: re.sub(r'"upstream_url": "[^"]*"',
+                                             lambda m: f'"upstream_url": {STAMP_LINE.search(t).group(1)}', t, count=1),
+                            same_data=False),
+              "generator_mismatch", label="unrelated field set to the timestamp text")
+baseline_case(edit_baseline(lambda t: STAMP_LINE.sub("", re.sub(r'"upstream_url": "[^"]*"',
+                                                                lambda m: f'"upstream_url": {STAMP_LINE.search(t).group(1)}',
+                                                                t, count=1), count=1), same_data=False),
+              "generator_mismatch", label="timestamp moved into an unrelated field")
+
 # ---------------------------------------------------------------- stale or modified evidence
 
 expect(validate(safe_pr, live_head="1" * 40), assess.BLOCKED, "stale_pr_head", label="PR head pushed after assessment")
@@ -419,9 +496,16 @@ for step in ("Check out trusted base commit", "Set up Python", "Fetch PR head co
              "Check identity, scope and generator reproducibility"):
     assert re.search(rf"- name: {step}\n(?:        id: .*\n)?        if: steps\.classify\.outputs\.applicable == 'true'\n", workflow), step
 
+def step_script(name):
+    """The run block of a workflow step, exactly as the workflow holds it."""
+    m = re.search(rf"- name: {re.escape(name)}\n(?:        .*\n)*?        run: \|\n((?:          .*\n|\n)+?)\n      - name:",
+                  workflow)
+    assert m, name
+    return m.group(1)
+
+
 # Run the real Classify block with a fake gh for the live chore/vidhin-sync head.
-classify = re.search(r"- name: Classify PR\n(?:        .*\n)*?        run: \|\n((?:          .*\n|\n)+?)\n      - name:",
-                     workflow).group(1)
+classify = step_script("Classify PR")
 fake_bin = fresh("fake-gh")
 (fake_bin / "gh").write_text(
     '#!/usr/bin/env bash\ncase "$FAKE_GH" in\n'
@@ -447,6 +531,72 @@ assert classify_run("feat/x", "b" * 40) == (0, "applicable=false\n")
 assert classify_run("feat/x", "a" * 40)[0] == 1, "a non-sync PR reusing the sync head must fail"
 assert classify_run("feat/x", "error")[0] == 1, "an unreadable sync head must fail closed"
 print("ok - classify step (sync, unrelated, masking, API failure)")
+
+# Run the real live-read step with a fake gh that answers each endpoint with
+# SHAs other than the event's, and feed its outputs to decide as Decide does.
+assert re.search(r"- name: Read live PR head and base\n        id: live\n", workflow)
+assert "LIVE_HEAD_SHA: ${{ steps.live.outputs.head }}" in workflow
+assert "LIVE_BASE_SHA: ${{ steps.live.outputs.base }}" in workflow
+live = step_script("Read live PR head and base")
+live_bin = fresh("fake-gh-live")
+(live_bin / "gh").write_text(
+    '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$GH_LOG"\n'
+    'case "$2" in\n'
+    '  "repos/$BASE_REPO/pulls/$PR_NUMBER") v="$LIVE_HEAD";;\n'
+    '  "repos/$BASE_REPO/git/ref/heads/$BASE_REF") v="$LIVE_BASE";;\n'
+    '  *) echo "unexpected endpoint $2" >&2; exit 1;;\nesac\n'
+    'if [[ "$v" == error ]]; then echo "gh: Server Error (HTTP 502)" >&2; exit 1; fi\n'
+    'echo "$v"\n', encoding="utf-8")
+(live_bin / "gh").chmod(0o755)
+
+
+def live_run(live_head, live_base, event_head="e" * 40, event_base="f" * 40):
+    d = fresh("live")
+    env = {**os.environ, "PATH": f"{live_bin}:{os.environ['PATH']}", "GH_LOG": str(d / "gh.log"),
+           "LIVE_HEAD": live_head, "LIVE_BASE": live_base, "PR_NUMBER": "7", "BASE_REPO": REPO, "BASE_REF": "main",
+           "HEAD_SHA": event_head, "BASE_SHA": event_base, "GITHUB_OUTPUT": str(d / "out")}
+    proc = subprocess.run(["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", live], env=env,
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    calls = (d / "gh.log").read_text().splitlines() if (d / "gh.log").exists() else []
+    assert calls == [f"api repos/{REPO}/pulls/7 --jq .head.sha",
+                     f"api repos/{REPO}/git/ref/heads/main --jq .object.sha"], calls
+    out = dict(line.split("=", 1) for line in (d / "out").read_text().splitlines())
+    assert set(out) == {"head", "base"}, out
+    return out
+
+
+assert live_run("1" * 40, "2" * 40) == {"head": "1" * 40, "base": "2" * 40}, "live SHAs, not the event SHAs"
+assert live_run("error", "error") == {"head": "", "base": ""}
+
+
+def decide_live(live_head, live_base):
+    repo, base, head = safe_pr
+    out = live_run(live_head, live_base, event_head=head, event_base=base)
+    state = v.prepare(repo, base_sha=base, head_sha=head, head_ref=v.SYNC_BRANCH, head_repo=REPO,
+                      base_repo=REPO, author=v.SYNC_AUTHOR, author_type="Bot")
+    adir = fresh("live-evidence")
+    (adir / "prepare.json").write_text(assess.canonical_json(state), encoding="utf-8")
+    run_assessment(repo, base, adir, same_outcome, "passed", PASSING_LOG)
+    r = v.decide(repo, head_ref=v.SYNC_BRANCH, pr_number="7", prepare_path=adir / "prepare.json",
+                 assessment_dir=adir, live_head_sha=out["head"], live_base_sha=out["base"])
+    git(repo, "checkout", "-q", "--", ".")
+    git(repo, "clean", "-fdq")
+    return r, {x["code"] for x in r["reasons"]}
+
+
+repo, base, head = safe_pr
+r, codes = decide_live(head, base)
+assert r["decision"] == assess.SAFE and not codes, r
+r, codes = decide_live("1" * 40, base)
+assert r["decision"] == assess.BLOCKED and codes == {"stale_pr_head"}, r
+r, codes = decide_live(head, "2" * 40)
+assert r["decision"] == assess.BLOCKED and codes == {"stale_base"}, r
+for live_head, live_base, want in (("error", base, {"stale_pr_head"}), (head, "error", {"stale_base"}),
+                                   ("error", "error", {"stale_pr_head", "stale_base"})):
+    r, codes = decide_live(live_head, live_base)
+    assert r["decision"] == assess.BLOCKED and codes == want, (live_head, live_base, r)
+print("ok - live-read step (live API reads, output keys, stale head/base, API failure)")
 
 sync = (ROOT / ".github/workflows/sync-vidhin.yml").read_text(encoding="utf-8")
 assert re.search(rf"^\s+branch: {re.escape(v.SYNC_BRANCH)}$", sync, flags=re.MULTILINE)

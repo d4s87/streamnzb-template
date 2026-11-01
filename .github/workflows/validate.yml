@@ -51,6 +51,9 @@ jobs:
       - name: Test Vidhin sync assessment
         run: python tests/test_vidhin_sync_assessment.py
 
+      - name: Test Vidhin sync PR-head validation
+        run: python tests/test_validate_vidhin_sync_pr.py
+
       - name: Test Vidhin sync workflow PR governance
         run: ./tests/test_vidhin_workflow_pr_metadata.sh
 

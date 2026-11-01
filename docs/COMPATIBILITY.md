@@ -223,7 +223,7 @@ Metadata-only changes are ignored so they do not create unnecessary synchronizat
 
 `scripts/vidhin_mapping.json` holds one local LQ case exception: `case_insensitive_group_overrides: ["GHOSTS"]` on `Shows LQ Groups`. The generator renders it as `group matches "(?i)^(GHOSTS)$"`, a whole parsed-group match that never matches the release name. The rest of the upstream case-sensitive record, `iVy`, is rendered unchanged. The override stays valid only while `GHOSTS`, spelled exactly, appears in exactly one case-sensitive upstream `LQ (Sonarr)` record. If upstream removes it, respells it, duplicates it or makes it case-insensitive again, the sync fails closed and the override must be re-reviewed or removed. `tests/streamnzb_compat/vidhin_ghosts_lq_sync_test.go` locks the resulting behavior.
 
-Each sync PR includes an advisory SAFE / REVIEW_REQUIRED / BLOCKED assessment. It is built from a semantic diff of the generated Defines, their consumers in both published profiles, and old-vs-new real-engine probes. It never merges or approves a PR. See [VIDHIN_SYNC_ASSESSMENT.md](VIDHIN_SYNC_ASSESSMENT.md).
+Each sync PR includes an advisory SAFE / REVIEW_REQUIRED / BLOCKED assessment. It is built from a semantic diff of the generated Defines, their consumers in both published profiles, and old-vs-new real-engine probes. It never merges or approves a PR. The `Validate Vidhin sync PR` check independently re-runs it, with the pinned engine, against the exact head commit of each `chore/vidhin-sync` PR. See [VIDHIN_SYNC_ASSESSMENT.md](VIDHIN_SYNC_ASSESSMENT.md).
 
 ## Scheduled upstream check
 

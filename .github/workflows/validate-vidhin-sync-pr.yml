@@ -1,0 +1,120 @@
+name: Validate Vidhin sync PR
+
+# PR-head validation for generated chore/vidhin-sync PRs
+# (docs/VIDHIN_SYNC_ASSESSMENT.md, "PR-head validation"). Plain
+# pull_request with a read-only token and no secrets: the job checks out
+# the trusted base commit and reads only the PR head's three generated files
+# as data, so no PR code runs. It never approves, merges or labels.
+#
+# Every PR runs this job and non-sync PRs finish as NOT_APPLICABLE inside it.
+# There is deliberately no job-level `if:`: a skipped run reports success,
+# which would mask an earlier failure for the same head commit.
+
+on:
+  pull_request:
+    branches:
+      - main
+    # `edited` covers a PR retargeted onto main.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: validate-vidhin-sync-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Vidhin sync PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # PR-controlled values reach scripts only through the environment.
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      BASE_REPO: ${{ github.repository }}
+      AUTHOR: ${{ github.event.pull_request.user.login }}
+      AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+
+    steps:
+      - name: Check out trusted base commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      # Data only: nothing from the head is checked out or executed.
+      - name: Fetch PR head commit
+        run: git fetch --no-tags --quiet origin "$HEAD_SHA" || echo "PR head $HEAD_SHA could not be fetched." >&2
+
+      - name: Check identity, scope and generator reproducibility
+        id: prepare
+        run: |
+          python3 scripts/validate_vidhin_sync_pr.py prepare \
+            --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --head-ref "$HEAD_REF" \
+            --head-repo "$HEAD_REPO" --base-repo "$BASE_REPO" \
+            --author "$AUTHOR" --author-type "$AUTHOR_TYPE" \
+            --out "$RUNNER_TEMP/vidhin-pr-validation/prepare.json"
+
+      - name: Set up Go
+        if: steps.prepare.outputs.run_engine == 'true'
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.0"
+          cache-dependency-path: tests/streamnzb_compat/go.sum
+
+      # A failure here leaves evidence missing, which the decision blocks on.
+      - name: Assess against base with the pinned StreamNZB engine
+        if: steps.prepare.outputs.run_engine == 'true'
+        continue-on-error: true
+        run: ./scripts/assess_vidhin_sync.sh "$BASE_SHA" "$RUNNER_TEMP/vidhin-pr-validation/assessment"
+
+      # Read after the engine run, so a head push or base move during the
+      # run makes this result stale instead of passing.
+      - name: Read live PR head and base
+        id: live
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "head=$(gh api "repos/$BASE_REPO/pulls/$PR_NUMBER" --jq .head.sha || true)" >> "$GITHUB_OUTPUT"
+          echo "base=$(gh api "repos/$BASE_REPO/git/ref/heads/$BASE_REF" --jq .object.sha || true)" >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        if: always()
+        env:
+          LIVE_HEAD_SHA: ${{ steps.live.outputs.head }}
+          LIVE_BASE_SHA: ${{ steps.live.outputs.base }}
+        run: |
+          python3 scripts/validate_vidhin_sync_pr.py decide \
+            --head-ref "$HEAD_REF" --pr-number "$PR_NUMBER" \
+            --prepare "$RUNNER_TEMP/vidhin-pr-validation/prepare.json" \
+            --assessment-dir "$RUNNER_TEMP/vidhin-pr-validation/assessment" \
+            --live-head-sha "$LIVE_HEAD_SHA" --live-base-sha "$LIVE_BASE_SHA" \
+            --json-out "$RUNNER_TEMP/vidhin-pr-validation/decision.json" \
+            --summary-out "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vidhin-pr-validation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/vidhin-pr-validation/
+          if-no-files-found: ignore
+          retention-days: 14

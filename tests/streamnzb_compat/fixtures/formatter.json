@@ -979,7 +979,9 @@
         "Season": 1,
         "Episode": 28,
         "EpisodeCode": "S01E28",
-        "TopScore": 1234
+        "TopScore": 1234,
+        "ScoreWithoutResolution": 1234,
+        "TopScoreWithoutResolution": 1234
       },
       "name_contains": [
         "4K",
@@ -1109,7 +1111,9 @@
         "Season": 1,
         "Episode": 12,
         "EpisodeCode": "S01E12",
-        "TopScore": 1234
+        "TopScore": 1234,
+        "ScoreWithoutResolution": 950,
+        "TopScoreWithoutResolution": 1234
       },
       "name_contains": [
         "FHD",
@@ -1219,7 +1223,9 @@
         ],
         "HDR": [],
         "Complete": true,
-        "TopScore": 1800
+        "TopScore": 1800,
+        "ScoreWithoutResolution": 1800,
+        "TopScoreWithoutResolution": 1800
       },
       "name_contains": [
         "FHD",
@@ -1265,6 +1271,8 @@
         "Quality": "WEB-DL",
         "Score": 1000,
         "TopScore": 1000,
+        "ScoreWithoutResolution": 1000,
+        "TopScoreWithoutResolution": 1000,
         "Avail": true
       },
       "name_contains": [
@@ -1286,6 +1294,8 @@
         "Quality": "WEB-DL",
         "Score": 600,
         "TopScore": 1000,
+        "ScoreWithoutResolution": 600,
+        "TopScoreWithoutResolution": 1000,
         "Avail": false
       },
       "name_contains": [
@@ -1307,6 +1317,8 @@
         "Quality": "WEB-DL",
         "Score": -10,
         "TopScore": 1000,
+        "ScoreWithoutResolution": -10,
+        "TopScoreWithoutResolution": 1000,
         "Avail": false
       },
       "name_contains": [
@@ -1325,6 +1337,8 @@
         "Quality": "WEB-DL",
         "Score": 0,
         "TopScore": 0,
+        "ScoreWithoutResolution": 0,
+        "TopScoreWithoutResolution": 0,
         "Avail": false
       },
       "name_contains": [
@@ -1338,12 +1352,61 @@
       ]
     },
     {
+      "name": "Resolution-independent stars ignore the built-in resolution ladder",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 20670,
+        "TopScore": 60406,
+        "ScoreWithoutResolution": 670,
+        "TopScoreWithoutResolution": 670,
+        "Avail": true
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉",
+        "★★★★★"
+      ],
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "₂₀₆₇₀ · 💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Zero TopScoreWithoutResolution suppresses stars despite a positive TopScore",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "Score": 60000,
+        "TopScore": 60000,
+        "ScoreWithoutResolution": 0,
+        "TopScoreWithoutResolution": 0,
+        "Avail": true
+      },
+      "name_contains": [
+        "4K",
+        "〈ᴡᴇʙ-ᴅʟ〉"
+      ],
+      "name_excludes": [
+        "★",
+        "☆",
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "₆₀₀₀₀ · 💚 ɴᴢʙ"
+      ]
+    },
+    {
       "name": "Available zero-score result has clean NZB badge",
       "context": {
         "Resolution": "1080p",
         "Quality": "WEB-DL",
         "Score": 0,
         "TopScore": 0,
+        "ScoreWithoutResolution": 0,
+        "TopScoreWithoutResolution": 0,
         "Avail": true
       },
       "name_contains": [

@@ -3,7 +3,7 @@
 DraCuLa's custom filtering, scoring, Define Library and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
 **Current version: 6.4.6**  
-**Compatibility: StreamNZB 6.3.0 / Jhin 0.8.0**
+**Compatibility: StreamNZB 6.4.0 / Jhin 0.8.0**
 
 DraCuLa is designed to keep trusted release-group and source quality at the center of StreamNZB ranking while still accounting for availability, Anime-specific preferences, HDR/audio metadata, corrected releases and device compatibility.
 
@@ -29,6 +29,9 @@ Both profiles use the same shared Define Library and formatter architecture.
 For detailed scoring policy and compatibility behavior, see [Scoring Reference](docs/SCORING.md) and [Compatibility and Validation](docs/COMPATIBILITY.md).
 
 ## Quick Start
+
+> [!IMPORTANT]
+> **DraCuLa requires StreamNZB 6.4.0 or newer.** Upgrade StreamNZB before importing or refreshing the formatter. Older StreamNZB versions are not supported: the formatter still imports, but result names silently fall back to StreamNZB's defaults. See [Compatibility and Validation](docs/COMPATIBILITY.md#supported-baseline).
 
 > [!IMPORTANT]
 > **Import the Define Library before importing the Profile.**
@@ -77,9 +80,10 @@ You do **not** need new URLs when a release is published.
 
 Refresh in this order:
 
-1. **Define Library**
-2. **Profile**
-3. **Formatter** when it changed
+1. **StreamNZB** — upgrade first when a release raises the required version (currently 6.4.0 or newer)
+2. **Define Library**
+3. **Profile**
+4. **Formatter** when it changed
 
 StreamNZB shows proposed changes before they are applied.
 
@@ -129,6 +133,8 @@ Examples of the language/subtitle line:
 - `⛿ sᴜʙ 🇫🇷 🇩🇪`
 - `⛿ EN · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9`
 - `✓ JA · EN`
+
+The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This requires StreamNZB 6.4.0 or newer.
 
 `✓` means every displayed audio language was measured from the media file's own audio tracks. You can expect it on probed Library results, not on ordinary fresh indexer results. `⛿` means the language information is reported by the indexer or inferred from the release name, or was not fully measured.
 
@@ -183,7 +189,7 @@ In short: **keep DraCuLa rules upstream-managed and layer your preferences on to
 
 The repository validates both generated profile variants, the Define Library, formatter artifacts, Vidhin synchronization and Anime tier integrity.
 
-Compatibility-sensitive behavior is also tested against a pinned revision of the real StreamNZB engine rather than being reimplemented locally. The current accepted baseline is **StreamNZB 6.3.0 / Jhin 0.8.0**.
+Compatibility-sensitive behavior is also tested against a pinned revision of the real StreamNZB engine rather than being reimplemented locally. The current accepted baseline is **StreamNZB 6.4.0 / Jhin 0.8.0**.
 
 A separate scheduled workflow checks the latest upstream StreamNZB release for early warning of compatibility regressions. That check is advisory and does not silently change the supported baseline.
 

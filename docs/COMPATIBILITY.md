@@ -4,6 +4,9 @@ This document contains the technical compatibility and validation details for Dr
 
 ## Supported baseline
 
+**Minimum supported StreamNZB: 6.4.0.** Older StreamNZB versions are not
+supported by the current DraCuLa formatter.
+
 Current published compatibility baseline:
 
 - StreamNZB 6.4.0 (commit `56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`)
@@ -20,15 +23,29 @@ not a rule input. Against the exact tagged v6.4.0 source, all
 control run, apart from parallel subtest ordering. The share-code codecs are
 unchanged, and no `go.mod` change is needed.
 
+### StreamNZB 6.4.0 minimum (formatter)
+
 StreamNZB 6.4.0 adds `.ScoreWithoutResolution` and
 `.TopScoreWithoutResolution` to the formatter context
-(`Gaisberg/streamnzb#373`, requested in `Gaisberg/streamnzb#343`).
-DraCuLa's formatter uses them for its stars (see
-[Formatter compatibility](#formatter-compatibility)), so the current
-formatter requires StreamNZB 6.4.0. Older StreamNZB versions still import
-it, because import-time validation does not check fields, but every result
-name then fails to render and StreamNZB falls back to its default name
-(confirmed against the real 6.3.0 engine).
+(`Gaisberg/streamnzb#373`, requested in `Gaisberg/streamnzb#343`). The
+production formatter uses them for its stars (see
+[Formatter compatibility](#formatter-compatibility)). This is a deliberate,
+coordinated raise of the minimum supported StreamNZB version, not a
+best-effort compatibility layer:
+
+- DraCuLa publishes one formatter at the existing `formatter.txt` URL. There
+  is no separate formatter for StreamNZB 6.3.0 or older.
+- Upgrade StreamNZB to 6.4.0 or newer **before** importing or refreshing the
+  formatter. Then refresh the Define Library, Profile and Formatter as the
+  release notes direct.
+- On StreamNZB older than 6.4.0 the formatter still imports, because
+  StreamNZB's import-time template validation does not check field names.
+  At render time, however, the new fields do not exist, so every result name
+  fails to render and StreamNZB silently falls back to its built-in default
+  name. Descriptions still render. This behavior was confirmed against the
+  real 6.3.0 engine and is unsupported.
+- The profile and Define Library do not use any 6.4.0-only feature, but
+  DraCuLa validates and supports them only on the current baseline.
 
 The move from StreamNZB 6.2.0 to 6.3.0 is a **compatibility pin update
 only**. Jhin stays at 0.8.0. The `v6.2.0...v6.3.0` range does not touch
@@ -134,7 +151,8 @@ weaker 2160p result; 720p and unparsed resolutions, which pay no ladder, rate
 on equal terms; and when no returned result has a positive adjusted score,
 no stars are shown. A real-engine regression ranks mixed-resolution Anime and
 Movie pools through the published profile and Define Library and renders
-them through StreamNZB's own `newFormatContext`.
+the star labels through StreamNZB's own playlist aggregation, which computes
+both top values itself.
 
 Jhin exposes parsed `Languages` separately from the boolean `Subbed` flag. DraCuLa therefore displays the metadata that Jhin actually exports and does not invent subtitle-language identities that are not present in the formatter context.
 

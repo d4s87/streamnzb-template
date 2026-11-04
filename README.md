@@ -31,6 +31,9 @@ For detailed scoring policy and compatibility behavior, see [Scoring Reference](
 ## Quick Start
 
 > [!IMPORTANT]
+> **DraCuLa requires StreamNZB 6.4.0 or newer.** Upgrade StreamNZB before importing or refreshing the formatter. Older StreamNZB versions are not supported: the formatter still imports, but result names silently fall back to StreamNZB's defaults. See [Compatibility and Validation](docs/COMPATIBILITY.md#supported-baseline).
+
+> [!IMPORTANT]
 > **Import the Define Library before importing the Profile.**
 >
 > The profiles reference shared Define rules with `matched()`. Importing a profile first may leave Define references unresolved.
@@ -77,9 +80,10 @@ You do **not** need new URLs when a release is published.
 
 Refresh in this order:
 
-1. **Define Library**
-2. **Profile**
-3. **Formatter** when it changed
+1. **StreamNZB** — upgrade first when a release raises the required version (currently 6.4.0 or newer)
+2. **Define Library**
+3. **Profile**
+4. **Formatter** when it changed
 
 StreamNZB shows proposed changes before they are applied.
 
@@ -130,7 +134,7 @@ Examples of the language/subtitle line:
 - `⛿ EN · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9`
 - `✓ JA · EN`
 
-The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This needs StreamNZB 6.4.0 or later.
+The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This requires StreamNZB 6.4.0 or newer.
 
 `✓` means every displayed audio language was measured from the media file's own audio tracks. You can expect it on probed Library results, not on ordinary fresh indexer results. `⛿` means the language information is reported by the indexer or inferred from the release name, or was not fully measured.
 

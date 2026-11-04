@@ -15,6 +15,7 @@ import (
 
 	"github.com/dreulavelle/jhin/rank"
 
+	"streamnzb/pkg/auth"
 	"streamnzb/pkg/core/config"
 	"streamnzb/pkg/release"
 	"streamnzb/pkg/search/parser"
@@ -605,7 +606,7 @@ func TestDraculaFormatterFixtures(
 				bluray  = "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.Dual-Audio.FLAC2.0.x265-FLE"
 				weakWeb = "Frieren.Beyond.Journeys.End.S01E01.1080p.WEB.H264-SubsPlease"
 			)
-			anime := draculaRankedContexts(t, profile, ranking.Request{
+			animeCands, anime := draculaRankedContexts(t, profile, ranking.Request{
 				Kind: ranking.KindAnimeShow, IsAnime: true,
 				Title: "Frieren Beyond Journeys End", Season: 1, Episode: 1,
 			}, weakWeb, bluray, uhdWeb)
@@ -632,9 +633,10 @@ func TestDraculaFormatterFixtures(
 					anime[1].ScoreWithoutResolution, anime[0].ScoreWithoutResolution)
 			}
 
-			names := make([]string, len(anime))
+			// Star expectations run on labels from StreamNZB's own playlist
+			// aggregation (facade.go), which computes both top values itself.
+			names := draculaPlaylistLabels(t, payload.ResultNameTemplate, animeCands, anime)
 			for i, ctx := range anime {
-				names[i] = renderDraculaFormatter(t, payload.ResultNameTemplate, ctx)
 				t.Logf("#%d score=%d swr=%d %q", i+1, ctx.Score, ctx.ScoreWithoutResolution, names[i])
 			}
 			if !strings.Contains(names[1], "★★★★★") {
@@ -660,7 +662,7 @@ func TestDraculaFormatterFixtures(
 				hd720   = "Example.Movie.2024.720p.WEB-DL.DDP5.1.H.264-NTb"
 				unknown = "Example.Movie.2024.WEB-DL.DDP5.1.H.264-NTb"
 			)
-			movies := draculaRankedContexts(t, profile, ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"},
+			movieCands, movies := draculaRankedContexts(t, profile, ranking.Request{Kind: ranking.KindMovie, Title: "Example Movie"},
 				unknown, hd720, uhdBD, webT1)
 			byTitle := map[string]FormatContext{}
 			for i, ctx := range movies {
@@ -669,6 +671,7 @@ func TestDraculaFormatterFixtures(
 					t.Errorf("order no longer follows .Score at #%d", i+1)
 				}
 			}
+			draculaPlaylistLabels(t, payload.ResultNameTemplate, movieCands, movies)
 			bd := byTitle[uhdBD]
 			if !slices.ContainsFunc(bd.MatchedRules, func(m triage.RuleMatch) bool { return m.Name == "Movies UHD BluRay T1" }) {
 				t.Fatalf("premise lost: %s no longer matches Movies UHD BluRay T1", uhdBD)
@@ -737,9 +740,10 @@ func draculaProductionProfile(t *testing.T, root string) *ranking.Profile {
 	return profile
 }
 
-// draculaRankedContexts ranks titles through the profile and builds each
-// survivor's FormatContext the way handlers_playlist.go and facade.go do.
-func draculaRankedContexts(t *testing.T, profile *ranking.Profile, req ranking.Request, titles ...string) []FormatContext {
+// draculaRankedContexts ranks titles through the profile, maps survivors to
+// candidates as handlers_playlist.go does, and builds each FormatContext the
+// way facade.go does, so field-level assertions can read it directly.
+func draculaRankedContexts(t *testing.T, profile *ranking.Profile, req ranking.Request, titles ...string) ([]triage.Candidate, []FormatContext) {
 	t.Helper()
 
 	in := make([]triage.Candidate, 0, len(titles))
@@ -765,9 +769,36 @@ func draculaRankedContexts(t *testing.T, profile *ranking.Profile, req ranking.R
 
 	out := make([]FormatContext, 0, len(cands))
 	for i, cand := range cands {
-		out = append(out, newFormatContext(cand, i+1, len(cands), top, topWithout, "", "", req.Title, "", false, 0))
+		out = append(out, newFormatContext(cand, i+1, len(cands), top, topWithout, "", "", "", capsSummaryLine(cand.Release), false, 0))
 	}
-	return out
+	return cands, out
+}
+
+// draculaPlaylistLabels renders the name template through StreamNZB's own
+// playlist aggregation, which computes TopScore/TopScoreWithoutResolution
+// itself, and fails if any label differs from the helper-built context's.
+func draculaPlaylistLabels(t *testing.T, nameTemplate string, cands []triage.Candidate, ctxs []FormatContext) []string {
+	t.Helper()
+
+	view := (&Server{}).playlistViewOf(
+		&playlistResult{Candidates: cands},
+		StreamSlotKey{},
+		&auth.Stream{ResultNameTemplate: nameTemplate},
+	)
+	if len(view.Entries) != len(ctxs) {
+		t.Fatalf("playlist has %d entries, want %d", len(view.Entries), len(ctxs))
+	}
+	labels := make([]string, len(view.Entries))
+	for i, entry := range view.Entries {
+		labels[i] = entry.DisplayTitle
+		if labels[i] == "" {
+			t.Fatalf("%s: production playlist label fell back to the release title", entry.Title)
+		}
+		if want := singleLineLabel(renderDraculaFormatter(t, nameTemplate, ctxs[i])); labels[i] != want {
+			t.Errorf("%s: production aggregation renders %q, helper context renders %q", entry.Title, labels[i], want)
+		}
+	}
+	return labels
 }
 
 func draculaContextTitles(ctxs []FormatContext) []string {

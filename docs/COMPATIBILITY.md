@@ -6,9 +6,29 @@ This document contains the technical compatibility and validation details for Dr
 
 Current published compatibility baseline:
 
-- StreamNZB 6.3.0 (commit `7e855bd9e60c68ea4971c40f3cee22e8cc26e331`)
+- StreamNZB 6.4.0 (commit `56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`)
 - Jhin 0.8.0
 - StreamNZB profile payload schema v2
+
+The move from StreamNZB 6.3.0 to 6.4.0 keeps Jhin at 0.8.0 and changes no
+parser trait, rule evaluation, aggregate or native score. In `pkg/search`,
+`v6.3.0...v6.4.0` extracts the resolution ladder into
+`ranking.ResolutionScore()` without changing its values, and adds air-date
+acceptance for daily-show episode requests, which is request validation and
+not a rule input. Against the exact tagged v6.4.0 source, all
+`tests/streamnzb_compat` subtests pass with output identical to a v6.3.0
+control run, apart from parallel subtest ordering. The share-code codecs are
+unchanged, and no `go.mod` change is needed.
+
+StreamNZB 6.4.0 adds `.ScoreWithoutResolution` and
+`.TopScoreWithoutResolution` to the formatter context
+(`Gaisberg/streamnzb#373`, requested in `Gaisberg/streamnzb#343`).
+DraCuLa's formatter uses them for its stars (see
+[Formatter compatibility](#formatter-compatibility)), so the current
+formatter requires StreamNZB 6.4.0. Older StreamNZB versions still import
+it, because import-time validation does not check fields, but every result
+name then fails to render and StreamNZB falls back to its default name
+(confirmed against the real 6.3.0 engine).
 
 The move from StreamNZB 6.2.0 to 6.3.0 is a **compatibility pin update
 only**. Jhin stays at 0.8.0. The `v6.2.0...v6.3.0` range does not touch
@@ -96,7 +116,25 @@ Pinned real-StreamNZB formatter regressions cover user-facing behaviors such as:
 - same-release variant visibility;
 - PROPER / REPACK status labels;
 - ordinary versus backbone-confirmed NZB availability;
-- formatter behavior for compatibility-sensitive metadata.
+- formatter behavior for compatibility-sensitive metadata;
+- resolution-independent stars.
+
+The star rating uses `{{stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution}}`
+(StreamNZB 6.4.0+). `.ScoreWithoutResolution` is the final score minus only
+StreamNZB's built-in resolution ladder (20,000 points per rung, so 2160p
+carries 40,000 more than 1080p). DraCuLa rules that score resolution, such as
+the `Movies UHD BluRay` tiers, still count. `.TopScoreWithoutResolution` is
+the highest adjusted score among the returned results, which need not be the
+top-ranked one. Stars therefore rate a release on everything except its pixel
+count, which the formatter already shows separately. Ranking, filtering,
+Best-N retention and sort order still use the normal `.Score`, and the
+description keeps showing `.Score` so the numeric value always explains the
+order. Consequences: a strong 1080p release can show five stars below a
+weaker 2160p result; 720p and unparsed resolutions, which pay no ladder, rate
+on equal terms; and when no returned result has a positive adjusted score,
+no stars are shown. A real-engine regression ranks mixed-resolution Anime and
+Movie pools through the published profile and Define Library and renders
+them through StreamNZB's own `newFormatContext`.
 
 Jhin exposes parsed `Languages` separately from the boolean `Subbed` flag. DraCuLa therefore displays the metadata that Jhin actually exports and does not invent subtitle-language identities that are not present in the formatter context.
 
@@ -104,7 +142,7 @@ Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, ded
 
 The language marker is source-aware. StreamNZB's `.Languages` is a merge of probed audio-track languages, the indexer's language tag and release-name parsing, and `.LanguageSource` names only the strongest source that contributed (`measured`, `reported`, `inferred`, or empty). So `measured` can sit next to a language the file never confirmed. `.Verified` alone is not enough either: it is true for any probed Library result, even one whose audio tracks were not read. DraCuLa shows `✓` only when `.LanguageSource` is `measured` and every displayed `.Languages` entry is present in `.Probed.AudioLanguages`; otherwise it keeps `⛿`. The subtitle-only line always uses `⛿`. In the current StreamNZB release only Library results carry probe data, so fresh indexer results never show `✓`.
 
-Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.3.0 baseline. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.4.0 baseline (from source). DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
 
 ## Dolby Vision Profile 8
 
@@ -117,7 +155,7 @@ rules read (`DV without HDR fallback`, `Neutralize Dolby Vision`,
 `Generated Dynamic HDR Penalty`) is unchanged between 6.1.0 and 6.2.0 — it
 only activates for already-downloaded Library candidates. No DraCuLa rule
 change is required: DraCuLa's existing rules simply see more accurate input
-for Library candidates than before. StreamNZB 6.3.0 does not change the probe
+for Library candidates than before. StreamNZB 6.3.0 and 6.4.0 do not change the probe
 merge or the bundled ffprobe; this is confirmed from source only, not with a
 real Profile 8 file.
 

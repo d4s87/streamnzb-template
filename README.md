@@ -3,7 +3,7 @@
 DraCuLa's custom filtering, scoring, Define Library and formatter template for [StreamNZB](https://github.com/Gaisberg/streamnzb).
 
 **Current version: 6.4.6**  
-**Compatibility: StreamNZB 6.3.0 / Jhin 0.8.0**
+**Compatibility: StreamNZB 6.4.0 / Jhin 0.8.0**
 
 DraCuLa is designed to keep trusted release-group and source quality at the center of StreamNZB ranking while still accounting for availability, Anime-specific preferences, HDR/audio metadata, corrected releases and device compatibility.
 
@@ -130,6 +130,8 @@ Examples of the language/subtitle line:
 - `⛿ EN · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9`
 - `✓ JA · EN`
 
+The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This needs StreamNZB 6.4.0 or later.
+
 `✓` means every displayed audio language was measured from the media file's own audio tracks. You can expect it on probed Library results, not on ordinary fresh indexer results. `⛿` means the language information is reported by the indexer or inferred from the release name, or was not fully measured.
 
 The `sᴜʙ` marker is the single subtitle indicator: it now also appears when StreamNZB's merged `FormatContext.Subtitles` contains at least one recognized language, even if the release itself isn't tagged `.Subbed` — known subtitle-language flags are its immediate presentation, not a separate badge. This is a presentation inference from explicit subtitle metadata; StreamNZB's own `.Subbed` field is never mutated or derived from it. The formatter only displays metadata StreamNZB/Jhin exposes; it does not invent subtitle-language identities that are not available in the formatter context, and an unmapped/unknown code is silently skipped rather than shown raw. The formatter shows at most three subtitle-language flags; any additional recognized languages are summarized as `+N` rather than growing the line unbounded.
@@ -183,7 +185,7 @@ In short: **keep DraCuLa rules upstream-managed and layer your preferences on to
 
 The repository validates both generated profile variants, the Define Library, formatter artifacts, Vidhin synchronization and Anime tier integrity.
 
-Compatibility-sensitive behavior is also tested against a pinned revision of the real StreamNZB engine rather than being reimplemented locally. The current accepted baseline is **StreamNZB 6.3.0 / Jhin 0.8.0**.
+Compatibility-sensitive behavior is also tested against a pinned revision of the real StreamNZB engine rather than being reimplemented locally. The current accepted baseline is **StreamNZB 6.4.0 / Jhin 0.8.0**.
 
 A separate scheduled workflow checks the latest upstream StreamNZB release for early warning of compatibility regressions. That check is advisory and does not silently change the supported baseline.
 

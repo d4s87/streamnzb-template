@@ -4,6 +4,11 @@
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Changed
+
+- **formatter:** the production result-name stars now show only filled stars, and the star block is hidden entirely when a result's resolution-independent score is zero or negative. The template changes from `{{if gt .TopScoreWithoutResolution 0}} {{stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution}}{{end}}` to `{{if gt .ScoreWithoutResolution 0}} {{replace (stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution) "☆" ""}}{{end}}`, using only helpers and fields already required (StreamNZB 6.4.0). For example, `★★★★☆` now renders as `★★★★` and `★☆☆☆☆` as `★`. Previously a negative score rendered `☆☆☆☆☆`; now it renders nothing. A positive adjusted score below half a star of the top also renders no stars. The star scale, `.ScoreWithoutResolution`, `.TopScoreWithoutResolution`, ranking, filtering, sort order and the description's numeric `.Score` are unchanged. The debug formatter, profiles, Define Library and the StreamNZB pin are unchanged. **Formatter refresh required.** No profile or Define Library refresh.
+- **testing:** `fixtures/formatter.json` now asserts exact `★`/`☆` counts (no `☆` anywhere) for five-star, partial (4/3/2/1) and rich-render cases, and adds cases for a hidden star block at zero and negative adjusted scores with a positive top and for a positive score below one star. The descriptions of these cases still show `.Score`. The real-pipeline subtest `resolution-independent stars (real ranking pipeline)` checks the new template fragment and asserts that no `☆` appears in any Anime or Movie label rendered through StreamNZB's playlist aggregation. Against the previous `formatter.txt`, eight fixture cases and the real-pipeline subtest fail.
+
 ## [6.5.0](https://github.com/d4s87/streamnzb-template/compare/6.4.6...6.5.0) (2026-11-04)
 
 ### Changed

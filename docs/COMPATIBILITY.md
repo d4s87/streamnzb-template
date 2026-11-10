@@ -136,8 +136,11 @@ Pinned real-StreamNZB formatter regressions cover user-facing behaviors such as:
 - formatter behavior for compatibility-sensitive metadata;
 - resolution-independent stars.
 
-The star rating uses `{{stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution}}`
-(StreamNZB 6.4.0+). `.ScoreWithoutResolution` is the final score minus only
+The star rating uses
+`{{if gt .ScoreWithoutResolution 0}} {{replace (stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution) "☆" ""}}{{end}}`
+(StreamNZB 6.4.0+). Only filled stars are shown: the engine's `stars`
+helper rounds to the nearest star, and the empty `☆` positions are removed,
+so `★★★☆☆` renders as `★★★`. `.ScoreWithoutResolution` is the final score minus only
 StreamNZB's built-in resolution ladder (20,000 points per rung, so 2160p
 carries 40,000 more than 1080p). DraCuLa rules that score resolution, such as
 the `Movies UHD BluRay` tiers, still count. `.TopScoreWithoutResolution` is
@@ -148,8 +151,9 @@ Best-N retention and sort order still use the normal `.Score`, and the
 description keeps showing `.Score` so the numeric value always explains the
 order. Consequences: a strong 1080p release can show five stars below a
 weaker 2160p result; 720p and unparsed resolutions, which pay no ladder, rate
-on equal terms; and when no returned result has a positive adjusted score,
-no stars are shown. A real-engine regression ranks mixed-resolution Anime and
+on equal terms; a result whose adjusted score is zero or negative shows no
+star block at all; and a positive adjusted score below half a star of the
+top renders no stars. A real-engine regression ranks mixed-resolution Anime and
 Movie pools through the published profile and Define Library and renders
 the star labels through StreamNZB's own playlist aggregation, which computes
 both top values itself.

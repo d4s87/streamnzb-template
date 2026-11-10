@@ -584,8 +584,9 @@ func TestDraculaFormatterFixtures(
 				// The debug formatter keeps raw score/top diagnostics.
 				return
 			}
-			// Only filled stars render; the block is hidden at an adjusted score <= 0.
-			const starsFrag = `{{if gt .ScoreWithoutResolution 0}} {{replace (stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution) "☆" ""}}{{end}}`
+			// Only filled stars render; the block (and its space) is hidden
+			// whenever StreamNZB's own stars helper yields no filled star.
+			const starsFrag = `{{$filledStars := replace (stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution) "☆" ""}}{{if $filledStars}} {{$filledStars}}{{end}}`
 			if !strings.Contains(payload.ResultNameTemplate, starsFrag) {
 				t.Fatal("production name template no longer renders stars from the resolution-independent score fields")
 			}

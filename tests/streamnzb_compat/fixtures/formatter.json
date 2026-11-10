@@ -1438,7 +1438,7 @@
       ]
     },
     {
-      "name": "Positive adjusted score below one star renders no stars",
+      "name": "Positive adjusted score rounding to zero stars hides the star block",
       "context": {
         "Resolution": "1080p",
         "Quality": "WEB-DL",
@@ -1455,6 +1455,7 @@
       "name_excludes": [
         "★",
         "☆",
+        "〉 ",
         "💚 ɴᴢʙ"
       ],
       "contains": [

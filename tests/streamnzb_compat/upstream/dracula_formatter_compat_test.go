@@ -584,7 +584,9 @@ func TestDraculaFormatterFixtures(
 				// The debug formatter keeps raw score/top diagnostics.
 				return
 			}
-			const starsFrag = `{{if gt .TopScoreWithoutResolution 0}} {{stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution}}{{end}}`
+			// Only filled stars render; the block (and its space) is hidden
+			// whenever StreamNZB's own stars helper yields no filled star.
+			const starsFrag = `{{$filledStars := replace (stars 5 .TopScoreWithoutResolution .ScoreWithoutResolution) "☆" ""}}{{if $filledStars}} {{$filledStars}}{{end}}`
 			if !strings.Contains(payload.ResultNameTemplate, starsFrag) {
 				t.Fatal("production name template no longer renders stars from the resolution-independent score fields")
 			}
@@ -638,6 +640,9 @@ func TestDraculaFormatterFixtures(
 			names := draculaPlaylistLabels(t, payload.ResultNameTemplate, animeCands, anime)
 			for i, ctx := range anime {
 				t.Logf("#%d score=%d swr=%d %q", i+1, ctx.Score, ctx.ScoreWithoutResolution, names[i])
+				if strings.Contains(names[i], "☆") {
+					t.Errorf("production stars must render filled stars only:\n%s", names[i])
+				}
 			}
 			if !strings.Contains(names[1], "★★★★★") {
 				t.Errorf("strong 1080p BluRay should rate five stars below a 2160p result:\n%s", names[1])
@@ -671,7 +676,11 @@ func TestDraculaFormatterFixtures(
 					t.Errorf("order no longer follows .Score at #%d", i+1)
 				}
 			}
-			draculaPlaylistLabels(t, payload.ResultNameTemplate, movieCands, movies)
+			for _, name := range draculaPlaylistLabels(t, payload.ResultNameTemplate, movieCands, movies) {
+				if strings.Contains(name, "☆") {
+					t.Errorf("production stars must render filled stars only:\n%s", name)
+				}
+			}
 			bd := byTitle[uhdBD]
 			if !slices.ContainsFunc(bd.MatchedRules, func(m triage.RuleMatch) bool { return m.Name == "Movies UHD BluRay T1" }) {
 				t.Fatalf("premise lost: %s no longer matches Movies UHD BluRay T1", uhdBD)

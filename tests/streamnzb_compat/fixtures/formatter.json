@@ -1118,8 +1118,12 @@
       "name_contains": [
         "FHD",
         "〈ᴡᴇʙ-ᴅʟ〉",
-        "★★★★☆"
+        "★★★★"
       ],
+      "name_counts": {
+        "★": 4,
+        "☆": 0
+      },
       "name_excludes": [
         "💚 ɴᴢʙ"
       ],
@@ -1280,6 +1284,10 @@
         "〈ᴡᴇʙ-ᴅʟ〉",
         "★★★★★"
       ],
+      "name_counts": {
+        "★": 5,
+        "☆": 0
+      },
       "name_excludes": [
         "💚 ɴᴢʙ"
       ],
@@ -1288,7 +1296,7 @@
       ]
     },
     {
-      "name": "TopScore partial result renders relative stars",
+      "name": "TopScore partial result renders only filled stars",
       "context": {
         "Resolution": "1080p",
         "Quality": "WEB-DL",
@@ -1300,18 +1308,90 @@
       },
       "name_contains": [
         "FHD",
-        "〈ᴡᴇʙ-ᴅʟ〉",
-        "★★★☆☆"
+        "〈ᴡᴇʙ-ᴅʟ〉 ★★★"
       ],
+      "name_counts": {
+        "★": 3,
+        "☆": 0
+      },
       "name_excludes": [
         "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "₆₀₀"
       ],
       "excludes": [
         "💚 ɴᴢʙ"
       ]
     },
     {
-      "name": "Negative score renders empty stars",
+      "name": "Partial adjusted score renders 4 filled stars only",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 800,
+        "TopScore": 1000,
+        "ScoreWithoutResolution": 800,
+        "TopScoreWithoutResolution": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "〈ᴡᴇʙ-ᴅʟ〉 ★★★★"
+      ],
+      "name_counts": {
+        "★": 4,
+        "☆": 0
+      },
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Partial adjusted score renders 2 filled stars only",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 400,
+        "TopScore": 1000,
+        "ScoreWithoutResolution": 400,
+        "TopScoreWithoutResolution": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "〈ᴡᴇʙ-ᴅʟ〉 ★★"
+      ],
+      "name_counts": {
+        "★": 2,
+        "☆": 0
+      },
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Partial adjusted score renders 1 filled star only",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 200,
+        "TopScore": 1000,
+        "ScoreWithoutResolution": 200,
+        "TopScoreWithoutResolution": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "〈ᴡᴇʙ-ᴅʟ〉 ★"
+      ],
+      "name_counts": {
+        "★": 1,
+        "☆": 0
+      },
+      "name_excludes": [
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Negative adjusted score hides the star block",
       "context": {
         "Resolution": "1080p",
         "Quality": "WEB-DL",
@@ -1323,11 +1403,63 @@
       },
       "name_contains": [
         "FHD",
-        "☆☆☆☆☆"
+        "〈ᴡᴇʙ-ᴅʟ〉"
       ],
       "name_excludes": [
         "★",
+        "☆",
+        "〉 ",
         "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "-₁₀"
+      ]
+    },
+    {
+      "name": "Zero adjusted score hides the star block despite a positive top",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 0,
+        "TopScore": 1000,
+        "ScoreWithoutResolution": 0,
+        "TopScoreWithoutResolution": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉"
+      ],
+      "name_excludes": [
+        "★",
+        "☆",
+        "〉 ",
+        "💚 ɴᴢʙ"
+      ]
+    },
+    {
+      "name": "Positive adjusted score rounding to zero stars hides the star block",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Score": 50,
+        "TopScore": 1000,
+        "ScoreWithoutResolution": 50,
+        "TopScoreWithoutResolution": 1000,
+        "Avail": false
+      },
+      "name_contains": [
+        "FHD",
+        "〈ᴡᴇʙ-ᴅʟ〉"
+      ],
+      "name_excludes": [
+        "★",
+        "☆",
+        "〉 ",
+        "💚 ɴᴢʙ"
+      ],
+      "contains": [
+        "₅₀"
       ]
     },
     {

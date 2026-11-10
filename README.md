@@ -134,7 +134,7 @@ Examples of the language/subtitle line:
 - `⛿ EN · sᴜʙ 🇫🇷 🇩🇪 🇪🇸 +9`
 - `✓ JA · EN`
 
-The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This requires StreamNZB 6.4.0 or newer.
+The stars rate each result against the best one in the list without StreamNZB's built-in resolution bonus, and only filled stars are shown (`★★★` rather than `★★★☆☆`; no stars when the adjusted score is zero or negative), so a strong 1080p release can earn five stars even when a 2160p result ranks above it. Resolution is shown separately, and the numeric score in the description is still the score that sets the order. This requires StreamNZB 6.4.0 or newer.
 
 `✓` means every displayed audio language was measured from the media file's own audio tracks. You can expect it on probed Library results, not on ordinary fresh indexer results. `⛿` means the language information is reported by the indexer or inferred from the release name, or was not fully measured.
 

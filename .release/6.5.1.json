@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "version": "6.5.1",
+  "previous_version": "6.5.0",
+  "prepared_from_sha": "8d76c1922fb73ba5158d0c8943b6616b0152b67b",
+  "prepared_at_date": "2026-11-10",
+  "compatibility": {
+    "streamnzb_version": "6.4.0",
+    "streamnzb_sha": "56fbe4914a08c2fc0960b3fce63c923fc24d8ee7",
+    "jhin_version": "0.8.0"
+  },
+  "expected_counts": {
+    "samsung": 160,
+    "neutral": 159,
+    "core": 131,
+    "presentation": 28,
+    "device": 1,
+    "defines": 62
+  }
+}

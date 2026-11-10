@@ -1,8 +1,10 @@
 # Changelog
 
-## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/6.5.0...HEAD)
+## [Unreleased](https://github.com/d4s87/streamnzb-template/compare/6.5.1...HEAD)
 
 Changes in this section are under development and are not part of the latest stable release.
+
+## [6.5.1](https://github.com/d4s87/streamnzb-template/compare/6.5.0...6.5.1) (2026-11-10)
 
 ### Changed
 

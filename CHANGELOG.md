@@ -4,6 +4,11 @@
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Changed
+
+- **compatibility:** move the tested StreamNZB baseline from 6.4.0 (`56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`) to 6.5.0 (`63a37b614db9246cd65aec08e42b93a91e9068d0`). The minimum supported version stays **StreamNZB 6.4.0**; nothing in DraCuLa needs 6.5.0. Jhin stays at 0.8.0. `v6.4.0...v6.5.0` does not touch `pkg/release`, `pkg/search/parser`, `pkg/search/rules`, `pkg/search/ranking`, `pkg/search/triage` or the formatter context, so parsing, rule evaluation, aggregates, native scores and formatter rendering are unchanged. Its one `pkg/search` change relevant here is request validation: StreamNZB 6.5.0 makes Anime episode-number validation more lenient (a release is dropped for its episode number only when it names another episode, with OVA handling), potentially admitting additional candidates before ranking. Other upstream validation, including title, year and season-pack checks where applicable, remains in effect. These checks run before DraCuLa scoring and are not rule inputs; DraCuLa's classification, scoring and ranking rules are unchanged. The real-engine harness does not exercise request validation, so it does not establish that live Anime candidate admission is equivalent to 6.4.0. Against the exact tagged v6.5.0 source, all `tests/streamnzb_compat` tests (1724 runs: 1723 pass, plus the opt-in `TestVidhinSyncProbe` skip) and the production and debug formatter regressions produce output identical to a v6.4.0 control run, apart from the reported commit. The share-code schemas are unchanged, and rules, scoring, Defines and counts are unchanged (Samsung 160, neutral 159, Defines 62). No profile, formatter or Define Library refresh.
+- **testing:** `tests/streamnzb_compat/go.mod` raises `golang.org/x/text` from v0.43.0 to v0.44.0, which StreamNZB 6.5.0 requires. `go.sum` swaps the matching two checksum lines; no other module changes. This lets pinned CI test StreamNZB 6.5.0 without rewriting `go.mod`; pinned CI keeps Go's default `-mod=readonly`. The scheduled upstream monitor is separate: it already tolerates newer upstream requirements through a temporary `GOFLAGS=-mod=mod` update (PR #100).
+
 ## [6.5.1](https://github.com/d4s87/streamnzb-template/compare/6.5.0...6.5.1) (2026-11-10)
 
 ### Changed

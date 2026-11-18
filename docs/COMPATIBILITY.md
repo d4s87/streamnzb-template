@@ -19,10 +19,16 @@ only**; the minimum supported version stays 6.4.0. Jhin stays at 0.8.0.
 `pkg/search/rules`, `pkg/search/ranking`, `pkg/search/triage` or the
 formatter context (`newFormatContext` keeps its signature), so parsing,
 rule evaluation, aggregates, native scores and formatter rendering are
-unchanged. The relevant `pkg/search` change is request validation: Anime
-episode requests are validated leniently (a release is dropped only when it
-names another episode, with OVA handling), which can admit more Anime
-candidates before ranking but is not a rule input. Against the exact tagged
+unchanged. The relevant `pkg/search` change is request validation:
+StreamNZB 6.5.0 introduces more lenient Anime episode-number validation (a
+release is dropped for its episode number only when it names another
+episode, with OVA handling), potentially admitting additional candidates
+before ranking. Other upstream validation, including title, year and
+season-pack checks where applicable, remains in effect. These checks run
+before DraCuLa scoring and are not rule inputs; DraCuLa's classification,
+scoring and ranking rules are unchanged. The real-engine harness does not
+exercise request validation, so it does not establish that live Anime
+candidate admission is equivalent to 6.4.0. Against the exact tagged
 v6.5.0 source, the full harness, including the production and debug
 formatter regressions, produces output identical to a v6.4.0 control run
 apart from the reported commit. The share-code codecs are unchanged. The

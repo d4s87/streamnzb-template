@@ -4,6 +4,11 @@
 
 Changes in this section are under development and are not part of the latest stable release.
 
+### Changed
+
+- **compatibility:** move the tested StreamNZB baseline from 6.4.0 (`56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`) to 6.5.0 (`63a37b614db9246cd65aec08e42b93a91e9068d0`). The minimum supported version stays **StreamNZB 6.4.0**; nothing in DraCuLa needs 6.5.0. Jhin stays at 0.8.0. `v6.4.0...v6.5.0` does not touch `pkg/release`, `pkg/search/parser`, `pkg/search/rules`, `pkg/search/ranking`, `pkg/search/triage` or the formatter context, so parsing, rule evaluation, aggregates, native scores and formatter rendering are unchanged. Its one `pkg/search` change relevant here is request validation: Anime episode requests are now checked leniently, dropping a release only when it names another episode (with OVA handling). This can admit more Anime candidates before ranking, but it is not a rule input. Against the exact tagged v6.5.0 source, all `tests/streamnzb_compat` tests (1724 runs: 1723 pass, plus the opt-in `TestVidhinSyncProbe` skip) and the production and debug formatter regressions produce output identical to a v6.4.0 control run, apart from the reported commit. The share-code schemas are unchanged, and rules, scoring, Defines and counts are unchanged (Samsung 160, neutral 159, Defines 62). No profile, formatter or Define Library refresh.
+- **testing:** `tests/streamnzb_compat/go.mod` raises `golang.org/x/text` from v0.43.0 to v0.44.0, which StreamNZB 6.5.0 requires. `go.sum` swaps the matching two checksum lines; no other module changes. Pinned CI keeps Go's default `-mod=readonly`. This fixes the scheduled upstream-check failure reported in #99.
+
 ## [6.5.1](https://github.com/d4s87/streamnzb-template/compare/6.5.0...6.5.1) (2026-11-10)
 
 ### Changed

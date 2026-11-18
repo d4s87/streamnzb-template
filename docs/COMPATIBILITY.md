@@ -9,9 +9,25 @@ supported by the current DraCuLa formatter.
 
 Current published compatibility baseline:
 
-- StreamNZB 6.4.0 (commit `56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`)
+- StreamNZB 6.5.0 (commit `63a37b614db9246cd65aec08e42b93a91e9068d0`)
 - Jhin 0.8.0
 - StreamNZB profile payload schema v2
+
+The move from StreamNZB 6.4.0 to 6.5.0 is a **compatibility pin update
+only**; the minimum supported version stays 6.4.0. Jhin stays at 0.8.0.
+`v6.4.0...v6.5.0` changes nothing in `pkg/release`, `pkg/search/parser`,
+`pkg/search/rules`, `pkg/search/ranking`, `pkg/search/triage` or the
+formatter context (`newFormatContext` keeps its signature), so parsing,
+rule evaluation, aggregates, native scores and formatter rendering are
+unchanged. The relevant `pkg/search` change is request validation: Anime
+episode requests are validated leniently (a release is dropped only when it
+names another episode, with OVA handling), which can admit more Anime
+candidates before ranking but is not a rule input. Against the exact tagged
+v6.5.0 source, the full harness, including the production and debug
+formatter regressions, produces output identical to a v6.4.0 control run
+apart from the reported commit. The share-code codecs are unchanged. The
+only harness change is `golang.org/x/text` v0.44.0 in
+`tests/streamnzb_compat/go.mod`, which StreamNZB 6.5.0 requires.
 
 The move from StreamNZB 6.3.0 to 6.4.0 keeps Jhin at 0.8.0 and changes no
 parser trait, rule evaluation, aggregate or native score. In `pkg/search`,
@@ -290,7 +306,7 @@ Each sync PR includes an advisory SAFE / REVIEW_REQUIRED / BLOCKED assessment. I
 
 A scheduled workflow checks the latest StreamNZB release against the repository's compatibility suite. If it fails, GitHub records the failure and uploads the diagnostic log as an artifact for inspection.
 
-`tests/streamnzb_compat/go.mod` records the module requirements of the pinned baseline. A newer release may require newer versions, for example `golang.org/x/text` v0.44.0 in StreamNZB 6.5.0. Under Go's default `-mod=readonly`, the stale requirement would stop the suite before any test runs. The scheduled check therefore sets `GOFLAGS=-mod=mod`. Go then raises the harness requirements to what the tested release declares, using minimal version selection and the checksum database, and the change stays on the runner. Pinned CI keeps `-mod=readonly`, so a baseline update still has to commit those requirements.
+`tests/streamnzb_compat/go.mod` records the module requirements of the pinned baseline. A newer release may require newer versions, as StreamNZB 6.5.0 did with `golang.org/x/text` v0.44.0. Under Go's default `-mod=readonly`, the stale requirement would stop the suite before any test runs. The scheduled check therefore sets `GOFLAGS=-mod=mod`. Go then raises the harness requirements to what the tested release declares, using minimal version selection and the checksum database, and the change stays on the runner. Pinned CI keeps `-mod=readonly`, so a baseline update still has to commit those requirements.
 
 The check is an early-warning mechanism only. The repository's normal CI remains pinned to the accepted baseline until a deliberate compatibility update is reviewed and merged.
 

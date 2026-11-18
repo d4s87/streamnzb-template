@@ -7,11 +7,17 @@ This document contains the technical compatibility and validation details for Dr
 **Minimum supported StreamNZB: 6.4.0.** Older StreamNZB versions are not
 supported by the current DraCuLa formatter.
 
-Current published compatibility baseline:
+Current tested baseline, the exact engine revision that repository CI pins on
+`main` (it may not yet be part of a published DraCuLa release):
 
 - StreamNZB 6.5.0 (commit `63a37b614db9246cd65aec08e42b93a91e9068d0`)
 - Jhin 0.8.0
 - StreamNZB profile payload schema v2
+
+Published release compatibility: each published DraCuLa release lists the
+baseline it was validated against in the Compatibility section of its release
+notes. That baseline can be older than the current tested baseline until the
+next release ships.
 
 The move from StreamNZB 6.4.0 to 6.5.0 is a **compatibility pin update
 only**; the minimum supported version stays 6.4.0. Jhin stays at 0.8.0.
@@ -187,7 +193,7 @@ Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, ded
 
 The language marker is source-aware. StreamNZB's `.Languages` is a merge of probed audio-track languages, the indexer's language tag and release-name parsing, and `.LanguageSource` names only the strongest source that contributed (`measured`, `reported`, `inferred`, or empty). So `measured` can sit next to a language the file never confirmed. `.Verified` alone is not enough either: it is true for any probed Library result, even one whose audio tracks were not read. DraCuLa shows `✓` only when `.LanguageSource` is `measured` and every displayed `.Languages` entry is present in `.Probed.AudioLanguages`; otherwise it keeps `⛿`. The subtitle-only line always uses `⛿`. In the current StreamNZB release only Library results carry probe data, so fresh indexer results never show `✓`.
 
-Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged at the current 6.4.0 baseline (from source). DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged in the StreamNZB 6.4.0 source. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
 
 ## Dolby Vision Profile 8
 

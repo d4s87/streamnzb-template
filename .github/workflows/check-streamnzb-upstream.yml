@@ -51,6 +51,9 @@ jobs:
         continue-on-error: true
         env:
           STREAMNZB_REF: ${{ steps.upstream.outputs.tag }}
+          # The harness go.mod tracks the pinned release; let Go raise it to the
+          # requirements of the release under test. Changes stay on the runner.
+          GOFLAGS: -mod=mod
         run: |
           set -o pipefail
           ./scripts/test_streamnzb_compat.sh 2>&1 | tee streamnzb-upstream-compat.log

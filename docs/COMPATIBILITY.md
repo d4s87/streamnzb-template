@@ -7,11 +7,17 @@ This document contains the technical compatibility and validation details for Dr
 **Minimum supported StreamNZB: 6.4.0.** Older StreamNZB versions are not
 supported by the current DraCuLa formatter.
 
-Current published compatibility baseline:
+Current tested baseline, the exact engine revision that repository CI pins on
+`main` (it may not yet be part of a published DraCuLa release):
 
 - StreamNZB 6.5.0 (commit `63a37b614db9246cd65aec08e42b93a91e9068d0`)
 - Jhin 0.8.0
 - StreamNZB profile payload schema v2
+
+Published release compatibility: each published DraCuLa release lists the
+baseline it was validated against in the Compatibility section of its release
+notes. That baseline can be older than the current tested baseline until the
+next release ships.
 
 The move from StreamNZB 6.4.0 to 6.5.0 is a **compatibility pin update
 only**; the minimum supported version stays 6.4.0. Jhin stays at 0.8.0.

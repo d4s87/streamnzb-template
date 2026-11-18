@@ -290,6 +290,8 @@ Each sync PR includes an advisory SAFE / REVIEW_REQUIRED / BLOCKED assessment. I
 
 A scheduled workflow checks the latest StreamNZB release against the repository's compatibility suite. If it fails, GitHub records the failure and uploads the diagnostic log as an artifact for inspection.
 
+`tests/streamnzb_compat/go.mod` records the module requirements of the pinned baseline. A newer release may require newer versions, for example `golang.org/x/text` v0.44.0 in StreamNZB 6.5.0. Under Go's default `-mod=readonly`, the stale requirement would stop the suite before any test runs. The scheduled check therefore sets `GOFLAGS=-mod=mod`. Go then raises the harness requirements to what the tested release declares, using minimal version selection and the checksum database, and the change stays on the runner. Pinned CI keeps `-mod=readonly`, so a baseline update still has to commit those requirements.
+
 The check is an early-warning mechanism only. The repository's normal CI remains pinned to the accepted baseline until a deliberate compatibility update is reviewed and merged.
 
 ## CI and workflow security

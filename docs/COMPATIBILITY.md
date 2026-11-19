@@ -25,16 +25,34 @@ only**; the minimum supported version stays 6.4.0. Jhin stays at 0.8.0.
 `pkg/search/rules`, `pkg/search/ranking`, `pkg/search/triage` or the
 formatter context (`newFormatContext` keeps its signature), so parsing,
 rule evaluation, aggregates, native scores and formatter rendering are
-unchanged. The relevant `pkg/search` change is request validation:
-StreamNZB 6.5.0 introduces more lenient Anime episode-number validation (a
-release is dropped for its episode number only when it names another
-episode, with OVA handling), potentially admitting additional candidates
-before ranking. Other upstream validation, including title, year and
-season-pack checks where applicable, remains in effect. These checks run
-before DraCuLa scoring and are not rule inputs; DraCuLa's classification,
-scoring and ranking rules are unchanged. The real-engine harness does not
-exercise request validation, so it does not establish that live Anime
-candidate admission is equivalent to 6.4.0. Against the exact tagged
+unchanged. The relevant upstream change is request validation (candidate
+admission: `pkg/search/validation.go` and its routing in
+`pkg/server/stremio/handlers_search.go`), and its direction depends on how
+the request is routed:
+
+- **Requests typed `anime`:** 6.4.0 skipped candidate validation for
+  episodic `anime` requests entirely. 6.5.0 adds Anime-specific validation,
+  so wrong episodes, unrelated titles on text searches, mismatched years
+  (when the plan enforces the year) and season packs that do not fit the
+  request can now be rejected before ranking. A release is dropped for its
+  episode number only when its title names another episode, with special
+  handling for absolute numbering, OVAs and specials.
+- **Requests typed `series` with a Kitsu ID:** 6.5.0 routes these through
+  the Anime validation instead of the strict series validation. For some
+  candidates that is more permissive, such as certain unnumbered episodes,
+  OVA specials and season packs; others are still rejected, and a few are
+  newly rejected.
+- **Other `series` requests (no Kitsu ID):** these keep the series
+  validation, which behaved the same in the tested cases.
+
+Candidate admission happens upstream, before DraCuLa's profile rules, and
+its checks are not rule inputs. DraCuLa's classification, scoring, ranking,
+profiles, Defines and formatters are unchanged. The real-engine harness
+tests behavior after admission and does not exercise request validation, so
+identical harness and formatter output does not establish that live
+candidate admission is unchanged. These findings come from the exact
+upstream source and synthetic probes of the upstream validation functions
+at both tags, not from end-to-end Stremio requests. Against the exact tagged
 v6.5.0 source, the full harness, including the production and debug
 formatter regressions, produces output identical to a v6.4.0 control run
 apart from the reported commit. The share-code codecs are unchanged. The

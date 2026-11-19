@@ -37,11 +37,12 @@ the request is routed:
   request can now be rejected before ranking. A release is dropped for its
   episode number only when its title names another episode, with special
   handling for absolute numbering, OVAs and specials.
-- **Requests typed `series` with a Kitsu ID:** 6.5.0 routes these through
-  the Anime validation instead of the strict series validation. For some
-  candidates that is more permissive, such as certain unnumbered episodes,
-  OVA specials and season packs; others are still rejected, and a few are
-  newly rejected.
+- **Episodic requests typed `series` with a Kitsu ID:** 6.5.0 routes these
+  through the Anime validation instead of the strict series validation. For
+  some candidates that is more permissive, such as certain unnumbered
+  episodes, OVA specials and season packs; others are still rejected, and a
+  few are newly rejected. Film-like requests (a Kitsu entry typed as a
+  movie) are checked first and use movie validation in both versions.
 - **Other `series` requests (no Kitsu ID):** these keep the series
   validation, which behaved the same in the tested cases.
 

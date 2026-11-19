@@ -47,9 +47,11 @@ the request is routed:
   validation, which behaved the same in the tested cases.
 
 Candidate admission happens upstream, before DraCuLa's profile rules, and
-its checks are not rule inputs. DraCuLa's classification, scoring, ranking,
-profiles, Defines and formatters are unchanged. The real-engine harness
-tests behavior after admission and does not exercise request validation, so
+its checks are not rule inputs. DraCuLa's classification, scoring and
+ranking rules, profiles, Defines and formatters are unchanged, but a
+different set of admitted candidates can change the results users see. The
+real-engine harness tests behavior after admission and does not exercise
+request validation, so
 identical harness and formatter output does not establish that live
 candidate admission is unchanged. These findings come from the exact
 upstream source and synthetic probes of the upstream validation functions

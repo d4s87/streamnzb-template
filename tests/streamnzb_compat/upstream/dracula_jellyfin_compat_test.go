@@ -53,6 +53,11 @@ type draculaJellyfinCase struct {
 	Name    string          `json:"name"`
 	Context json.RawMessage `json:"context"`
 	Label   string          `json:"label"`
+	// OutOfVocabulary marks contexts the parser cannot produce (oversized or
+	// multi-line essential values). The label oracle then skips the checks that
+	// model in-vocabulary rendering (intact head, whitespace); budget, newline,
+	// separator, stars and claim checks still apply.
+	OutOfVocabulary bool `json:"out_of_vocabulary,omitempty"`
 }
 
 // draculaJellyfinRoot is the repository root, derived from the fixture path
@@ -84,7 +89,7 @@ var draculaStarRun = regexp.MustCompile(`★+`)
 // invariant for one rendered label. It re-derives the essential head from the
 // context independently of the template, so a template regression cannot hide
 // behind its own output.
-func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string) []string {
+func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string, inVocabulary bool) []string {
 	t.Helper()
 	var problems []string
 	add := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
@@ -99,7 +104,7 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string)
 	if n := utf8.RuneCountInString(label); n > draculaJellyfinBudget {
 		add("label has %d code points, budget %d", n, draculaJellyfinBudget)
 	}
-	if label != strings.TrimSpace(label) || strings.Contains(label, "  ") {
+	if label != strings.TrimSpace(label) || (inVocabulary && strings.Contains(label, "  ")) {
 		add("stray whitespace")
 	}
 	if strings.HasPrefix(label, "·") || strings.HasSuffix(label, "·") || strings.Contains(label, "· ·") || strings.Contains(label, " ·· ") {
@@ -146,7 +151,7 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string)
 	if wantStars != "" {
 		wantHead += " " + wantStars
 	}
-	if label != wantHead && !strings.HasPrefix(label, wantHead+" · ") {
+	if inVocabulary && label != wantHead && !strings.HasPrefix(label, wantHead+" · ") {
 		add("essential head %q is not intact at the start of the label", wantHead)
 	}
 
@@ -189,9 +194,9 @@ func orZero(s string) string {
 	return s
 }
 
-func draculaJellyfinRequireClean(t *testing.T, ctx FormatContext, raw, label, name string) {
+func draculaJellyfinRequireClean(t *testing.T, ctx FormatContext, raw, label, name string, inVocabulary bool) {
 	t.Helper()
-	if problems := draculaJellyfinProblems(t, ctx, raw, label); len(problems) > 0 {
+	if problems := draculaJellyfinProblems(t, ctx, raw, label, inVocabulary); len(problems) > 0 {
 		t.Errorf("%s: %s\nlabel: %q", name, strings.Join(problems, "; "), label)
 	}
 }
@@ -243,6 +248,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			t.Fatalf("only %d Jellyfin fixtures", len(fixtures.Cases))
 		}
 		seen := map[string]bool{}
+		longest := 0
 		for _, fx := range fixtures.Cases {
 			if seen[fx.Name] {
 				t.Fatalf("duplicate fixture name %q", fx.Name)
@@ -256,10 +262,16 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			if label != fx.Label {
 				t.Errorf("%s:\n got  %q\n want %q", fx.Name, label, fx.Label)
 			}
-			draculaJellyfinRequireClean(t, ctx, raw, label, fx.Name)
+			draculaJellyfinRequireClean(t, ctx, raw, label, fx.Name, !fx.OutOfVocabulary)
 			if _, again := draculaJellyfinRender(t, tpl, ctx); again != label {
 				t.Errorf("%s: rendering is not deterministic: %q vs %q", fx.Name, label, again)
 			}
+			longest = max(longest, utf8.RuneCountInString(fx.Label))
+		}
+		// The limit is inclusive: a fixture must sit exactly on it, so a `<=` that
+		// became `<` (wasting the last code point) cannot pass the exact fixtures.
+		if longest != draculaJellyfinBudget {
+			t.Errorf("the longest exact-label fixture has %d code points; one must have exactly %d", longest, draculaJellyfinBudget)
 		}
 	})
 
@@ -294,7 +306,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			{"phantom LIB", "LIB 1080p WEB-DL ★★★★★ · 2.8 GB", "", "essential head", ctx},
 		}
 		for _, tc := range cases {
-			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, tc.raw, tc.label), "; ")
+			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, tc.raw, tc.label, true), "; ")
 			if !strings.Contains(problems, tc.want) {
 				t.Errorf("%s: oracle reported %q, want a problem containing %q", tc.name, problems, tc.want)
 			}
@@ -341,7 +353,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			}
 			ctx.Probed.AudioLanguages = list(langs[:6], 4)
 			raw, label := draculaJellyfinRender(t, tpl, ctx)
-			draculaJellyfinRequireClean(t, ctx, raw, label, fmt.Sprintf("adversarial #%d", i))
+			draculaJellyfinRequireClean(t, ctx, raw, label, fmt.Sprintf("adversarial #%d", i), true)
 			if again := singleLineLabel(mustRender(t, tpl, ctx)); again != label {
 				t.Fatalf("adversarial #%d is not deterministic", i)
 			}
@@ -352,13 +364,16 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 		}
 		t.Logf("4000 seeded adversarial contexts; longest label %d of %d code points", longest, draculaJellyfinBudget)
 
-		// Outside the parser vocabulary: 90-character quality and 400-character group,
-		// 1000 languages. Nothing may error, empty out or reach StreamNZB's 160-rune cut.
-		junk := FormatContext{Resolution: "1080p", Quality: strings.Repeat("Q", 90), Group: strings.Repeat("G", 400), Library: true,
-			Languages: slices.Repeat(stringList{"en"}, 1000), Audio: slices.Repeat(stringList{"Atmos"}, 50), HDR: slices.Repeat(stringList{"DV"}, 50)}
-		_, label := draculaJellyfinRender(t, tpl, junk)
-		if label == "" || utf8.RuneCountInString(label) >= maxSourceLabelRunes {
-			t.Errorf("out-of-vocabulary context produced %d code points: %q", utf8.RuneCountInString(label), label)
+		// Outside the parser vocabulary the essential head is length-capped, so the
+		// 72 budget still holds: oversized resolution, quality and HDR values, a
+		// 400-character group, 1000 languages, line breaks in every free-text field.
+		junk := FormatContext{Resolution: strings.Repeat("9", 40) + "p", Quality: strings.Repeat("Q", 90), Group: strings.Repeat("G\n", 200), Library: true,
+			Seasons: intList{1}, Languages: slices.Repeat(stringList{"en"}, 1000), Audio: slices.Repeat(stringList{"Atmos"}, 50),
+			HDR: slices.Repeat(stringList{strings.Repeat("D", 30)}, 50), TopScoreWithoutResolution: 100, ScoreWithoutResolution: 100,
+			Codec: "C\r\nD", BitDepth: "8\nbit", Size: 123_456_789_012_345}
+		raw, label := draculaJellyfinRender(t, tpl, junk)
+		if strings.ContainsAny(raw, "\r\n") || label == "" || utf8.RuneCountInString(label) > draculaJellyfinBudget {
+			t.Errorf("out-of-vocabulary context produced %d code points (budget %d): %q", utf8.RuneCountInString(label), draculaJellyfinBudget, label)
 		}
 	})
 
@@ -490,7 +505,7 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 			for i, ctx := range ctxs {
 				spec := specs[i]
 				raw, _ := draculaJellyfinRender(t, jellyfinTpl, ctx)
-				draculaJellyfinRequireClean(t, ctx, raw, jf[i], spec.note)
+				draculaJellyfinRequireClean(t, ctx, raw, jf[i], spec.note, true)
 				distinctJF[jf[i]], distinctProd[prod[i]] = true, true
 
 				if got, want := strings.Join(draculaStarRun.FindAllString(jf[i], -1), ","), strings.Join(draculaStarRun.FindAllString(prod[i], -1), ","); got != want {

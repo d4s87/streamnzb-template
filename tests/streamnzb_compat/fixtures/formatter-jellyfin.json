@@ -67,7 +67,7 @@
       "label": "4K REMUX DV+HDR ★★★★ · 68 GB · Atmos TrueHD 7.1 · EN · HEVC 10bit"
     },
     {
-      "name": "4K WEB-DL DV+HDR10+ fills the budget exactly enough for the group",
+      "name": "4K WEB-DL DV+HDR10+ with every optional field (71 code points)",
       "context": {
         "Resolution": "2160p",
         "Quality": "WEB-DL",
@@ -1145,6 +1145,103 @@
         "Size": 10500000000
       },
       "label": "1080p · 11 GB"
+    },
+    {
+      "name": "Budget: a field that ends exactly at 72 code points is kept",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR10+"
+        ],
+        "Size": 22100000000,
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "世界字幕组",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit · 世界字幕组"
+    },
+    {
+      "name": "Budget: a field one code point over 72 is dropped",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR10+"
+        ],
+        "Size": 22100000000,
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "世界字幕组A",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit"
+    },
+    {
+      "name": "Out-of-vocabulary essentials are length-capped, never cut by the engine",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "123456789p",
+        "Quality": "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ",
+        "HDR": [
+          "AAAAAAAAAA",
+          "BBBBBBBBBB",
+          "CCCCCCCCCC"
+        ],
+        "Size": 2800000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 12345… QQQQQQQQQ… AAAAAAAAAA+BBBBBBBBB… ★★★★★ · 2.8 GB",
+      "out_of_vocabulary": true
+    },
+    {
+      "name": "A line break inside a field never reaches StreamNZB's flattening",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A\nB"
+      },
+      "label": "1080p · A B",
+      "out_of_vocabulary": true
+    },
+    {
+      "name": "A carriage return and line break inside the head never reach the flattening",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB\r\nDL"
+      },
+      "label": "1080p WEB  DL",
+      "out_of_vocabulary": true
     }
   ]
 }

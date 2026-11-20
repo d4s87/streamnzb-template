@@ -60,8 +60,10 @@ for source, output in EXPECTED_PAIRS:
 for source, output in EXPECTED_PAIRS:
     payload = build_formatter.load_source(ROOT / source)
     generated = build_formatter.encode_payload(payload)
-    assert generated == (ROOT / output).read_text(encoding="utf-8"), (
-        f"{output} is not what build_formatter.py generates from {source}"
+    # Compare raw bytes, not normalised text: a CRLF-terminated share code must fail here
+    # even though the semantic `--check` (which release tooling runs) would accept it.
+    assert generated.encode("utf-8") == (ROOT / output).read_bytes(), (
+        f"{output} is not byte-for-byte what build_formatter.py generates from {source}"
     )
     assert build_formatter.encode_payload(payload) == generated, "non-deterministic encoding"
     assert build_formatter.decode_share_code(ROOT / output) == payload, f"{output} round trip"
@@ -119,10 +121,39 @@ assert jellyfin["name"] == "DraCuLa Jellyfin"
 assert jellyfin["result_description_template"] == "", "the Jellyfin formatter must not copy a description"
 assert jellyfin["result_name_template"].strip()
 
-# Release tooling checks every formatter pair, not just the production one.
-release_source = (ROOT / "scripts" / "check_release.py").read_text(encoding="utf-8")
-assert release_source.count('"build_formatter.py"), "--check", "--all"]') == 2, (
-    "check_release.py must run `build_formatter.py --check --all` in both prepare and candidate flows"
-)
+# Release tooling checks every formatter pair. Behavioural test: run the real
+# document checks shared by `candidate` and `prep-pr`, and `verify-published`, with
+# the build_formatter subprocess replaced by a failing fake, and require the
+# finding and the `--all` command. (`prepare` does not run generation checks for
+# any artifact, profiles included, and is intentionally not covered.)
+import subprocess  # noqa: E402
+
+import check_release  # noqa: E402
+
+captured = []
+real_run = check_release._run
+
+
+def fake_run(args, cwd=check_release.ROOT):
+    if any("build_formatter.py" in str(arg) for arg in args):
+        captured.append([str(arg) for arg in args])
+        return subprocess.CompletedProcess(args, 1, "", "ERROR: formatter-jellyfin is not synchronized")
+    return real_run(args, cwd)
+
+
+check_release._run = fake_run
+try:
+    for label, call in (
+        ("candidate/prep-pr documents", lambda: (lambda r: (check_release._check_release_documents(r, "6.5.1"), r)[1])(check_release.Report())),
+        ("verify-published", lambda: check_release.run_verify_published("6.5.1", "9efb02f19c90bf9d923140f8cc10bbe2666f40eb", None, True)),
+    ):
+        captured.clear()
+        report = call()
+        findings = [f for f in report.findings if f.check == "formatter-generation-sync"]
+        assert len(findings) == 1 and not findings[0].ok, f"{label}: {findings}"
+        assert "--check" in captured[0] and "--all" in captured[0], f"{label}: {captured}"
+        assert "formatter-jellyfin" in findings[0].detail, f"{label}: {findings[0].detail}"
+finally:
+    check_release._run = real_run
 
 print("PASS: build_formatter registry, --all, determinism, drift detection and description policy.")

@@ -18,6 +18,9 @@ JELLYFIN_TEST_TARGET="${CHECKOUT}/pkg/server/stremio/dracula_jellyfin_compat_tes
 JELLYFIN_MEDIA_TEST_SOURCE="${HARNESS}/upstream/dracula_jellyfin_media_source_test.go"
 JELLYFIN_MEDIA_TEST_TARGET="${CHECKOUT}/pkg/server/jellyfin/dracula_jellyfin_media_source_test.go"
 JELLYFIN=0
+# Set only after this run creates its own scratch file; the cleanup trap removes
+# nothing else, so a JELLYFIN_ENTRIES inherited from the caller is never touched.
+JELLYFIN_ENTRIES=""
 
 MODE="candidate"
 FORMATTER="${ROOT}/tests/streamnzb_compat/formatter.source.json"
@@ -191,7 +194,7 @@ fi
 
 cleanup_formatter_test() {
     rm -f "${TEST_TARGET}" "${JELLYFIN_TEST_TARGET}" "${JELLYFIN_MEDIA_TEST_TARGET}"
-    if [[ -n "${JELLYFIN_ENTRIES:-}" ]]; then
+    if [[ -n "${JELLYFIN_ENTRIES}" ]]; then
         rm -f "${JELLYFIN_ENTRIES}"
     fi
 }
@@ -258,7 +261,11 @@ if [[ "${JELLYFIN}" -eq 1 ]]; then
     # aggregation and hands the labels to stage 2, which sends them through the
     # real Jellyfin PlaybackInfo handler. The description-policy test proves the
     # empty-description allowance does not extend to the other formatters.
-    JELLYFIN_ENTRIES="$(mktemp "${TMPDIR:-/tmp}/dracula-jellyfin-entries.XXXXXX")"
+    JELLYFIN_ENTRIES="$(mktemp "${TMPDIR:-/tmp}/dracula-jellyfin-entries.XXXXXX")" || {
+        JELLYFIN_ENTRIES=""
+        echo "ERROR: could not create the Jellyfin scratch file" >&2
+        exit 1
+    }
 
     DRACULA_FORMATTER_PATH="${FORMATTER}" \
     DRACULA_FORMATTER_CASES_PATH="${CASES}" \

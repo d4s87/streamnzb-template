@@ -1242,6 +1242,97 @@
       },
       "label": "1080p WEB  DL",
       "out_of_vocabulary": true
+    },
+    {
+      "name": "A whitespace-only group never leaves a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "\n"
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "A tab-and-space group never leaves a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Group": " \t "
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Blank codec and bit depth never leave a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 2800000000,
+        "Codec": "\r\n",
+        "BitDepth": " "
+      },
+      "label": "1080p · 2.8 GB"
+    },
+    {
+      "name": "Languages: an unprobed fourth language hidden by +N withholds the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "fr",
+            "de"
+          ]
+        }
+      },
+      "label": "1080p BluRay · EN/FR/DE +1"
+    },
+    {
+      "name": "Languages: every language measured, one hidden by +N, keeps the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "fr",
+            "de",
+            "es"
+          ]
+        }
+      },
+      "label": "1080p BluRay · EN/FR/DE✓ +1"
+    },
+    {
+      "name": "A whitespace-only audio token never leaves a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Audio": [
+          "\n"
+        ]
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "A whitespace-only language never leaves a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "\r\n"
+        ]
+      },
+      "label": "1080p"
     }
   ]
 }

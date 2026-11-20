@@ -103,6 +103,16 @@ try:
     assert {output: (tmp / output).read_bytes() for _, output in EXPECTED_PAIRS[:2]} == before
     assert run(tmp, "--check", "--all").returncode == 0
 
+    # Byte-level drift (a CRLF terminator): semantic --check accepts it, the rebuild repairs it.
+    jellyfin_output = tmp / EXPECTED_PAIRS[2][1]
+    good = jellyfin_output.read_bytes()
+    jellyfin_output.write_bytes(good.rstrip(b"\n") + b"\r\n")
+    assert run(tmp, "--check", "--all").returncode == 0, "--check is semantic"
+    result = run(tmp, "--all")
+    assert result.returncode == 0 and "Generated" in result.stdout, result.stdout
+    assert jellyfin_output.read_bytes() == good, "the build did not repair byte drift"
+    assert "already identical" in run(tmp, "--all").stdout
+
     # A desynchronised debug share code is caught too (it was not checked at release time before).
     debug_output = tmp / EXPECTED_PAIRS[1][1]
     debug_output.write_text((tmp / EXPECTED_PAIRS[0][1]).read_text(encoding="utf-8"), encoding="utf-8")
@@ -121,11 +131,11 @@ assert jellyfin["name"] == "DraCuLa Jellyfin"
 assert jellyfin["result_description_template"] == "", "the Jellyfin formatter must not copy a description"
 assert jellyfin["result_name_template"].strip()
 
-# Release tooling checks every formatter pair. Behavioural test: run the real
-# document checks shared by `candidate` and `prep-pr`, and `verify-published`, with
-# the build_formatter subprocess replaced by a failing fake, and require the
-# finding and the `--all` command. (`prepare` does not run generation checks for
-# any artifact, profiles included, and is intentionally not covered.)
+# Release tooling checks every formatter pair. Behavioural test: run the real entry
+# points (`candidate`, `prep-pr`, `verify-published`, all offline) with the
+# build_formatter subprocess replaced by a failing fake, and require the finding
+# and the `--all` command from each. (`prepare` runs no generation check for any
+# artifact, profiles included, and is intentionally not covered.)
 import subprocess  # noqa: E402
 
 import check_release  # noqa: E402
@@ -141,17 +151,19 @@ def fake_run(args, cwd=check_release.ROOT):
     return real_run(args, cwd)
 
 
+SHA = "9efb02f19c90bf9d923140f8cc10bbe2666f40eb"
 check_release._run = fake_run
 try:
     for label, call in (
-        ("candidate/prep-pr documents", lambda: (lambda r: (check_release._check_release_documents(r, "6.5.1"), r)[1])(check_release.Report())),
-        ("verify-published", lambda: check_release.run_verify_published("6.5.1", "9efb02f19c90bf9d923140f8cc10bbe2666f40eb", None, True)),
+        ("candidate", lambda: check_release.run_candidate("6.5.1", SHA, None, True)),
+        ("prep-pr", lambda: check_release.run_prep_pr("6.5.1", None, True)),
+        ("verify-published", lambda: check_release.run_verify_published("6.5.1", SHA, None, True)),
     ):
         captured.clear()
         report = call()
         findings = [f for f in report.findings if f.check == "formatter-generation-sync"]
         assert len(findings) == 1 and not findings[0].ok, f"{label}: {findings}"
-        assert "--check" in captured[0] and "--all" in captured[0], f"{label}: {captured}"
+        assert len(captured) == 1 and "--check" in captured[0] and "--all" in captured[0], f"{label}: {captured}"
         assert "formatter-jellyfin" in findings[0].detail, f"{label}: {findings[0].detail}"
 finally:
     check_release._run = real_run

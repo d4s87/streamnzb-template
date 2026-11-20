@@ -85,6 +85,12 @@ func draculaJellyfinRender(t *testing.T, tpl string, ctx FormatContext) (raw, la
 
 var draculaStarRun = regexp.MustCompile(`★+`)
 
+// draculaLangSegment matches the language field: up to three upper-case codes,
+// an optional measured mark, an optional overflow count and the DUAL claim, or
+// DUAL alone. Claims are checked in this segment only, never in arbitrary label
+// text such as a release group called DUALITY.
+var draculaLangSegment = regexp.MustCompile(`^(?:[A-Z]{2}(?:/[A-Z]{2}){0,2}(✓)?(?: \+\d+)?(?: DUAL)?|DUAL)$`)
+
 // draculaJellyfinProblems is the label oracle: it returns every violated
 // invariant for one rendered label. It re-derives the essential head from the
 // context independently of the template, so a template regression cannot hide
@@ -172,14 +178,20 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string,
 			}
 		}
 	}
-	if strings.Contains(label, "✓") {
-		verified := ctx.LanguageSource == "measured" && len(withoutStrings(ctx.Probed.AudioLanguages, ctx.Languages)) == 0 && len(ctx.Languages) > 0
-		if !verified {
-			add("✓ asserted without measured, fully probed languages")
+	for _, seg := range segments[1:] {
+		m := draculaLangSegment.FindStringSubmatch(seg)
+		if m == nil {
+			continue
 		}
-	}
-	if strings.Contains(label, "DUAL") && !ctx.DualAudio {
-		add("DUAL without the release's dual-audio flag")
+		if m[1] != "" {
+			verified := ctx.LanguageSource == "measured" && len(withoutStrings(ctx.Probed.AudioLanguages, ctx.Languages)) == 0 && len(ctx.Languages) > 0
+			if !verified {
+				add("✓ asserted without measured, fully probed languages")
+			}
+		}
+		if (seg == "DUAL" || strings.HasSuffix(seg, " DUAL")) && !ctx.DualAudio {
+			add("DUAL without the release's dual-audio flag")
+		}
 	}
 	if hasLib := label == "LIB" || strings.HasPrefix(label, "LIB "); hasLib != ctx.Library {
 		add("LIB marker %v, Library %v", hasLib, ctx.Library)
@@ -304,6 +316,13 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			{"unverified check mark", "1080p WEB-DL ★★★★★ · EN✓", "", "✓ asserted", ctx},
 			{"unflagged DUAL", "1080p WEB-DL ★★★★★ · JA/EN DUAL", "", "DUAL without", ctx},
 			{"phantom LIB", "LIB 1080p WEB-DL ★★★★★ · 2.8 GB", "", "essential head", ctx},
+		}
+		// A legitimate label must not be rejected because its group resembles a claim.
+		dualGroup := FormatContext{Resolution: "1080p", Group: "DUALITY"}
+		if _, label := draculaJellyfinRender(t, tpl, dualGroup); label != "1080p · DUALITY" {
+			t.Fatalf("self-test baseline changed: %q", label)
+		} else if problems := draculaJellyfinProblems(t, dualGroup, "1080p · DUALITY", label, true); len(problems) > 0 {
+			t.Errorf("oracle rejected a valid label whose group is DUALITY: %v", problems)
 		}
 		for _, tc := range cases {
 			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, tc.raw, tc.label, true), "; ")

@@ -21,6 +21,7 @@ JELLYFIN=0
 # Set only after this run creates its own scratch file; the cleanup trap removes
 # nothing else, so a JELLYFIN_ENTRIES inherited from the caller is never touched.
 JELLYFIN_ENTRIES=""
+JELLYFIN_STAGE_LOG=""
 
 MODE="candidate"
 FORMATTER="${ROOT}/tests/streamnzb_compat/formatter.source.json"
@@ -197,6 +198,9 @@ cleanup_formatter_test() {
     if [[ -n "${JELLYFIN_ENTRIES}" ]]; then
         rm -f "${JELLYFIN_ENTRIES}"
     fi
+    if [[ -n "${JELLYFIN_STAGE_LOG}" ]]; then
+        rm -f "${JELLYFIN_STAGE_LOG}"
+    fi
 }
 
 trap cleanup_formatter_test EXIT INT TERM
@@ -267,6 +271,16 @@ if [[ "${JELLYFIN}" -eq 1 ]]; then
         exit 1
     }
 
+    #
+    # `go test -run` exits 0 when the pattern matches nothing, so each stage must
+    # show its tests passing and stage one must produce labels. Runs that share one
+    # StreamNZB checkout must not overlap: every run injects and removes these files.
+    JELLYFIN_STAGE_LOG="$(mktemp "${TMPDIR:-/tmp}/dracula-jellyfin-stage.XXXXXX")" || {
+        JELLYFIN_STAGE_LOG=""
+        echo "ERROR: could not create the Jellyfin stage log" >&2
+        exit 1
+    }
+
     DRACULA_FORMATTER_PATH="${FORMATTER}" \
     DRACULA_FORMATTER_CASES_PATH="${CASES}" \
     DRACULA_JELLYFIN_ENTRIES="${JELLYFIN_ENTRIES}" \
@@ -274,9 +288,19 @@ if [[ "${JELLYFIN}" -eq 1 ]]; then
         -v \
         -count=1 \
         ./pkg/server/stremio \
-        -run '^(TestDraculaJellyfinFormatter|TestDraculaFormatterDescriptionPolicy)$'
+        -run '^(TestDraculaJellyfinFormatter|TestDraculaFormatterDescriptionPolicy)$' \
+        2>&1 | tee "${JELLYFIN_STAGE_LOG}"
 
-    TEST_RC=$?
+    TEST_RC="${PIPESTATUS[0]}"
+
+    if [[ "${TEST_RC}" -eq 0 ]] && {
+        ! grep -q '^--- PASS: TestDraculaJellyfinFormatter ' "${JELLYFIN_STAGE_LOG}" \
+            || ! grep -q '^--- PASS: TestDraculaFormatterDescriptionPolicy ' "${JELLYFIN_STAGE_LOG}" \
+            || [[ ! -s "${JELLYFIN_ENTRIES}" ]]
+    }; then
+        echo "ERROR: the Jellyfin label stage did not run its tests or wrote no labels" >&2
+        TEST_RC=1
+    fi
 
     if [[ "${TEST_RC}" -eq 0 ]]; then
         echo "==> Sending the rendered labels through StreamNZB's Jellyfin PlaybackInfo handler"
@@ -286,9 +310,16 @@ if [[ "${JELLYFIN}" -eq 1 ]]; then
             -v \
             -count=1 \
             ./pkg/server/jellyfin \
-            -run '^TestDraculaJellyfinMediaSourceNames$'
+            -run '^TestDraculaJellyfinMediaSourceNames$' \
+            2>&1 | tee "${JELLYFIN_STAGE_LOG}"
 
-        TEST_RC=$?
+        TEST_RC="${PIPESTATUS[0]}"
+
+        if [[ "${TEST_RC}" -eq 0 ]] \
+            && ! grep -q '^--- PASS: TestDraculaJellyfinMediaSourceNames ' "${JELLYFIN_STAGE_LOG}"; then
+            echo "ERROR: the Jellyfin PlaybackInfo stage did not run its test" >&2
+            TEST_RC=1
+        fi
     fi
 else
     DRACULA_FORMATTER_PATH="${FORMATTER}" \

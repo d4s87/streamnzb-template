@@ -196,16 +196,18 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
 
         return 0
 
-    if synchronized:
-        print(
-            f"No {output_path.name} update required; source and "
-            "published formatter are already equivalent."
-        )
-        return 0
-
     share_code = encode_payload(
         source,
     )
+
+    # Build mode repairs byte-level drift too (for example a CRLF terminator),
+    # which the semantic --check accepts but tests/test_build_formatter.py rejects.
+    if synchronized and output_path.read_bytes() == share_code.encode("utf-8"):
+        print(
+            f"No {output_path.name} update required; source and "
+            "published formatter are already identical."
+        )
+        return 0
 
     try:
         atomic_write(

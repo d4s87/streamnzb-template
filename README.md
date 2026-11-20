@@ -167,12 +167,12 @@ Jellyfin only receives a formatter's **name**: StreamNZB labels each release in 
 - `LIB 1080p WEB-DL ★★★ · 6.2 GB · DD+ 5.1 · EN✓ · AVC · NTb`
 - `1080p WEB-DL ★★★★★ · 1.7 GB · DD+ 2.0 · AVC · Morita`
 
-Fields appear in this order: `LIB` (Library result) and `PACK` (season pack or complete series), resolution, source quality, HDR/Dolby Vision tokens, stars, file size, audio format and channels, languages with `DUAL`, video codec with bit depth, and release group. Essential information comes first. The label never exceeds 72 characters: the essential fields are length-capped and optional fields are added in that order only while they fit, so a later field can be dropped on a long label. The stars are the same as in the normal formatter.
+Fields appear in this order: `LIB` (Library result) and `PACK` (season pack or complete series), resolution, source quality, HDR/Dolby Vision tokens, stars, file size, audio format and channels, languages with `DUAL`, video codec with bit depth, and release group. Essential information comes first. The label never exceeds 72 code points (Unicode characters, not display width): the essential fields are length-capped and optional fields are added in that order only while they fit, so a later field can be dropped on a long label. The stars are the same as in the normal formatter.
 
 - HDR tokens are the ones the release name lists (`DV`, `HDR`, `HDR10+`, `HLG`, `SDR`). The label does not claim an HDR fallback or device compatibility.
 - Lossless and lossy audio stay distinguishable (`TrueHD`, `DTS-HD MA`, `FLAC` versus `DD+`, `DD`, `DTS`); at most two audio formats and one channel layout are shown.
 - Languages are listed as codes (`EN/FR/DE +3`). A trailing `✓` means the release's whole language list, including any codes hidden behind `+N`, was measured from the media file's own audio tracks, as in the normal formatter. No mark means that was not established for the full list: the codes may come from the release name or the indexer, and some may even have been measured. `DUAL` repeats the release name's dual-audio claim and is not a verification.
-- Sizes below 9.95 GB show one decimal, and from 9.95 GB whole gigabytes (nearest, decimal GB, so 9.95 GB reads `10 GB`); sizes below 1 GB use StreamNZB's MB form.
+- Sizes use decimal units in three ranges: below 1 GB StreamNZB's own MB form (`450 MB`), from 1 GB to below 9.95 GB one decimal (`2.8 GB`), and from 9.95 GB whole gigabytes, rounded once to the nearest (9.95 GB reads `10 GB`).
 - When nothing is known about a release the label reads `Unknown` rather than falling back to the raw release title.
 
 **Using it**

@@ -81,9 +81,11 @@ echo "==> Using StreamNZB ${ACTUAL_REF}"
 
 echo "==> Checking formatter source/published synchronization"
 
+# Production, debug and Jellyfin formatters: scripts/build_formatter.py owns the list.
 python3 \
     "${ROOT}/scripts/build_formatter.py" \
-    --check
+    --check \
+    --all
 
 SYNC_RC=$?
 
@@ -92,21 +94,6 @@ if [[ "${SYNC_RC}" -ne 0 ]]; then
         "ERROR: formatter synchronization check failed" \
         >&2
     exit "${SYNC_RC}"
-fi
-
-python3 \
-    "${ROOT}/scripts/build_formatter.py" \
-    --source "tests/streamnzb_compat/formatter-debug.source.json" \
-    --output "formatter-debug.txt" \
-    --check
-
-DEBUG_SYNC_RC=$?
-
-if [[ "${DEBUG_SYNC_RC}" -ne 0 ]]; then
-    echo \
-        "ERROR: debug formatter synchronization check failed" \
-        >&2
-    exit "${DEBUG_SYNC_RC}"
 fi
 
 echo "==> Running rule/profile compatibility tests"
@@ -149,6 +136,19 @@ if [[ "${DEBUG_FORMATTER_RC}" -ne 0 ]]; then
         "ERROR: debug formatter compatibility tests failed" \
         >&2
     exit "${DEBUG_FORMATTER_RC}"
+fi
+
+echo
+echo "==> Running published Jellyfin formatter regression"
+
+./scripts/test_formatter.sh --jellyfin-production
+JELLYFIN_FORMATTER_RC=$?
+
+if [[ "${JELLYFIN_FORMATTER_RC}" -ne 0 ]]; then
+    echo \
+        "ERROR: Jellyfin formatter compatibility tests failed" \
+        >&2
+    exit "${JELLYFIN_FORMATTER_RC}"
 fi
 
 echo

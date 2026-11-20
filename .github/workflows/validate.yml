@@ -75,6 +75,9 @@ jobs:
       - name: Validate Anime tier integrity
         run: python tests/test_tier_integrity.py
 
+      - name: Test formatter build tooling
+        run: python tests/test_build_formatter.py
+
       - name: Test release checker
         run: python tests/test_check_release.py
 

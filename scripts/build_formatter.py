@@ -13,6 +13,14 @@ import tempfile
 PREFIX = "SNZBF1:"
 EXPECTED_SCHEMA = 1
 
+# Every published formatter: (readable source, generated SNZBF1 share code).
+# `--all` builds or checks each pair, so release tooling covers all of them.
+FORMATTERS = (
+    ("tests/streamnzb_compat/formatter.source.json", "formatter.txt"),
+    ("tests/streamnzb_compat/formatter-debug.source.json", "formatter-debug.txt"),
+    ("tests/streamnzb_compat/formatter-jellyfin.source.json", "formatter-jellyfin.txt"),
+)
+
 EXPECTED_KEYS = {
     "streamnzb_format_profile",
     "name",
@@ -138,41 +146,9 @@ def atomic_write(path: Path, text: str):
         raise
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=(
-            "Build a formatter share code from source JSON "
-            "or verify semantic synchronization."
-        )
-    )
-
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help=(
-            "verify source and published formatter "
-            "are semantically synchronized"
-        ),
-    )
-
-    parser.add_argument(
-        "--source",
-        default="tests/streamnzb_compat/formatter.source.json",
-        help="formatter source JSON path relative to repository root",
-    )
-
-    parser.add_argument(
-        "--output",
-        default="formatter.txt",
-        help="published SNZBF1 output path relative to repository root",
-    )
-
-    args = parser.parse_args()
-
-    root = Path(__file__).resolve().parents[1]
-
-    source_path = root / args.source
-    output_path = root / args.output
+def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
+    source_path = root / source_rel
+    output_path = root / output_rel
 
     try:
         source = load_source(
@@ -194,7 +170,7 @@ def main():
             )
         except Exception as exc:
             print(
-                "ERROR: could not decode existing formatter.txt: "
+                f"ERROR: could not decode existing {output_path.name}: "
                 f"{exc}",
                 file=sys.stderr,
             )
@@ -204,7 +180,7 @@ def main():
         current == source
     )
 
-    if args.check:
+    if check:
         if not synchronized:
             print(
                 f"ERROR: {source_path} and {output_path} "
@@ -238,7 +214,7 @@ def main():
         )
     except Exception as exc:
         print(
-            f"ERROR: could not write formatter.txt: {exc}",
+            f"ERROR: could not write {output_path.name}: {exc}",
             file=sys.stderr,
         )
         return 1
@@ -249,7 +225,7 @@ def main():
         )
     except Exception as exc:
         print(
-            "ERROR: generated formatter.txt could not "
+            f"ERROR: generated {output_path.name} could not "
             f"be decoded: {exc}",
             file=sys.stderr,
         )
@@ -257,7 +233,7 @@ def main():
 
     if rebuilt != source:
         print(
-            "ERROR: generated formatter.txt failed "
+            f"ERROR: generated {output_path.name} failed "
             "semantic round-trip.",
             file=sys.stderr,
         )
@@ -273,6 +249,69 @@ def main():
     )
 
     return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build a formatter share code from source JSON "
+            "or verify semantic synchronization."
+        )
+    )
+
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "verify source and published formatter "
+            "are semantically synchronized"
+        ),
+    )
+
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help=(
+            "process every published formatter (production, debug and "
+            "Jellyfin); cannot be combined with --source/--output"
+        ),
+    )
+
+    parser.add_argument(
+        "--source",
+        default=None,
+        help=(
+            "formatter source JSON path relative to repository root "
+            f"(default: {FORMATTERS[0][0]})"
+        ),
+    )
+
+    parser.add_argument(
+        "--output",
+        default=None,
+        help=(
+            "published SNZBF1 output path relative to repository root "
+            f"(default: {FORMATTERS[0][1]})"
+        ),
+    )
+
+    args = parser.parse_args()
+
+    if args.all and (args.source or args.output):
+        parser.error("--all cannot be combined with --source or --output")
+
+    root = Path(__file__).resolve().parents[1]
+
+    if args.all:
+        pairs = FORMATTERS
+    else:
+        pairs = (
+            (args.source or FORMATTERS[0][0], args.output or FORMATTERS[0][1]),
+        )
+
+    # Process every pair even after a failure so one run reports them all.
+    results = [process(root, source, output, args.check) for source, output in pairs]
+    return 1 if any(results) else 0
 
 
 if __name__ == "__main__":

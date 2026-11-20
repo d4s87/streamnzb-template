@@ -82,8 +82,9 @@ production formatter uses them for its stars (see
 coordinated raise of the minimum supported StreamNZB version, not a
 best-effort compatibility layer:
 
-- DraCuLa publishes one formatter at the existing `formatter.txt` URL. There
-  is no separate formatter for StreamNZB 6.3.0 or older.
+- DraCuLa publishes one normal formatter at the existing `formatter.txt` URL.
+  There is no separate formatter for StreamNZB 6.3.0 or older. (The optional
+  debug and Jellyfin formatters are separate artifacts with the same minimum.)
 - Upgrade StreamNZB to 6.4.0 or newer **before** importing or refreshing the
   formatter. Then refresh the Define Library, Profile and Formatter as the
   release notes direct.
@@ -173,7 +174,7 @@ DraCuLa profiles always carry a scoring map, so published profiles are required 
 
 ## Formatter compatibility
 
-The normal and debug formatters are built from readable JSON sources and published as `SNZBF1:` artifacts. Tests verify that the published formatter artifacts stay semantically synchronized with their readable sources.
+The normal, debug and Jellyfin formatters are built from readable JSON sources and published as `SNZBF1:` artifacts (`scripts/build_formatter.py` keeps the list; `--all` builds or checks every pair, which is what the compatibility harness and the release checker run). Tests verify that the published formatter artifacts stay semantically synchronized with their readable sources, and `tests/test_build_formatter.py` additionally pins the exact bytes the tool generates.
 
 Pinned real-StreamNZB formatter regressions cover user-facing behaviors such as:
 
@@ -215,6 +216,29 @@ Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, ded
 The language marker is source-aware. StreamNZB's `.Languages` is a merge of probed audio-track languages, the indexer's language tag and release-name parsing, and `.LanguageSource` names only the strongest source that contributed (`measured`, `reported`, `inferred`, or empty). So `measured` can sit next to a language the file never confirmed. `.Verified` alone is not enough either: it is true for any probed Library result, even one whose audio tracks were not read. DraCuLa shows `✓` only when `.LanguageSource` is `measured` and every displayed `.Languages` entry is present in `.Probed.AudioLanguages`; otherwise it keeps `⛿`. The subtitle-only line always uses `⛿`. In the current StreamNZB release only Library results carry probe data, so fresh indexer results never show `✓`.
 
 Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged in the StreamNZB 6.4.0 source. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+
+### Jellyfin formatter
+
+`formatter-jellyfin.txt` ("DraCuLa Jellyfin") is an optional third formatter for StreamNZB's Jellyfin endpoint. Behavior it relies on, read in the pinned v6.5.0 source and exercised against both v6.4.0 (`56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`) and v6.5.0 (`63a37b614db9246cd65aec08e42b93a91e9068d0`):
+
+- Only `result_name_template` reaches Jellyfin. `playlistViewOf` renders the name half; the description template is never rendered for Jellyfin.
+- The rendered name is flattened by `singleLineLabel`: lines are trimmed, blank lines dropped and the rest joined with ` · `, then StreamNZB cuts the label at 160 runes (`maxSourceLabelRunes`) without warning or ellipsis, by rune rather than by character. The result becomes `MediaSourceInfo.Name`, which is what a client's version picker shows; a failed or empty render falls back to the raw release title.
+- Formatter selection is `stream.FormatProfileName`, one per stream. A Jellyfin login is a stream, so StreamNZB 6.4.0 and 6.5.0 cannot choose a formatter by client; DraCuLa does not try to.
+
+The formatter therefore emits one line, budgets its own length to **72 code points** (essential head `[LIB] [PACK] resolution quality HDR` plus the production star fragment, then size, audio, languages, codec and group appended only while they fit), and never depends on the 160-rune cut. The head is bounded by Jhin's closed quality, resolution and HDR vocabularies, so no real release can exceed the budget. Its description is empty: StreamNZB accepts that, builds a name-only format and uses the built-in description where one is rendered. It uses no tier, SeaDex or classification logic (no `.MatchedRules`), and its star expression is the production one, unchanged.
+
+Metadata semantics match the normal formatter. `✓` follows the same condition (`.LanguageSource == "measured"` and every displayed language in `.Probed.AudioLanguages`); `DUAL` is `.DualAudio`, the release name's claim; HDR tokens are listed, never interpreted; `PACK` is `.Seasons` or `.Complete` without `.Episode`/`.Episodes`, so Anime batches whose names carry neither are not marked. Sizes below 10 GB round once to 0.1 GB and larger sizes once to the nearest whole GB (decimal GB, like StreamNZB's `size` helper).
+
+Regression coverage (`./scripts/test_formatter.sh --jellyfin` for the readable source, `--jellyfin-production` for the published share code; the compatibility harness runs the latter):
+
+- 72 exact-label fixtures (`fixtures/formatter-jellyfin.json`) covering 4K DV/HDR, REMUX and encodes, SDR, Anime WEB/BluRay/dual/multi-audio, episodes, season packs, Library results, partial and zero stars, missing metadata, size boundaries, audio and language semantics, long groups and a pathological everything-maxed context;
+- a label oracle that re-derives the essential head from the context, with a self-test that feeds it deliberately broken labels;
+- 4,000 seeded adversarial contexts (the full 40,000-context prototype run is not repeated in CI);
+- real ranking-pipeline pools (Movie, TV, Season pack, Anime) through the published profile and Define Library, compared with the production labels: stars must be identical and the Jellyfin labels must separate releases the production labels collide on;
+- the same labels sent through StreamNZB's real Jellyfin PlaybackInfo handler (`pkg/server/jellyfin`, using the engine's own test fixture), asserting `MediaSourceInfo.Name` equals the rendered label, is non-empty, single-line, within 72 code points and not the raw title;
+- `TestDraculaFormatterDescriptionPolicy`: the empty-description allowance applies only to this formatter. Emptying the production or debug description, in source or share code, still fails validation, and a copied production description is rejected here.
+
+The Jellyfin handler test reuses StreamNZB's own test helpers (`newFixture`, `itemIDFor`, `decodeInto`), so a StreamNZB pin move may need that file adjusted, like the other injected tests. A real Jellyfin client has not been scripted; one mobile client was checked by eye on the prototype, and no universal client rendering is claimed.
 
 ## Dolby Vision Profile 8
 

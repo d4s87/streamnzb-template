@@ -1500,17 +1500,15 @@ def _check_release_documents(report, version):
     else:
         report.add_pass("profile-generation-sync", "build_profiles.py check passed")
 
-    formatter_check = _run(
-        ["python3", str(ROOT / "scripts" / "build_formatter.py"), "--check"]
-    )
+    formatter_check = _run(["python3", str(ROOT / "scripts" / "build_formatter.py"), "--check", "--all"])
     if formatter_check.returncode != 0:
         report.add_fail(
             "formatter-generation-sync",
-            f"build_formatter.py --check failed: "
+            f"build_formatter.py --check --all failed: "
             f"{formatter_check.stderr.strip() or formatter_check.stdout.strip()}",
         )
     else:
-        report.add_pass("formatter-generation-sync", "build_formatter.py --check passed")
+        report.add_pass("formatter-generation-sync", "build_formatter.py --check --all passed")
 
     release_note_path = RELEASE_DIR / f"{version}.md"
     if not release_note_path.exists():
@@ -1900,15 +1898,15 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
     else:
         report.add_pass("profile-generation-sync", "build_profiles.py check passed")
 
-    formatter_check = _run(["python3", str(ROOT / "scripts" / "build_formatter.py"), "--check"])
+    formatter_check = _run(["python3", str(ROOT / "scripts" / "build_formatter.py"), "--check", "--all"])
     if formatter_check.returncode != 0:
         report.add_fail(
             "formatter-generation-sync",
-            f"build_formatter.py --check failed: "
+            f"build_formatter.py --check --all failed: "
             f"{formatter_check.stderr.strip() or formatter_check.stdout.strip()}",
         )
     else:
-        report.add_pass("formatter-generation-sync", "build_formatter.py --check passed")
+        report.add_pass("formatter-generation-sync", "build_formatter.py --check --all passed")
 
     release_note_path = RELEASE_DIR / f"{version}.md"
     if release_note_path.exists():

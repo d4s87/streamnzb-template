@@ -92,15 +92,93 @@ func decodeDraculaShareCode(raw []byte, prefix string) ([]byte, error) {
 	return decoded, nil
 }
 
-func loadDraculaFormatter(
+// draculaDescriptionPolicy says what a formatter's description template must
+// be. The production and debug formatters render a real description, so an
+// accidentally emptied one must fail. The Jellyfin formatter is consumed only
+// through its result name (StreamNZB's Jellyfin endpoint ignores the
+// description), so it must stay empty rather than duplicate the production one.
+type draculaDescriptionPolicy int
+
+const (
+	draculaDescriptionRequired draculaDescriptionPolicy = iota
+	draculaDescriptionEmpty
+)
+
+// parseDraculaFormatter decodes a published SNZBF1 share code or a readable
+// source JSON and checks the schema version.
+func parseDraculaFormatter(data []byte) (draculaFormatterPayload, error) {
+	raw := data
+
+	if strings.HasPrefix(
+		strings.TrimSpace(string(data)),
+		draculaFormatterPrefix,
+	) {
+		var err error
+		raw, err = decodeDraculaShareCode(data, draculaFormatterPrefix)
+		if err != nil {
+			return draculaFormatterPayload{}, err
+		}
+	}
+
+	var payload draculaFormatterPayload
+
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return draculaFormatterPayload{}, fmt.Errorf(
+			"decode formatter payload: %w",
+			err,
+		)
+	}
+
+	if payload.StreamNZBFormatProfile != 1 {
+		return draculaFormatterPayload{}, fmt.Errorf(
+			"unsupported formatter schema: got %d, expected 1",
+			payload.StreamNZBFormatProfile,
+		)
+	}
+
+	return payload, nil
+}
+
+// validateDraculaFormatterPayload applies the description policy and asks
+// StreamNZB itself whether both templates compile.
+func validateDraculaFormatterPayload(
+	payload draculaFormatterPayload,
+	policy draculaDescriptionPolicy,
+) error {
+	hasDescription := strings.TrimSpace(
+		payload.ResultDescriptionTemplate,
+	) != ""
+
+	switch policy {
+	case draculaDescriptionRequired:
+		if !hasDescription {
+			return fmt.Errorf("result_description_template is empty")
+		}
+	case draculaDescriptionEmpty:
+		if hasDescription {
+			return fmt.Errorf("result_description_template must stay empty")
+		}
+	}
+
+	if err := ValidateResultTemplates(
+		payload.ResultNameTemplate,
+		payload.ResultDescriptionTemplate,
+	); err != nil {
+		return fmt.Errorf(
+			"StreamNZB rejected formatter templates: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
+func loadDraculaFormatterFile(
 	t *testing.T,
+	path string,
+	policy draculaDescriptionPolicy,
 ) draculaFormatterPayload {
 	t.Helper()
-
-	path := os.Getenv("DRACULA_FORMATTER_PATH")
-	if path == "" {
-		t.Fatal("DRACULA_FORMATTER_PATH is not set")
-	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -111,54 +189,29 @@ func loadDraculaFormatter(
 		)
 	}
 
-	raw := data
-
-	if strings.HasPrefix(
-		strings.TrimSpace(string(data)),
-		draculaFormatterPrefix,
-	) {
-		raw, err = decodeDraculaShareCode(data, draculaFormatterPrefix)
-		if err != nil {
-			t.Fatal(err)
-		}
+	payload, err := parseDraculaFormatter(data)
+	if err != nil {
+		t.Fatalf("formatter %q: %v", path, err)
 	}
 
-	var payload draculaFormatterPayload
-
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		t.Fatalf(
-			"decode formatter payload %q: %v",
-			path,
-			err,
-		)
-	}
-
-	if payload.StreamNZBFormatProfile != 1 {
-		t.Fatalf(
-			"unsupported formatter schema: got %d, expected 1",
-			payload.StreamNZBFormatProfile,
-		)
-	}
-
-	if strings.TrimSpace(
-		payload.ResultDescriptionTemplate,
-	) == "" {
-		t.Fatal(
-			"result_description_template is empty",
-		)
-	}
-
-	if err := ValidateResultTemplates(
-		payload.ResultNameTemplate,
-		payload.ResultDescriptionTemplate,
-	); err != nil {
-		t.Fatalf(
-			"StreamNZB rejected formatter templates: %v",
-			err,
-		)
+	if err := validateDraculaFormatterPayload(payload, policy); err != nil {
+		t.Fatalf("formatter %q: %v", path, err)
 	}
 
 	return payload
+}
+
+func loadDraculaFormatter(
+	t *testing.T,
+) draculaFormatterPayload {
+	t.Helper()
+
+	path := os.Getenv("DRACULA_FORMATTER_PATH")
+	if path == "" {
+		t.Fatal("DRACULA_FORMATTER_PATH is not set")
+	}
+
+	return loadDraculaFormatterFile(t, path, draculaDescriptionRequired)
 }
 
 func loadDraculaFormatterFixtures(

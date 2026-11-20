@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import tempfile
+import zlib
 
 PREFIX = "SNZBF1:"
 EXPECTED_SCHEMA = 1
@@ -20,6 +21,11 @@ FORMATTERS = (
     ("tests/streamnzb_compat/formatter-debug.source.json", "formatter-debug.txt"),
     ("tests/streamnzb_compat/formatter-jellyfin.source.json", "formatter-jellyfin.txt"),
 )
+
+# Failures a damaged, unreadable or missing file can legitimately cause. They are
+# reported per formatter pair so one bad artifact never hides the others; any other
+# exception is a programming error and is deliberately not caught.
+EXPECTED_ERRORS = (OSError, ValueError, EOFError, zlib.error)
 
 EXPECTED_KEYS = {
     "streamnzb_format_profile",
@@ -147,20 +153,37 @@ def atomic_write(path: Path, text: str):
         raise
 
 
+def same_file(first: Path, second: Path) -> bool:
+    """True when both paths name the same file: identical, relative/absolute or `..`
+    aliases, symbolic links and hard links. Fails closed: an OSError other than a
+    missing file propagates instead of being read as "different"."""
+    try:
+        return os.path.samefile(first, second)
+    except FileNotFoundError:
+        # One of them does not exist, so there is no inode to compare (and nothing a
+        # hard link could alias); compare fully resolved paths, which follows symlinks
+        # and parent-directory aliases even when the target is missing.
+        return first.resolve() == second.resolve()
+
+
 def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
     source_path = root / source_rel
     output_path = root / output_rel
 
-    try:
-        source = load_source(
-            source_path,
-        )
-    except Exception as exc:
+    # Source protection comes before anything is read for writing and applies to
+    # --check as well as to a build, so no path through this function can replace
+    # the source with its own share code.
+    if same_file(source_path, output_path):
         print(
-            f"ERROR: {exc}",
+            f"ERROR: formatter source and output are the same file "
+            f"({source_path} and {output_path}); refusing to continue.",
             file=sys.stderr,
         )
         return 1
+
+    source = load_source(
+        source_path,
+    )
 
     # The canonical artifact is the exact UTF-8, LF-terminated text encode_payload()
     # produces, so both --check and the rebuild decision compare bytes.
@@ -169,22 +192,37 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
     )
     canonical = share_code.encode("utf-8")
 
-    current_bytes = output_path.read_bytes() if output_path.is_file() else None
+    current_bytes = None
+
+    if output_path.is_file():
+        current_bytes = output_path.read_bytes()
+
+        # Fail closed: only a file that is itself a formatter share code is ever
+        # compared with, repaired or replaced. A source JSON, a typo'd path or any
+        # other file is reported and left untouched.
+        try:
+            decode_share_code(
+                output_path,
+            )
+        except EXPECTED_ERRORS as exc:
+            print(
+                f"ERROR: could not decode existing {output_path.name} as a "
+                f"formatter share code; refusing to overwrite it: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+
     identical = current_bytes == canonical
 
     if check:
         if not identical:
             detail = "are not synchronized."
-            if current_bytes is not None:
-                try:
-                    if decode_share_code(output_path) == source:
-                        detail = (
-                            "decode to the same payload but are not byte-identical "
-                            "(for example CRLF line endings or a missing final newline); "
-                            "rebuild with scripts/build_formatter.py."
-                        )
-                except Exception:
-                    pass
+            if current_bytes is not None and decode_share_code(output_path) == source:
+                detail = (
+                    "decode to the same payload but are not byte-identical "
+                    "(for example CRLF line endings or a missing final newline); "
+                    "rebuild with scripts/build_formatter.py."
+                )
             print(
                 f"ERROR: {source_path} and {output_path} {detail}",
                 file=sys.stderr,
@@ -205,31 +243,12 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
         )
         return 0
 
-    try:
-        atomic_write(
-            output_path,
-            share_code,
-        )
-    except Exception as exc:
-        print(
-            f"ERROR: could not write {output_path.name}: {exc}",
-            file=sys.stderr,
-        )
-        return 1
+    atomic_write(
+        output_path,
+        share_code,
+    )
 
-    try:
-        rebuilt = decode_share_code(
-            output_path,
-        )
-    except Exception as exc:
-        print(
-            f"ERROR: generated {output_path.name} could not "
-            f"be decoded: {exc}",
-            file=sys.stderr,
-        )
-        return 1
-
-    if rebuilt != source:
+    if decode_share_code(output_path) != source:
         print(
             f"ERROR: generated {output_path.name} failed "
             "semantic round-trip.",
@@ -257,11 +276,24 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
     return 0
 
 
+def process_pair(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
+    """Process one pair; an expected file or format failure becomes a diagnostic and a
+    failing result for this pair only."""
+    try:
+        return process(root, source_rel, output_rel, check)
+    except EXPECTED_ERRORS as exc:
+        print(
+            f"ERROR: {source_rel} -> {output_rel}: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=(
             "Build a formatter share code from source JSON "
-            "or verify semantic synchronization."
+            "or verify that it is byte-for-byte up to date."
         )
     )
 
@@ -316,7 +348,7 @@ def main():
         )
 
     # Process every pair even after a failure so one run reports them all.
-    results = [process(root, source, output, args.check) for source, output in pairs]
+    results = [process_pair(root, source, output, args.check) for source, output in pairs]
     return 1 if any(results) else 0
 
 

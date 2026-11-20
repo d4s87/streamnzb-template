@@ -1322,7 +1322,8 @@
           "\n"
         ]
       },
-      "label": "1080p"
+      "label": "1080p",
+      "out_of_vocabulary": true
     },
     {
       "name": "A whitespace-only language never leaves a dangling separator",
@@ -1332,7 +1333,8 @@
           "\r\n"
         ]
       },
-      "label": "1080p"
+      "label": "1080p",
+      "out_of_vocabulary": true
     },
     {
       "name": "Group: empty",
@@ -1399,12 +1401,12 @@
       "label": "1080p · FLE-x265_v2"
     },
     {
-      "name": "Group: a separator inside a name is kept",
+      "name": "Group: the middle dot is the field delimiter and renders as a space",
       "context": {
         "Resolution": "1080p",
         "Group": "A·B"
       },
-      "label": "1080p · A·B"
+      "label": "1080p · A B"
     },
     {
       "name": "Group: DUAL with the dual-audio flag off is a group, not a claim",
@@ -1422,6 +1424,111 @@
         "Group": "DUAL"
       },
       "label": "1080p · DUAL · DUAL"
+    },
+    {
+      "name": "Group: a long separator-prefixed name keeps its text, not a cut-off run of dots",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "············Team"
+      },
+      "label": "1080p · Team"
+    },
+    {
+      "name": "Group: an embedded delimiter cannot create a standalone DUAL field",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A · DUAL"
+      },
+      "label": "1080p · A DUAL"
+    },
+    {
+      "name": "Group: an embedded delimiter run collapses to single spaces",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "x · y · z"
+      },
+      "label": "1080p · x y z"
+    },
+    {
+      "name": "Group: ellipsis characters alone render nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "……………………………………………………"
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: a language-looking name stays a group",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN · EN✓"
+    },
+    {
+      "name": "Group: a size-looking name with no size",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "10 GB"
+      },
+      "label": "1080p · 10 GB"
+    },
+    {
+      "name": "Group: a size-looking name after the real size",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 2800000000,
+        "Group": "10 GB"
+      },
+      "label": "1080p · 2.8 GB · 10 GB"
+    },
+    {
+      "name": "Group: a language-and-DUAL-looking name with no claims",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "JA/EN DUAL"
+      },
+      "label": "1080p · JA/EN DUAL"
+    },
+    {
+      "name": "Delimiter in quality never creates a standalone field",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB · DL",
+        "Size": 2800000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB   DL ★★★★★ · 2.8 GB",
+      "out_of_vocabulary": true
+    },
+    {
+      "name": "Delimiter in codec and audio never creates standalone fields",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 2800000000,
+        "Audio": [
+          "AAC · DUAL"
+        ],
+        "Codec": "AV · C"
+      },
+      "label": "1080p · 2.8 GB · AAC   DUAL · AV   C",
+      "out_of_vocabulary": true
+    },
+    {
+      "name": "Delimiter in a language code never claims dual audio",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "e · n"
+        ]
+      },
+      "label": "1080p · E   N",
+      "out_of_vocabulary": true
     }
   ]
 }

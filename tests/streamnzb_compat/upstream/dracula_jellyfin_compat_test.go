@@ -15,6 +15,7 @@ package stremio
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -92,18 +93,149 @@ var draculaStarRun = regexp.MustCompile(`★+`)
 var draculaLangSegment = regexp.MustCompile(`^(?:[A-Z]{2}(?:/[A-Z]{2}){0,2}(✓)?(?: \+\d+)?(?: DUAL)?|DUAL)$`)
 
 // draculaJellyfinGroupSegment is the label segment the release group renders as,
-// derived independently of the template: line breaks become spaces, the value is
-// trimmed, a blank or separator-only value renders nothing, and the rest is cut
-// at 12 characters with an ellipsis.
+// derived independently of the template. The middle dot is the field delimiter, so
+// in a group it becomes a space (the " · " delimiter collapses to one); line breaks
+// become spaces; the value is trimmed and cut at 12 characters with an ellipsis; a
+// result with nothing but ellipsis left renders nothing.
 func draculaJellyfinGroupSegment(group string) string {
-	g := strings.TrimSpace(strings.NewReplacer("\r", " ", "\n", " ").Replace(group))
-	if strings.TrimSpace(strings.ReplaceAll(g, "·", "")) == "" {
+	g := strings.ReplaceAll(group, "\n", " ")
+	g = strings.ReplaceAll(g, "\r", " ")
+	g = strings.ReplaceAll(g, " · ", " ")
+	g = strings.TrimSpace(strings.ReplaceAll(g, "·", " "))
+	if g == "" {
 		return ""
 	}
 	if r := []rune(g); len(r) > 12 {
-		return string(r[:12]) + "…"
+		g = string(r[:12]) + "…"
+	}
+	if strings.TrimSpace(strings.ReplaceAll(g, "…", "")) == "" {
+		return ""
 	}
 	return g
+}
+
+var draculaJellyfinSizeShaped = regexp.MustCompile(`^(\d+)(?:\.(\d))? (GB|MB)$`)
+
+// draculaJellyfinSizeMatches reports whether seg is the size field for size bytes:
+// StreamNZB's own MB form below 1 GB, otherwise decimal GB rounded once (0.1 GB
+// below 9.95 GB, the nearest whole GB above).
+func draculaJellyfinSizeMatches(seg string, size int64) bool {
+	m := draculaJellyfinSizeShaped.FindStringSubmatch(seg)
+	if m == nil {
+		return false
+	}
+	value, _ := strconv.ParseFloat(m[1]+"."+orZero(m[2]), 64)
+	if m[3] == "MB" {
+		return size < 1_000_000_000 && math.Abs(value-float64(size)/1e6) <= 0.5+1e-9
+	}
+	tolerance := 0.05
+	if m[2] == "" {
+		tolerance = 0.5
+	}
+	return size >= 1_000_000_000 && math.Abs(value-float64(size)/1e9) <= tolerance+1e-9
+}
+
+// draculaJellyfinExpectedLanguage is the language field the context calls for: up
+// to three codes, the measured mark only when every listed language was probed from
+// a measured source, the overflow count, then the dual-audio claim.
+func draculaJellyfinExpectedLanguage(ctx FormatContext) string {
+	field := ""
+	if len(ctx.Languages) > 0 {
+		field = strings.ToUpper(strings.Join(ctx.Languages[:min(len(ctx.Languages), 3)], "/"))
+		if ctx.LanguageSource == "measured" && len(withoutStrings(ctx.Probed.AudioLanguages, ctx.Languages)) == 0 {
+			field += "✓"
+		}
+		if len(ctx.Languages) > 3 {
+			field += fmt.Sprintf(" +%d", len(ctx.Languages)-3)
+		}
+	}
+	if ctx.DualAudio {
+		field = strings.TrimSpace(field + " DUAL")
+	}
+	return field
+}
+
+// draculaJellyfinTailProblems attributes each optional segment to the field that
+// produced it, by position and by what the context says the field must be, instead
+// of guessing from the segment's text: the size is the first optional field, the
+// release group the last, the language field is the one the context spells out.
+// A group called EN✓, 10 GB or DUAL is therefore a group, never a claim, and a
+// missing field cannot hide behind a group with the same text. A field may be
+// absent only when it would not have fitted in the 72-code-point budget (it is then
+// absent from the final label too, which is at least as long as at the field's turn).
+// A trailing segment equal to the rendered group is either the group or, when the
+// group was dropped, another field with identical text; both readings are tried.
+func draculaJellyfinTailProblems(ctx FormatContext, label string, tail []string) []string {
+	group := draculaJellyfinGroupSegment(ctx.Group)
+	readings := []bool{false}
+	if group != "" && len(tail) > 0 && tail[len(tail)-1] == group {
+		readings = []bool{true, false}
+	}
+	var best []string
+	for i, lastIsGroup := range readings {
+		problems := draculaJellyfinTailReading(ctx, label, tail, group, lastIsGroup)
+		if len(problems) == 0 {
+			return nil
+		}
+		if i == 0 || len(problems) < len(best) {
+			best = problems
+		}
+	}
+	return best
+}
+
+func draculaJellyfinTailReading(ctx FormatContext, label string, tail []string, group string, lastIsGroup bool) []string {
+	var problems []string
+	add := func(format string, args ...any) { problems = append(problems, fmt.Sprintf(format, args...)) }
+	length := utf8.RuneCountInString
+	rest := tail
+
+	if lastIsGroup {
+		rest = tail[:len(tail)-1]
+	} else if group != "" && length(label)+3+length(group) <= draculaJellyfinBudget {
+		add("group %q is missing although it fits", group)
+	}
+
+	// Size: with a size the first optional field must be it (it always fits after the
+	// capped head); without one no size-shaped field may appear.
+	if ctx.Size > 0 {
+		if len(rest) == 0 || !draculaJellyfinSizeMatches(rest[0], ctx.Size) {
+			add("the size segment for %d bytes is missing or wrong (first optional field %q)", ctx.Size, firstOf(rest))
+		} else {
+			rest = rest[1:]
+		}
+	} else if len(rest) > 0 && draculaJellyfinSizeShaped.MatchString(rest[0]) {
+		add("size segment %q without a size", rest[0])
+	}
+
+	// Language: exactly the field the context spells out, mark and DUAL included.
+	if want := draculaJellyfinExpectedLanguage(ctx); want != "" {
+		if i := slices.Index(rest, want); i >= 0 {
+			rest = slices.Concat(rest[:i], rest[i+1:])
+		} else if length(label)+3+length(want) <= draculaJellyfinBudget {
+			add("language segment %q is missing or wrong", want)
+		}
+	}
+
+	// Whatever is left must not claim verification or dual audio.
+	for _, seg := range rest {
+		if m := draculaLangSegment.FindStringSubmatch(seg); m != nil {
+			if m[1] != "" {
+				add("%q asserts measured languages the context does not support", seg)
+			}
+			if seg == "DUAL" || strings.HasSuffix(seg, " DUAL") {
+				add("%q claims dual audio the release flag does not support", seg)
+			}
+		}
+	}
+	return problems
+}
+
+func firstOf(xs []string) string {
+	if len(xs) == 0 {
+		return ""
+	}
+	return xs[0]
 }
 
 // draculaJellyfinProblems is the label oracle: it returns every violated
@@ -125,7 +257,13 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string,
 	if n := utf8.RuneCountInString(label); n > draculaJellyfinBudget {
 		add("label has %d code points, budget %d", n, draculaJellyfinBudget)
 	}
-	if label != strings.TrimSpace(label) || (inVocabulary && strings.Contains(label, "  ")) {
+	// A group may hold spaces of its own (a middle dot becomes one); the rest of the
+	// label may not.
+	scan := label
+	if group := draculaJellyfinGroupSegment(ctx.Group); group != "" {
+		scan = strings.TrimSuffix(label, " · "+group)
+	}
+	if label != strings.TrimSpace(label) || (inVocabulary && strings.Contains(scan, "  ")) {
 		add("stray whitespace")
 	}
 	if strings.HasPrefix(label, "·") || strings.HasSuffix(label, "·") || strings.Contains(label, "· ·") || strings.Contains(label, " ·· ") {
@@ -176,45 +314,23 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string,
 		add("essential head %q is not intact at the start of the label", wantHead)
 	}
 
-	// Optional fields: each ` · `-separated segment is non-empty; claims need support.
+	// Optional fields: none may be empty, and in-vocabulary contexts must produce
+	// exactly the fields the context calls for.
 	segments := strings.Split(label, " · ")
+	for _, seg := range segments {
+		// The middle dot is the reserved field delimiter: no field may carry one, so a
+		// field can never inject a delimiter or pose as another field.
+		if strings.Contains(seg, "·") {
+			add("segment %q contains the field delimiter glyph", seg)
+		}
+	}
 	for _, seg := range segments[1:] {
-		if strings.Trim(seg, " ·…") == "" {
+		if strings.Trim(seg, " …") == "" {
 			add("meaningless segment %q", seg)
 		}
-		if m := regexp.MustCompile(`^(\d+)(?:\.(\d))? GB$`).FindStringSubmatch(seg); m != nil {
-			gb, _ := strconv.ParseFloat(m[1]+"."+orZero(m[2]), 64)
-			tolerance := 0.05 + 1e-9 // one decimal: nearest 0.1 GB
-			if m[2] == "" {
-				tolerance = 0.5 + 1e-9 // whole GB: nearest 1 GB, rounded once
-			}
-			if diff := gb - float64(ctx.Size)/1e9; diff > tolerance || diff < -tolerance {
-				add("size segment %q does not match %d bytes", seg, ctx.Size)
-			}
-		}
 	}
-	// The release group is the last optional field. Attribute a trailing segment that is
-	// exactly the rendered group to the group, so a group called DUAL (or EN✓) is not
-	// mistaken for a language claim. A claim and a group that are textually identical
-	// and the only optional segment cannot be told apart, which is inherent to the label.
-	claimSegments := segments[1:]
-	if group := draculaJellyfinGroupSegment(ctx.Group); group != "" && len(claimSegments) > 0 && claimSegments[len(claimSegments)-1] == group {
-		claimSegments = claimSegments[:len(claimSegments)-1]
-	}
-	for _, seg := range claimSegments {
-		m := draculaLangSegment.FindStringSubmatch(seg)
-		if m == nil {
-			continue
-		}
-		if m[1] != "" {
-			verified := ctx.LanguageSource == "measured" && len(withoutStrings(ctx.Probed.AudioLanguages, ctx.Languages)) == 0 && len(ctx.Languages) > 0
-			if !verified {
-				add("✓ asserted without measured, fully probed languages")
-			}
-		}
-		if (seg == "DUAL" || strings.HasSuffix(seg, " DUAL")) && !ctx.DualAudio {
-			add("DUAL without the release's dual-audio flag")
-		}
+	if inVocabulary {
+		problems = append(problems, draculaJellyfinTailProblems(ctx, label, segments[1:])...)
 	}
 	if hasLib := label == "LIB" || strings.HasPrefix(label, "LIB "); hasLib != ctx.Library {
 		add("LIB marker %v, Library %v", hasLib, ctx.Library)
@@ -315,6 +431,10 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 		if _, label := draculaJellyfinRender(t, tpl, ctx); label != "1080p WEB-DL ★★★★★ · 2.8 GB" {
 			t.Fatalf("oracle baseline changed: %q", label)
 		}
+		with := func(c FormatContext, edit func(*FormatContext)) FormatContext {
+			edit(&c)
+			return c
+		}
 		cases := []struct {
 			name, label, raw, want string
 			ctx                    FormatContext
@@ -325,77 +445,138 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			{"leading separator", "· 1080p WEB-DL ★★★★★", "", "separator", ctx},
 			{"trailing separator", "1080p WEB-DL ★★★★★ ·", "", "separator", ctx},
 			{"duplicate separator", "1080p WEB-DL ★★★★★ · · 2.8 GB", "", "separator", ctx},
-			{"raw title fallback", "Dune.Part.Two.2024.1080p.WEB-DL-GRP", "", "raw release title", func() FormatContext {
-				c := ctx
-				c.ReleaseTitle = "Dune.Part.Two.2024.1080p.WEB-DL-GRP"
-				return c
-			}()},
+			{"raw title fallback", "Dune.Part.Two.2024.1080p.WEB-DL-GRP", "", "raw release title", with(ctx, func(c *FormatContext) { c.ReleaseTitle = "Dune.Part.Two.2024.1080p.WEB-DL-GRP" })},
 			{"empty star glyph", "1080p WEB-DL ★★★☆☆", "", "empty star glyph", ctx},
 			{"wrong stars", "1080p WEB-DL ★★★ · 2.8 GB", "", "production renders", ctx},
 			{"stars missing", "1080p WEB-DL · 2.8 GB", "", "production renders", ctx},
 			{"truncated quality", "1080p WEB ★★★★★ · 2.8 GB", "", "essential head", ctx},
 			{"head reordered", "WEB-DL 1080p ★★★★★ · 2.8 GB", "", "essential head", ctx},
-			{"wrong size", "1080p WEB-DL ★★★★★ · 9.9 GB", "", "does not match", ctx},
-			{"unverified check mark", "1080p WEB-DL ★★★★★ · EN✓", "", "✓ asserted", ctx},
-			{"unflagged DUAL", "1080p WEB-DL ★★★★★ · JA/EN DUAL", "", "DUAL without", ctx},
 			{"phantom LIB", "LIB 1080p WEB-DL ★★★★★ · 2.8 GB", "", "essential head", ctx},
-			{"unsupported DUAL before a DUAL group", "1080p WEB-DL ★★★★★ · DUAL · DUAL", "", "DUAL without", func() FormatContext {
-				c := ctx
-				c.Group = "DUAL"
-				return c
-			}()},
+			{"wrong size", "1080p WEB-DL ★★★★★ · 9.9 GB", "", "size segment", ctx},
+			{"missing size", "1080p WEB-DL ★★★★★", "", "size segment", ctx},
+			{"size in the wrong unit", "1080p WEB-DL ★★★★★ · 2800 MB", "", "size segment", ctx},
+			{"size without a size", "1080p WEB-DL ★★★★★ · 2.8 GB", "", "without a size", with(ctx, func(c *FormatContext) { c.Size = 0 })},
 			{"dangling ellipsis group", "1080p WEB-DL ★★★★★ · …", "", "meaningless segment", ctx},
-			{"separator-only group", "1080p WEB-DL ★★★★★ · ·", "", "meaningless segment", ctx},
-		}
-		// A legitimate label must not be rejected because its group resembles a claim,
-		// and a genuine dual-audio flag must still be accepted.
-		for _, tc := range []struct {
-			name  string
-			ctx   FormatContext
-			label string
-		}{
-			{"group DUALITY, flag false", FormatContext{Resolution: "1080p", Group: "DUALITY"}, "1080p · DUALITY"},
-			{"group DUAL, flag false", FormatContext{Resolution: "1080p", Group: "DUAL"}, "1080p · DUAL"},
-			{"dual flag true", FormatContext{Resolution: "1080p", DualAudio: true, Group: "NTb"}, "1080p · DUAL · NTb"},
-			{"dual flag true and group DUAL", FormatContext{Resolution: "1080p", DualAudio: true, Group: "DUAL"}, "1080p · DUAL · DUAL"},
-			{"group EN✓, flag false", FormatContext{Resolution: "1080p", Group: "EN✓"}, "1080p · EN✓"},
-		} {
-			raw, label := draculaJellyfinRender(t, tpl, tc.ctx)
-			if label != tc.label {
-				t.Fatalf("%s: self-test baseline changed: %q, want %q", tc.name, label, tc.label)
-			}
-			if problems := draculaJellyfinProblems(t, tc.ctx, raw, label, true); len(problems) > 0 {
-				t.Errorf("%s: oracle rejected a valid label: %v", tc.name, problems)
-			}
-		}
-		// A deliberately defective formatter that always claims DUAL must still be caught,
-		// with and without a group that is literally named DUAL.
-		defective := strings.Replace(tpl, "{{- if .DualAudio -}}", "{{- if true -}}", 1)
-		if defective == tpl {
-			t.Fatal("self-test premise lost: the DUAL claim condition is no longer `{{- if .DualAudio -}}`")
-		}
-		for _, tc := range []struct {
-			name  string
-			group string
-			label string
-		}{
-			{"group NTb", "NTb", "1080p · DUAL · NTb"},
-			{"group DUAL", "DUAL", "1080p · DUAL · DUAL"},
-			{"no group", "", "1080p · DUAL"},
-		} {
-			ctx := FormatContext{Resolution: "1080p", Group: tc.group}
-			raw, label := draculaJellyfinRender(t, defective, ctx)
-			if label != tc.label {
-				t.Fatalf("defective formatter, %s: rendered %q, want %q", tc.name, label, tc.label)
-			}
-			if problems := strings.Join(draculaJellyfinProblems(t, ctx, raw, label, true), "; "); !strings.Contains(problems, "DUAL without") {
-				t.Errorf("defective formatter, %s: oracle reported %q, want an unsupported-DUAL problem", tc.name, problems)
-			}
+			{"separator-only group", "1080p WEB-DL ★★★★★ · ·", "", "separator", ctx},
+			{"delimiter glyph inside a field", "1080p WEB-DL ★★★★★ · 2.8 GB · A·B", "", "delimiter glyph", ctx},
 		}
 		for _, tc := range cases {
 			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, tc.raw, tc.label, true), "; ")
 			if !strings.Contains(problems, tc.want) {
 				t.Errorf("%s: oracle reported %q, want a problem containing %q", tc.name, problems, tc.want)
+			}
+		}
+
+		// Field semantics. A group whose text looks like another field is a group; the
+		// field it resembles must still be present when the context calls for it.
+		reportedEN := FormatContext{Resolution: "1080p", Languages: stringList{"en"}, LanguageSource: "reported"}
+		verifiedJAEN := FormatContext{Resolution: "1080p", Languages: stringList{"ja", "en"}, LanguageSource: "measured", Probed: ProbedCaps{AudioLanguages: stringList{"ja", "en"}}}
+		partlyProbed := with(verifiedJAEN, func(c *FormatContext) { c.Probed.AudioLanguages = stringList{"ja"} })
+		hiddenFourth := FormatContext{Resolution: "1080p", Languages: stringList{"en", "fr", "de", "es"}, LanguageSource: "measured", Probed: ProbedCaps{AudioLanguages: stringList{"en", "fr", "de"}}}
+		sized := FormatContext{Resolution: "1080p", Size: 2_800_000_000}
+		group := func(c FormatContext, g string) FormatContext { return with(c, func(c *FormatContext) { c.Group = g }) }
+		dual := func(c FormatContext) FormatContext { return with(c, func(c *FormatContext) { c.DualAudio = true }) }
+		// Deliberately long head with a group that fits only when short, and a field
+		// dropped by the budget.
+		longHead := FormatContext{Resolution: "2160p", Quality: "WEB-DL", HDR: stringList{"DV", "HDR10+"}, Size: 22_100_000_000, Audio: stringList{"Atmos", "Dolby Digital Plus"}, Channels: stringList{"5.1"},
+			Languages: stringList{"en"}, LanguageSource: "reported", Codec: "HEVC", BitDepth: "10bit", TopScoreWithoutResolution: 100, ScoreWithoutResolution: 40}
+		const fullLabel = "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit"
+
+		for _, tc := range []struct {
+			name  string
+			ctx   FormatContext
+			label string
+			want  string // "" = a legitimate label the oracle must accept
+		}{
+			// group named EN✓
+			{"group EN✓ with reported English: both fields", group(reportedEN, "EN✓"), "1080p · EN · EN✓", ""},
+			{"group EN✓ with reported English: language missing", group(reportedEN, "EN✓"), "1080p · EN✓", "language segment"},
+			{"group EN✓ and no languages", group(FormatContext{Resolution: "1080p"}, "EN✓"), "1080p · EN✓", ""},
+			// group named 10 GB
+			{"group 10 GB with no size", group(FormatContext{Resolution: "1080p"}, "10 GB"), "1080p · 10 GB", ""},
+			{"group 10 GB with a size: both fields", group(sized, "10 GB"), "1080p · 2.8 GB · 10 GB", ""},
+			{"group 10 GB with a size: size missing", group(sized, "10 GB"), "1080p · 10 GB", "size segment"},
+			{"group 10 GB with a size: group missing", group(sized, "10 GB"), "1080p · 2.8 GB", "group \"10 GB\" is missing"},
+			// group named DUAL and genuine DUAL claims
+			{"group DUAL, flag off", group(FormatContext{Resolution: "1080p"}, "DUAL"), "1080p · DUAL", ""},
+			{"group DUALITY, flag off", group(FormatContext{Resolution: "1080p"}, "DUALITY"), "1080p · DUALITY", ""},
+			{"flag on, group NTb", group(dual(FormatContext{Resolution: "1080p"}), "NTb"), "1080p · DUAL · NTb", ""},
+			{"flag on and group DUAL", group(dual(FormatContext{Resolution: "1080p"}), "DUAL"), "1080p · DUAL · DUAL", ""},
+			{"unsupported DUAL claim, group NTb", group(FormatContext{Resolution: "1080p"}, "NTb"), "1080p · DUAL · NTb", "claims dual audio"},
+			{"unsupported DUAL claim before a DUAL group", group(FormatContext{Resolution: "1080p"}, "DUAL"), "1080p · DUAL · DUAL", "claims dual audio"},
+			{"flag on but DUAL missing", dual(FormatContext{Resolution: "1080p"}), "1080p", "language segment"},
+			// language verification
+			{"verified languages carry the mark", verifiedJAEN, "1080p · JA/EN✓", ""},
+			{"verified languages without the mark", verifiedJAEN, "1080p · JA/EN", "language segment"},
+			{"partly probed languages carry no mark", partlyProbed, "1080p · JA/EN", ""},
+			{"partly probed languages with a false mark", partlyProbed, "1080p · JA/EN✓", "asserts measured languages"},
+			{"unprobed hidden fourth language withholds the mark", hiddenFourth, "1080p · EN/FR/DE +1", ""},
+			{"false mark over an unprobed hidden fourth language", hiddenFourth, "1080p · EN/FR/DE✓ +1", "language segment"},
+			// budget
+			{"a field dropped by the budget is accepted", group(longHead, "世界字幕组A"), fullLabel, ""},
+			{"the same omission is rejected when the group fits", group(longHead, "FLUX"), fullLabel, "group \"FLUX\" is missing"},
+			{"the group at exactly 72 code points", group(longHead, "世界字幕组"), fullLabel + " · 世界字幕组", ""},
+		} {
+			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, "", tc.label, true), "; ")
+			switch {
+			case tc.want == "" && problems != "":
+				t.Errorf("%s: oracle rejected a legitimate label %q: %s", tc.name, tc.label, problems)
+			case tc.want != "" && !strings.Contains(problems, tc.want):
+				t.Errorf("%s: oracle reported %q for %q, want a problem containing %q", tc.name, problems, tc.label, tc.want)
+			}
+		}
+
+		// The legitimate labels above must be what the real template renders, so the
+		// oracle is exercised against the formatter and not only against strings.
+		for _, tc := range []struct {
+			ctx   FormatContext
+			label string
+		}{
+			{group(reportedEN, "EN✓"), "1080p · EN · EN✓"},
+			{group(sized, "10 GB"), "1080p · 2.8 GB · 10 GB"},
+			{group(FormatContext{Resolution: "1080p"}, "DUAL"), "1080p · DUAL"},
+			{group(dual(FormatContext{Resolution: "1080p"}), "DUAL"), "1080p · DUAL · DUAL"},
+			{verifiedJAEN, "1080p · JA/EN✓"},
+			{hiddenFourth, "1080p · EN/FR/DE +1"},
+			{group(longHead, "世界字幕组A"), fullLabel},
+			{group(longHead, "世界字幕组"), fullLabel + " · 世界字幕组"},
+		} {
+			raw, label := draculaJellyfinRender(t, tpl, tc.ctx)
+			if label != tc.label {
+				t.Fatalf("self-test baseline changed: rendered %q, want %q", label, tc.label)
+			}
+			if problems := draculaJellyfinProblems(t, tc.ctx, raw, label, true); len(problems) > 0 {
+				t.Errorf("oracle rejected the real label %q: %v", label, problems)
+			}
+		}
+
+		// Deliberately defective formatters must be caught by the oracle itself, with a
+		// group that resembles the field being corrupted.
+		mutate := func(from, to string) string {
+			defective := strings.Replace(tpl, from, to, 1)
+			if defective == tpl {
+				t.Fatalf("self-test premise lost: %q is no longer in the template", from)
+			}
+			return defective
+		}
+		for _, tc := range []struct {
+			name      string
+			template  string
+			ctx       FormatContext
+			wantLabel string
+			want      string
+		}{
+			{"always claims DUAL, group NTb", mutate("{{- if .DualAudio -}}", "{{- if true -}}"), group(FormatContext{Resolution: "1080p"}, "NTb"), "1080p · DUAL · NTb", "claims dual audio"},
+			{"always claims DUAL, group DUAL", mutate("{{- if .DualAudio -}}", "{{- if true -}}"), group(FormatContext{Resolution: "1080p"}, "DUAL"), "1080p · DUAL · DUAL", "claims dual audio"},
+			{"always marks languages measured, group EN✓", mutate(`{{- if and (eq .LanguageSource "measured") (not (without .Probed.AudioLanguages .Languages)) -}}`, "{{- if true -}}"), group(reportedEN, "EN✓"), "1080p · EN✓ · EN✓", "language segment"},
+			{"drops the size", mutate("{{- if $size -}}", "{{- if false -}}"), group(sized, "10 GB"), "1080p · 10 GB", "size segment"},
+		} {
+			raw, label := draculaJellyfinRender(t, tc.template, tc.ctx)
+			if label != tc.wantLabel {
+				t.Fatalf("defective formatter %q rendered %q, want %q", tc.name, label, tc.wantLabel)
+			}
+			if problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, raw, label, true), "; "); !strings.Contains(problems, tc.want) {
+				t.Errorf("defective formatter %q: oracle reported %q, want a problem containing %q", tc.name, problems, tc.want)
 			}
 		}
 	})
@@ -421,7 +602,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 		bits := []string{"", "8bit", "10bit", "12bit"}
 		langs := []string{"en", "ja", "fr", "de", "es", "it", "pt", "ru", "ko", "zh", "nl", "pl", "sv", "tr", "ar", "he", "hi", "th", "id", "vi"}
 		sources := []string{"", "measured", "reported", "inferred"}
-		groups := []string{"", "NTb", "FLUX", "FraMeSToR", "世界字幕组", "-", "DUAL", "EN✓", "·", " · · ", strings.Repeat(" ", 13), "  Team Foo  ", "A·B", strings.Repeat("LongGroup", 3), strings.Repeat("LongGroup", 40)}
+		groups := []string{"", "NTb", "FLUX", "FraMeSToR", "世界字幕组", "-", "DUAL", "EN✓", "10 GB", "2.8 GB", "JA/EN DUAL", "A · DUAL", "x · y · z", "·", " · · ", strings.Repeat("·", 12) + "Team", strings.Repeat(" ", 13), "  Team Foo  ", "A·B", "……………………………………", strings.Repeat("LongGroup", 3), strings.Repeat("LongGroup", 40)}
 		sizes := []int64{0, 1, 450_000_000, 999_999_999, 1_000_000_000, 2_849_999_999, 9_949_999_999, 9_950_000_000, 10_000_000_000, 68_400_000_000, 999_999_999_999, 123_456_789_012_345}
 		var longest int
 		for i := 0; i < 4000; i++ {
@@ -454,6 +635,18 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 		// Outside the parser vocabulary the essential head is length-capped, so the
 		// 72 budget still holds: oversized resolution, quality and HDR values, a
 		// 400-character group, 1000 languages, line breaks in every free-text field.
+		for _, injected := range []FormatContext{
+			{Resolution: "10 · 80p"}, {Quality: "WEB · DL"}, {HDR: stringList{"DV · HDR"}}, {Audio: stringList{"AAC · DUAL"}},
+			{Channels: stringList{"5 · 1"}}, {Languages: stringList{"e · n"}, DualAudio: true}, {Codec: "AV · C"}, {BitDepth: "10 · bit"},
+			{Group: "A · DUAL · B"},
+		} {
+			c := injected
+			c.Size, c.TopScoreWithoutResolution, c.ScoreWithoutResolution = 2_800_000_000, 100, 100
+			raw, label := draculaJellyfinRender(t, tpl, c)
+			if problems := draculaJellyfinProblems(t, c, raw, label, false); len(problems) > 0 {
+				t.Errorf("delimiter injected through %+v: %v (label %q)", injected, problems, label)
+			}
+		}
 		junk := FormatContext{Resolution: strings.Repeat("9", 40) + "p", Quality: strings.Repeat("Q", 90), Group: strings.Repeat("G\n", 200), Library: true,
 			Seasons: intList{1}, Languages: slices.Repeat(stringList{"en"}, 1000), Audio: slices.Repeat(stringList{"Atmos"}, 50),
 			HDR: slices.Repeat(stringList{strings.Repeat("D", 30)}, 50), TopScoreWithoutResolution: 100, ScoreWithoutResolution: 100,

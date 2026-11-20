@@ -1,0 +1,6 @@
+# The published formatter share codes are checked byte-for-byte against the output of
+# scripts/build_formatter.py (UTF-8, one LF-terminated line), so Git must never
+# translate their line endings, whatever core.autocrlf says on a checkout.
+/formatter.txt text eol=lf
+/formatter-debug.txt text eol=lf
+/formatter-jellyfin.txt text eol=lf

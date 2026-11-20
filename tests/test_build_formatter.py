@@ -60,8 +60,7 @@ for source, output in EXPECTED_PAIRS:
 for source, output in EXPECTED_PAIRS:
     payload = build_formatter.load_source(ROOT / source)
     generated = build_formatter.encode_payload(payload)
-    # Compare raw bytes, not normalised text: a CRLF-terminated share code must fail here
-    # even though the semantic `--check` (which release tooling runs) would accept it.
+    # Compare raw bytes, not normalised text: a CRLF-terminated share code must fail.
     assert generated.encode("utf-8") == (ROOT / output).read_bytes(), (
         f"{output} is not byte-for-byte what build_formatter.py generates from {source}"
     )
@@ -103,21 +102,86 @@ try:
     assert {output: (tmp / output).read_bytes() for _, output in EXPECTED_PAIRS[:2]} == before
     assert run(tmp, "--check", "--all").returncode == 0
 
-    # Byte-level drift (a CRLF terminator): semantic --check accepts it, the rebuild repairs it.
+    # Canonical output is UTF-8, LF-terminated, exactly one trailing newline.
     jellyfin_output = tmp / EXPECTED_PAIRS[2][1]
     good = jellyfin_output.read_bytes()
-    jellyfin_output.write_bytes(good.rstrip(b"\n") + b"\r\n")
-    assert run(tmp, "--check", "--all").returncode == 0, "--check is semantic"
-    result = run(tmp, "--all")
-    assert result.returncode == 0 and "Generated" in result.stdout, result.stdout
-    assert jellyfin_output.read_bytes() == good, "the build did not repair byte drift"
-    assert "already identical" in run(tmp, "--all").stdout
+    assert good.endswith(b"\n") and not good.endswith(b"\n\n") and b"\r" not in good
+
+    # Newline drift decodes to the same payload but is NOT canonical: --check and
+    # --check --all reject it (naming the byte difference), and the rebuild repairs it
+    # to the canonical LF bytes; a second run is a no-op.
+    for label, drifted in (
+        ("CRLF terminator", good.rstrip(b"\n") + b"\r\n"),
+        ("missing final newline", good.rstrip(b"\n")),
+        ("extra blank line", good + b"\n"),
+    ):
+        jellyfin_output.write_bytes(drifted)
+        result = run(tmp, "--check", "--all")
+        assert result.returncode == 1, f"{label}: --check --all accepted byte drift"
+        assert "not byte-identical" in result.stderr and "formatter-jellyfin" in result.stderr, result.stderr
+        result = run(tmp, "--source", EXPECTED_PAIRS[2][0], "--output", EXPECTED_PAIRS[2][1], "--check")
+        assert result.returncode == 1, f"{label}: explicit --check accepted byte drift"
+        result = run(tmp, "--all")
+        assert result.returncode == 0 and "Generated" in result.stdout, f"{label}: {result.stdout}{result.stderr}"
+        assert jellyfin_output.read_bytes() == good, f"{label}: the rebuild did not restore the canonical bytes"
+        assert "already identical" in run(tmp, "--all").stdout
+        assert run(tmp, "--check", "--all").returncode == 0
+
+    # CRLF in the production share code is caught by the bare --check too, and repaired.
+    production_output = tmp / EXPECTED_PAIRS[0][1]
+    production_good = production_output.read_bytes()
+    production_output.write_bytes(production_good.rstrip(b"\n") + b"\r\n")
+    assert run(tmp, "--check").returncode == 1
+    assert run(tmp, "--all").returncode == 0 and production_output.read_bytes() == production_good
+
+    # Repeated generation from a missing file is deterministic.
+    jellyfin_output.unlink()
+    assert run(tmp, "--all").returncode == 0 and jellyfin_output.read_bytes() == good
+    jellyfin_output.unlink()
+    assert run(tmp, "--all").returncode == 0 and jellyfin_output.read_bytes() == good
 
     # A desynchronised debug share code is caught too (it was not checked at release time before).
     debug_output = tmp / EXPECTED_PAIRS[1][1]
     debug_output.write_text((tmp / EXPECTED_PAIRS[0][1]).read_text(encoding="utf-8"), encoding="utf-8")
     result = run(tmp, "--check", "--all")
     assert result.returncode == 1 and "formatter-debug" in result.stderr, result.stderr
+finally:
+    shutil.rmtree(tmp)
+
+# The writer emits exactly the UTF-8 bytes of the share code whatever the platform's
+# newline translation. Windows is emulated: text-mode handles opened without an
+# explicit newline translate "\n" to "\r\n"; binary handles are untouched. (This is a
+# platform-independent check; no Windows runtime was used.)
+import io  # noqa: E402
+
+real_fdopen = build_formatter.os.fdopen
+
+
+def windows_like_fdopen(fd, mode="r", *args, **kwargs):
+    if "b" in mode:
+        return real_fdopen(fd, mode, *args, **kwargs)
+    kwargs.setdefault("newline", "\r\n")
+    return real_fdopen(fd, mode, *args, **kwargs)
+
+
+tmp = Path(tempfile.mkdtemp(prefix="build-formatter-writer-"))
+try:
+    target = tmp / "share-code.txt"
+    expected = build_formatter.encode_payload(build_formatter.load_source(ROOT / EXPECTED_PAIRS[2][0]))
+    build_formatter.os.fdopen = windows_like_fdopen
+    try:
+        build_formatter.atomic_write(target, expected)
+    finally:
+        build_formatter.os.fdopen = real_fdopen
+    assert target.read_bytes() == expected.encode("utf-8"), "newline translation altered the generated bytes"
+    assert b"\r" not in target.read_bytes()
+    assert [p.name for p in tmp.iterdir()] == ["share-code.txt"], "temporary file left behind"
+    # The emulation really would have broken a text-mode writer (guards the test itself).
+    probe = io.BytesIO()
+    wrapper = io.TextIOWrapper(probe, encoding="utf-8", newline="\r\n")
+    wrapper.write("a\n")
+    wrapper.flush()
+    assert probe.getvalue() == b"a\r\n"
 finally:
     shutil.rmtree(tmp)
 

@@ -1333,6 +1333,95 @@
         ]
       },
       "label": "1080p"
+    },
+    {
+      "name": "Group: empty",
+      "context": {
+        "Resolution": "1080p",
+        "Group": ""
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: 13 spaces is blank, not an ellipsis",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "             "
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: a lone separator renders nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "·"
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: separators and spaces only render nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": " · · "
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: surrounding whitespace is trimmed before the length cut",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "  ExtremelyLongReleaseGroupName  "
+      },
+      "label": "1080p · ExtremelyLon…"
+    },
+    {
+      "name": "Group: a legitimate name with a space is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "Team Foo"
+      },
+      "label": "1080p · Team Foo"
+    },
+    {
+      "name": "Group: a long name with spaces is cut at twelve characters",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "Group With Spaces"
+      },
+      "label": "1080p · Group With S…"
+    },
+    {
+      "name": "Group: punctuation is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "FLE-x265_v2"
+      },
+      "label": "1080p · FLE-x265_v2"
+    },
+    {
+      "name": "Group: a separator inside a name is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A·B"
+      },
+      "label": "1080p · A·B"
+    },
+    {
+      "name": "Group: DUAL with the dual-audio flag off is a group, not a claim",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "DUAL"
+      },
+      "label": "1080p · DUAL"
+    },
+    {
+      "name": "Group: DUAL with the dual-audio flag on",
+      "context": {
+        "Resolution": "1080p",
+        "DualAudio": true,
+        "Group": "DUAL"
+      },
+      "label": "1080p · DUAL · DUAL"
     }
   ]
 }

@@ -91,6 +91,21 @@ var draculaStarRun = regexp.MustCompile(`★+`)
 // text such as a release group called DUALITY.
 var draculaLangSegment = regexp.MustCompile(`^(?:[A-Z]{2}(?:/[A-Z]{2}){0,2}(✓)?(?: \+\d+)?(?: DUAL)?|DUAL)$`)
 
+// draculaJellyfinGroupSegment is the label segment the release group renders as,
+// derived independently of the template: line breaks become spaces, the value is
+// trimmed, a blank or separator-only value renders nothing, and the rest is cut
+// at 12 characters with an ellipsis.
+func draculaJellyfinGroupSegment(group string) string {
+	g := strings.TrimSpace(strings.NewReplacer("\r", " ", "\n", " ").Replace(group))
+	if strings.TrimSpace(strings.ReplaceAll(g, "·", "")) == "" {
+		return ""
+	}
+	if r := []rune(g); len(r) > 12 {
+		return string(r[:12]) + "…"
+	}
+	return g
+}
+
 // draculaJellyfinProblems is the label oracle: it returns every violated
 // invariant for one rendered label. It re-derives the essential head from the
 // context independently of the template, so a template regression cannot hide
@@ -164,8 +179,8 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string,
 	// Optional fields: each ` · `-separated segment is non-empty; claims need support.
 	segments := strings.Split(label, " · ")
 	for _, seg := range segments[1:] {
-		if strings.TrimSpace(seg) == "" {
-			add("empty segment")
+		if strings.Trim(seg, " ·…") == "" {
+			add("meaningless segment %q", seg)
 		}
 		if m := regexp.MustCompile(`^(\d+)(?:\.(\d))? GB$`).FindStringSubmatch(seg); m != nil {
 			gb, _ := strconv.ParseFloat(m[1]+"."+orZero(m[2]), 64)
@@ -178,7 +193,15 @@ func draculaJellyfinProblems(t *testing.T, ctx FormatContext, raw, label string,
 			}
 		}
 	}
-	for _, seg := range segments[1:] {
+	// The release group is the last optional field. Attribute a trailing segment that is
+	// exactly the rendered group to the group, so a group called DUAL (or EN✓) is not
+	// mistaken for a language claim. A claim and a group that are textually identical
+	// and the only optional segment cannot be told apart, which is inherent to the label.
+	claimSegments := segments[1:]
+	if group := draculaJellyfinGroupSegment(ctx.Group); group != "" && len(claimSegments) > 0 && claimSegments[len(claimSegments)-1] == group {
+		claimSegments = claimSegments[:len(claimSegments)-1]
+	}
+	for _, seg := range claimSegments {
 		m := draculaLangSegment.FindStringSubmatch(seg)
 		if m == nil {
 			continue
@@ -316,13 +339,58 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 			{"unverified check mark", "1080p WEB-DL ★★★★★ · EN✓", "", "✓ asserted", ctx},
 			{"unflagged DUAL", "1080p WEB-DL ★★★★★ · JA/EN DUAL", "", "DUAL without", ctx},
 			{"phantom LIB", "LIB 1080p WEB-DL ★★★★★ · 2.8 GB", "", "essential head", ctx},
+			{"unsupported DUAL before a DUAL group", "1080p WEB-DL ★★★★★ · DUAL · DUAL", "", "DUAL without", func() FormatContext {
+				c := ctx
+				c.Group = "DUAL"
+				return c
+			}()},
+			{"dangling ellipsis group", "1080p WEB-DL ★★★★★ · …", "", "meaningless segment", ctx},
+			{"separator-only group", "1080p WEB-DL ★★★★★ · ·", "", "meaningless segment", ctx},
 		}
-		// A legitimate label must not be rejected because its group resembles a claim.
-		dualGroup := FormatContext{Resolution: "1080p", Group: "DUALITY"}
-		if _, label := draculaJellyfinRender(t, tpl, dualGroup); label != "1080p · DUALITY" {
-			t.Fatalf("self-test baseline changed: %q", label)
-		} else if problems := draculaJellyfinProblems(t, dualGroup, "1080p · DUALITY", label, true); len(problems) > 0 {
-			t.Errorf("oracle rejected a valid label whose group is DUALITY: %v", problems)
+		// A legitimate label must not be rejected because its group resembles a claim,
+		// and a genuine dual-audio flag must still be accepted.
+		for _, tc := range []struct {
+			name  string
+			ctx   FormatContext
+			label string
+		}{
+			{"group DUALITY, flag false", FormatContext{Resolution: "1080p", Group: "DUALITY"}, "1080p · DUALITY"},
+			{"group DUAL, flag false", FormatContext{Resolution: "1080p", Group: "DUAL"}, "1080p · DUAL"},
+			{"dual flag true", FormatContext{Resolution: "1080p", DualAudio: true, Group: "NTb"}, "1080p · DUAL · NTb"},
+			{"dual flag true and group DUAL", FormatContext{Resolution: "1080p", DualAudio: true, Group: "DUAL"}, "1080p · DUAL · DUAL"},
+			{"group EN✓, flag false", FormatContext{Resolution: "1080p", Group: "EN✓"}, "1080p · EN✓"},
+		} {
+			raw, label := draculaJellyfinRender(t, tpl, tc.ctx)
+			if label != tc.label {
+				t.Fatalf("%s: self-test baseline changed: %q, want %q", tc.name, label, tc.label)
+			}
+			if problems := draculaJellyfinProblems(t, tc.ctx, raw, label, true); len(problems) > 0 {
+				t.Errorf("%s: oracle rejected a valid label: %v", tc.name, problems)
+			}
+		}
+		// A deliberately defective formatter that always claims DUAL must still be caught,
+		// with and without a group that is literally named DUAL.
+		defective := strings.Replace(tpl, "{{- if .DualAudio -}}", "{{- if true -}}", 1)
+		if defective == tpl {
+			t.Fatal("self-test premise lost: the DUAL claim condition is no longer `{{- if .DualAudio -}}`")
+		}
+		for _, tc := range []struct {
+			name  string
+			group string
+			label string
+		}{
+			{"group NTb", "NTb", "1080p · DUAL · NTb"},
+			{"group DUAL", "DUAL", "1080p · DUAL · DUAL"},
+			{"no group", "", "1080p · DUAL"},
+		} {
+			ctx := FormatContext{Resolution: "1080p", Group: tc.group}
+			raw, label := draculaJellyfinRender(t, defective, ctx)
+			if label != tc.label {
+				t.Fatalf("defective formatter, %s: rendered %q, want %q", tc.name, label, tc.label)
+			}
+			if problems := strings.Join(draculaJellyfinProblems(t, ctx, raw, label, true), "; "); !strings.Contains(problems, "DUAL without") {
+				t.Errorf("defective formatter, %s: oracle reported %q, want an unsupported-DUAL problem", tc.name, problems)
+			}
 		}
 		for _, tc := range cases {
 			problems := strings.Join(draculaJellyfinProblems(t, tc.ctx, tc.raw, tc.label, true), "; ")
@@ -353,7 +421,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 		bits := []string{"", "8bit", "10bit", "12bit"}
 		langs := []string{"en", "ja", "fr", "de", "es", "it", "pt", "ru", "ko", "zh", "nl", "pl", "sv", "tr", "ar", "he", "hi", "th", "id", "vi"}
 		sources := []string{"", "measured", "reported", "inferred"}
-		groups := []string{"", "NTb", "FLUX", "FraMeSToR", "世界字幕组", "-", strings.Repeat("LongGroup", 3), strings.Repeat("LongGroup", 40)}
+		groups := []string{"", "NTb", "FLUX", "FraMeSToR", "世界字幕组", "-", "DUAL", "EN✓", "·", " · · ", strings.Repeat(" ", 13), "  Team Foo  ", "A·B", strings.Repeat("LongGroup", 3), strings.Repeat("LongGroup", 40)}
 		sizes := []int64{0, 1, 450_000_000, 999_999_999, 1_000_000_000, 2_849_999_999, 9_949_999_999, 9_950_000_000, 10_000_000_000, 68_400_000_000, 999_999_999_999, 123_456_789_012_345}
 		var longest int
 		for i := 0; i < 4000; i++ {

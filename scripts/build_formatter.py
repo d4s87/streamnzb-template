@@ -122,16 +122,17 @@ def atomic_write(path: Path, text: str):
     fd, temporary = tempfile.mkstemp(
         dir=path.parent,
         prefix=f".{path.name}.",
-        text=True,
     )
 
     try:
+        # Binary mode: the bytes written are exactly the UTF-8 encoding of
+        # `text`, so no platform newline translation (Windows CRLF) can alter
+        # the canonical LF-terminated share code.
         with os.fdopen(
             fd,
-            "w",
-            encoding="utf-8",
+            "wb",
         ) as handle:
-            handle.write(text)
+            handle.write(text.encode("utf-8"))
 
         os.replace(
             temporary,
@@ -161,48 +162,43 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
         )
         return 1
 
-    current = None
-
-    if output_path.is_file():
-        try:
-            current = decode_share_code(
-                output_path,
-            )
-        except Exception as exc:
-            print(
-                f"ERROR: could not decode existing {output_path.name}: "
-                f"{exc}",
-                file=sys.stderr,
-            )
-            return 1
-
-    synchronized = (
-        current == source
+    # The canonical artifact is the exact UTF-8, LF-terminated text encode_payload()
+    # produces, so both --check and the rebuild decision compare bytes.
+    share_code = encode_payload(
+        source,
     )
+    canonical = share_code.encode("utf-8")
+
+    current_bytes = output_path.read_bytes() if output_path.is_file() else None
+    identical = current_bytes == canonical
 
     if check:
-        if not synchronized:
+        if not identical:
+            detail = "are not synchronized."
+            if current_bytes is not None:
+                try:
+                    if decode_share_code(output_path) == source:
+                        detail = (
+                            "decode to the same payload but are not byte-identical "
+                            "(for example CRLF line endings or a missing final newline); "
+                            "rebuild with scripts/build_formatter.py."
+                        )
+                except Exception:
+                    pass
             print(
-                f"ERROR: {source_path} and {output_path} "
-                "are not semantically synchronized.",
+                f"ERROR: {source_path} and {output_path} {detail}",
                 file=sys.stderr,
             )
             return 1
 
         print(
             f"PASS: {source_path} and {output_path} "
-            "are semantically synchronized."
+            "are byte-for-byte synchronized."
         )
 
         return 0
 
-    share_code = encode_payload(
-        source,
-    )
-
-    # Build mode repairs byte-level drift too (for example a CRLF terminator),
-    # which the semantic --check accepts but tests/test_build_formatter.py rejects.
-    if synchronized and output_path.read_bytes() == share_code.encode("utf-8"):
+    if identical:
         print(
             f"No {output_path.name} update required; source and "
             "published formatter are already identical."
@@ -241,6 +237,14 @@ def process(root: Path, source_rel: str, output_rel: str, check: bool) -> int:
         )
         return 1
 
+    if output_path.read_bytes() != canonical:
+        print(
+            f"ERROR: generated {output_path.name} is not byte-identical "
+            "to the canonical output.",
+            file=sys.stderr,
+        )
+        return 1
+
     print(
         f"Generated {output_path} from {source_path}."
     )
@@ -265,8 +269,8 @@ def main():
         "--check",
         action="store_true",
         help=(
-            "verify source and published formatter "
-            "are semantically synchronized"
+            "verify the published formatter is byte-for-byte what is "
+            "generated from its source (UTF-8, LF)"
         ),
     )
 

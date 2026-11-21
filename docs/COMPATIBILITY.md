@@ -82,8 +82,9 @@ production formatter uses them for its stars (see
 coordinated raise of the minimum supported StreamNZB version, not a
 best-effort compatibility layer:
 
-- DraCuLa publishes one formatter at the existing `formatter.txt` URL. There
-  is no separate formatter for StreamNZB 6.3.0 or older.
+- DraCuLa publishes one normal formatter at the existing `formatter.txt` URL.
+  There is no separate normal formatter for StreamNZB 6.3.0 or older, and the
+  optional Jellyfin formatter has the same 6.4.0 minimum.
 - Upgrade StreamNZB to 6.4.0 or newer **before** importing or refreshing the
   formatter. Then refresh the Define Library, Profile and Formatter as the
   release notes direct.

@@ -91,17 +91,21 @@ func draculaJellyfinInvariants(t *testing.T, tpl string, ctx FormatContext) []st
 			problems = append(problems, fmt.Sprintf("malformed separator around %q", seg))
 		}
 	}
-	if strings.Contains(label, "☆") {
-		problems = append(problems, "empty star glyph")
-	}
 
+	// The stars end the essential head, so they are checked there: a group or other
+	// optional field containing a star glyph can neither satisfy nor break this.
+	head, _, _ := strings.Cut(label, " · ")
 	starsTpl, err := compileFormatTemplate(draculaJellyfinStars)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stars := renderResultTemplate(starsTpl, ctx, ""); stars != "" && !strings.Contains(label, stars) {
-		problems = append(problems, fmt.Sprintf("production stars %q missing", stars))
-	} else if stars == "" && strings.Contains(label, "★") {
+	stars := renderResultTemplate(starsTpl, ctx, "")
+	if strings.Contains(head, "☆") {
+		problems = append(problems, "empty star glyph")
+	}
+	if stars != "" && !strings.HasSuffix(head, " "+stars) {
+		problems = append(problems, fmt.Sprintf("head %q does not end with the production stars %q", head, stars))
+	} else if stars == "" && strings.Contains(head, "★") {
 		problems = append(problems, "stars rendered where production renders none")
 	}
 
@@ -219,13 +223,16 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 	})
 }
 
+// draculaTrailingStars returns the run of filled stars that ends s.
+func draculaTrailingStars(s string) string { return s[len(strings.TrimRight(s, "★")):] }
+
 type draculaJellyfinSpec struct {
-	title    string
-	sizeGB   float64
-	langs    []string
-	library  bool
-	probed   *release.MediaCaps
-	verified bool // the label must carry the measured-language mark
+	title   string
+	sizeGB  float64
+	langs   []string
+	library bool
+	probed  *release.MediaCaps
+	tail    string // exact label after the head, for Library releases whose languages were measured
 }
 
 // draculaJellyfinPools ranks representative releases through the published
@@ -248,11 +255,11 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 	}{
 		{"Movie", ranking.Request{Kind: ranking.KindMovie, Title: "Dune Part Two"}, []draculaJellyfinSpec{
 			{title: "Dune.Part.Two.2024.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.Atmos.7.1-FraMeSToR", sizeGB: 68.4, langs: en},
-			{title: "Dune.Part.Two.2024.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.Atmos.7.1-FraMeSToR", sizeGB: 68.4, langs: []string{"en", "fr"}, library: true, probed: uhdProbe, verified: true},
+			{title: "Dune.Part.Two.2024.2160p.UHD.BluRay.REMUX.DV.HDR10.HEVC.TrueHD.Atmos.7.1-FraMeSToR", sizeGB: 68.4, langs: []string{"en", "fr"}, library: true, probed: uhdProbe, tail: "68 GB · Atmos TrueHD 7.1 · EN/FR✓"},
 			{title: "Dune.Part.Two.2024.2160p.WEB-DL.x265.10bit.HDR10.DDP5.1-GRP", sizeGB: 15.2, langs: en},
 			{title: "Dune.Part.Two.2024.1080p.BluRay.x264.DTS-HD.MA.5.1-ExampleGroup", sizeGB: 14.3, langs: en},
 			{title: "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.H.264-NTb", sizeGB: 6.2, langs: en},
-			{title: "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.H.264-NTb", sizeGB: 6.2, langs: en, library: true, probed: sdrProbe, verified: true},
+			{title: "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.H.264-NTb", sizeGB: 6.2, langs: en, library: true, probed: sdrProbe, tail: "6.2 GB · DD+ 5.1 · EN✓ · AVC · NTb"},
 			{title: "Dune.Part.Two.2024.1080p.WEBRip.x265.10bit.AAC.2.0-ExtremelyLongReleaseGroupNameTeam", sizeGB: 2.1, langs: en},
 			{title: "Dune.Part.Two.2024.1080p.BluRay.MULTi.TrueHD.Atmos.7.1.x265-GRP", sizeGB: 31.0, langs: []string{"en", "fr", "de", "es", "it", "ja"}},
 			{title: "Dune.Part.Two.2024.WEB-DL.German.DL.DDP5.1-GRP", sizeGB: 8.0, langs: []string{"de", "en"}},
@@ -266,14 +273,14 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 		{"Season pack", ranking.Request{Kind: ranking.KindSeries, Title: "The Last of Us", Season: 1}, []draculaJellyfinSpec{
 			{title: "The.Last.of.Us.S01.2160p.BluRay.REMUX.HEVC.TrueHD.Atmos.7.1-GRP", sizeGB: 190, langs: en},
 			{title: "The.Last.of.Us.S01.COMPLETE.1080p.BluRay.x265.10bit.DTS-HD.MA.5.1-GRP", sizeGB: 42, langs: en},
-			{title: "The.Last.of.Us.S01.1080p.WEB-DL.DDP5.1.H.264-NTb", sizeGB: 42, langs: en, library: true, probed: sdrProbe, verified: true},
+			{title: "The.Last.of.Us.S01.1080p.WEB-DL.DDP5.1.H.264-NTb", sizeGB: 42, langs: en, library: true, probed: sdrProbe, tail: "42 GB · DD+ 5.1 · EN✓ · AVC · NTb"},
 		}},
 		{"Anime", ranking.Request{Kind: ranking.KindAnimeShow, IsAnime: true, Title: "Frieren Beyond Journeys End", Season: 1, Episode: 1}, []draculaJellyfinSpec{
 			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.CR.WEB-DL.AAC2.0.H.264-VARYG", sizeGB: 1.4, langs: []string{"ja"}},
 			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.Dual-Audio.FLAC2.0.x265-FLE", sizeGB: 2.8, langs: []string{"ja", "en"}},
 			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.REMUX.AVC.FLAC2.0.Dual.Audio-ZR", sizeGB: 12.5, langs: []string{"ja", "en"}},
 			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.Multi-Audio.FLAC2.0.x265.10bit-GRP", sizeGB: 3.1, langs: []string{"ja", "en", "de", "fr", "es"}},
-			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.x265.10bit.FLAC2.0-LIB", sizeGB: 2.5, langs: []string{"ja"}, library: true, probed: jaProbe, verified: true},
+			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.BluRay.x265.10bit.FLAC2.0-LIB", sizeGB: 2.5, langs: []string{"ja"}, library: true, probed: jaProbe, tail: "2.5 GB · FLAC 2.0 · JA✓ · HEVC 10bit · LIB"},
 			{title: "Frieren.Beyond.Journeys.End.S01E01.1080p.WEB.H264-SubsPlease", sizeGB: 0.9, langs: []string{"ja"}},
 		}},
 	}
@@ -324,26 +331,31 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 				if problems := draculaJellyfinInvariants(t, jellyfinTpl, ctx); len(problems) > 0 {
 					t.Errorf("%s: %s", jf[i], strings.Join(problems, "; "))
 				}
-				// Production star parity, and LIB/verification only where the data supports them.
-				if got, want := strings.Count(jf[i], "★"), strings.Count(prod[i], "★"); got != want {
-					t.Errorf("%q has %d stars, production label %q has %d", jf[i], got, prod[i], want)
+				// The stars end the head: they must equal the production label's, wherever a
+				// group might also contain a star. LIB leads the label.
+				head, tail, _ := strings.Cut(jf[i], " · ")
+				if got, want := draculaTrailingStars(head), draculaTrailingStars(prod[i]); got != want {
+					t.Errorf("%q has stars %q, production label %q has %q", jf[i], got, prod[i], want)
 				}
 				if got := strings.HasPrefix(jf[i], "LIB "); got != specs[i].library {
 					t.Errorf("%q: LIB marker %v, Library %v", jf[i], got, specs[i].library)
 				}
-				if got := strings.Contains(jf[i], "✓"); got != specs[i].verified {
-					t.Errorf("%q: measured mark %v, want %v", jf[i], got, specs[i].verified)
+				// The measured mark appears only on probed Library releases, in this exact tail;
+				// no other release in the pool may carry one.
+				if want := specs[i].tail; want != "" && tail != want {
+					t.Errorf("%q: tail %q, want %q", jf[i], tail, want)
+				} else if want == "" && strings.Contains(tail, "✓") {
+					t.Errorf("%q: measured mark on a release that was never probed", jf[i])
 				}
 				distinctJF[jf[i]], distinctProd[prod[i]] = true, true
 				t.Logf("prod=%q jellyfin=%q", prod[i], jf[i])
 				entries[pool.name] = append(entries[pool.name], map[string]any{"Index": i, "Title": ctx.ReleaseTitle, "DisplayTitle": jf[i], "Size": ctx.Size})
 			}
-			// Better differentiation, not a uniqueness guarantee.
-			if len(distinctJF) != len(ctxs) {
-				t.Errorf("%d distinct Jellyfin labels for %d releases", len(distinctJF), len(ctxs))
-			}
-			if (pool.name == "Movie" || pool.name == "Anime") && len(distinctProd) >= len(ctxs) {
-				t.Errorf("premise lost: production no longer collides in the %s pool", pool.name)
+			// Better differentiation than production, not a uniqueness guarantee: the Movie
+			// and Anime pools hold releases production labels collide on, and the Jellyfin
+			// labels must separate more of them; elsewhere they must separate at least as many.
+			if len(distinctJF) < len(distinctProd) || ((pool.name == "Movie" || pool.name == "Anime") && len(distinctJF) <= len(distinctProd)) {
+				t.Errorf("%d distinct Jellyfin labels do not improve on production's %d over %d releases", len(distinctJF), len(distinctProd), len(ctxs))
 			}
 		})
 	}

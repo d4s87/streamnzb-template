@@ -900,6 +900,44 @@
       "label": "LIB PACK 1080p REMUX DV+HDR+HDR10+ ★★★★★ · 89 GB · DD+ 5.1 · AVC · NTb"
     },
     {
+      "name": "Budget: the language field ending exactly at 72 code points is kept",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR",
+          "HDR10+"
+        ],
+        "Size": 88880000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": false,
+        "Codec": "AVC",
+        "Group": "NTb",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 1080p REMUX DV+HDR+HDR10+ ★★★★★ · 89 GB · DD+ 5.1 · EN/FR/DE +3"
+    },
+    {
       "name": "Pathological: every field maxed out stays within the budget",
       "context": {
         "Library": true,

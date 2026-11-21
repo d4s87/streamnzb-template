@@ -336,6 +336,16 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 			jf := draculaPlaylistLabels(t, jellyfinTpl, cands, ctxs)
 			// The PlaybackInfo stage gets the real playlist entries, not entries rebuilt from contexts.
 			entries[pool.name] = (&Server{}).playlistViewOf(&playlistResult{Candidates: cands}, StreamSlotKey{}, &auth.Stream{ResultNameTemplate: jellyfinTpl}).Entries
+			// The PlaybackInfo stage derives stream capabilities (such as 2160p) from the raw
+			// entry Title; it must stay the candidate's release title or that check goes vacuous.
+			if len(entries[pool.name]) != len(cands) {
+				t.Fatalf("%d playlist entries for %d candidates", len(entries[pool.name]), len(cands))
+			}
+			for i, e := range entries[pool.name] {
+				if e.Title != cands[i].Release.Title {
+					t.Errorf("entry #%d Title %q differs from its release title %q", i, e.Title, cands[i].Release.Title)
+				}
+			}
 			prod := draculaPlaylistLabels(t, productionTpl, cands, ctxs)
 			distinctJF, distinctProd := map[string]bool{}, map[string]bool{}
 			for i, ctx := range ctxs {

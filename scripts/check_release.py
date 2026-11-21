@@ -1399,6 +1399,27 @@ def run_prepare(version, github, offline):
     return report
 
 
+def _check_jellyfin_formatter_sync(report):
+    result = _run(
+        [
+            "python3", str(ROOT / "scripts" / "build_formatter.py"),
+            "--source", "tests/streamnzb_compat/formatter-jellyfin.source.json",
+            "--output", "formatter-jellyfin.txt",
+            "--check",
+        ]
+    )
+    if result.returncode != 0:
+        report.add_fail(
+            "jellyfin-formatter-generation-sync",
+            f"build_formatter.py --check (Jellyfin) failed: "
+            f"{result.stderr.strip() or result.stdout.strip()}",
+        )
+    else:
+        report.add_pass(
+            "jellyfin-formatter-generation-sync", "build_formatter.py --check (Jellyfin) passed"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Shared document-consistency checks -- used by both `candidate` (PR merged,
 # checking the exact commit about to be tagged) and `prep-pr` (PR still
@@ -1511,6 +1532,7 @@ def _check_release_documents(report, version):
         )
     else:
         report.add_pass("formatter-generation-sync", "build_formatter.py --check passed")
+    _check_jellyfin_formatter_sync(report)
 
     release_note_path = RELEASE_DIR / f"{version}.md"
     if not release_note_path.exists():
@@ -1909,6 +1931,7 @@ def run_verify_published(version, sha, github, offline, allow_missing_release_no
         )
     else:
         report.add_pass("formatter-generation-sync", "build_formatter.py --check passed")
+    _check_jellyfin_formatter_sync(report)
 
     release_note_path = RELEASE_DIR / f"{version}.md"
     if release_note_path.exists():

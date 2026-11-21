@@ -11,6 +11,14 @@ HARNESS="${ROOT}/tests/streamnzb_compat"
 
 TEST_SOURCE="${HARNESS}/upstream/dracula_formatter_compat_test.go"
 TEST_TARGET="${CHECKOUT}/pkg/server/stremio/dracula_formatter_compat_test.go"
+# The Jellyfin formatter adds a label test in the stremio package and a
+# PlaybackInfo test in pkg/server/jellyfin; both are injected only for it.
+JELLYFIN_TEST_SOURCE="${HARNESS}/upstream/dracula_jellyfin_compat_test.go"
+JELLYFIN_TEST_TARGET="${CHECKOUT}/pkg/server/stremio/dracula_jellyfin_compat_test.go"
+JELLYFIN_MEDIA_SOURCE="${HARNESS}/upstream/dracula_jellyfin_media_source_test.go"
+JELLYFIN_MEDIA_TARGET="${CHECKOUT}/pkg/server/jellyfin/dracula_jellyfin_media_source_test.go"
+JELLYFIN=0
+JELLYFIN_ENTRIES=""
 MODE="candidate"
 FORMATTER="${ROOT}/tests/streamnzb_compat/formatter.source.json"
 CASES="${HARNESS}/fixtures/formatter.json"
@@ -32,9 +40,21 @@ case "${1:-}" in
         FORMATTER="${ROOT}/formatter-debug.txt"
         CASES="${HARNESS}/fixtures/formatter-debug.json"
         ;;
+    --jellyfin)
+        MODE="jellyfin-candidate"
+        FORMATTER="${HARNESS}/formatter-jellyfin.source.json"
+        CASES="${HARNESS}/fixtures/formatter-jellyfin.json"
+        JELLYFIN=1
+        ;;
+    --jellyfin-production)
+        MODE="jellyfin-production"
+        FORMATTER="${ROOT}/formatter-jellyfin.txt"
+        CASES="${HARNESS}/fixtures/formatter-jellyfin.json"
+        JELLYFIN=1
+        ;;
     *)
         echo \
-            "Usage: $0 [--production|--debug|--debug-production]" \
+            "Usage: $0 [--production|--debug|--debug-production|--jellyfin|--jellyfin-production]" \
             >&2
         exit 2
         ;;
@@ -94,7 +114,7 @@ fi
 
 # Remove an injected test left by an interrupted previous run before switching
 # the pinned checkout.
-rm -f "${TEST_TARGET}"
+rm -f "${TEST_TARGET}" "${JELLYFIN_TEST_TARGET}" "${JELLYFIN_MEDIA_TARGET}"
 
 echo "==> Fetching pinned StreamNZB revision"
 
@@ -168,7 +188,7 @@ if ! find "${STATIC_DIR}" -type f -print -quit | grep -q .; then
 fi
 
 cleanup_formatter_test() {
-    rm -f "${TEST_TARGET}"
+    rm -f "${TEST_TARGET}" "${JELLYFIN_TEST_TARGET}" "${JELLYFIN_MEDIA_TARGET}" "${JELLYFIN_ENTRIES}"
 }
 
 trap cleanup_formatter_test EXIT INT TERM
@@ -184,6 +204,20 @@ if [[ "${COPY_RC}" -ne 0 ]]; then
         "ERROR: could not inject formatter compatibility test" \
         >&2
     exit "${COPY_RC}"
+fi
+
+if [[ "${JELLYFIN}" -eq 1 ]]; then
+    cp "${JELLYFIN_TEST_SOURCE}" "${JELLYFIN_TEST_TARGET}" \
+        && cp "${JELLYFIN_MEDIA_SOURCE}" "${JELLYFIN_MEDIA_TARGET}" \
+        && JELLYFIN_ENTRIES="$(mktemp "${TMPDIR:-/tmp}/dracula-jellyfin-entries.XXXXXX")"
+    JELLYFIN_COPY_RC=$?
+
+    if [[ "${JELLYFIN_COPY_RC}" -ne 0 ]]; then
+        echo \
+            "ERROR: could not inject Jellyfin formatter compatibility tests" \
+            >&2
+        exit "${JELLYFIN_COPY_RC}"
+    fi
 fi
 
 echo "==> Formatter input fingerprints"
@@ -215,15 +249,51 @@ echo "==> Rendering formatter through real StreamNZB engine"
 
 cd "${CHECKOUT}" || exit 1
 
-DRACULA_FORMATTER_PATH="${FORMATTER}" \
-DRACULA_FORMATTER_CASES_PATH="${CASES}" \
-go test \
-    -v \
-    -count=1 \
-    ./pkg/server/stremio \
-    -run '^TestDraculaFormatterFixtures$'
+if [[ "${JELLYFIN}" -eq 1 ]]; then
+    # Stage one renders real ranked candidates and writes their labels to
+    # JELLYFIN_ENTRIES; stage two sends them through the Jellyfin PlaybackInfo handler.
+    DRACULA_FORMATTER_PATH="${FORMATTER}" \
+    DRACULA_FORMATTER_CASES_PATH="${CASES}" \
+    DRACULA_JELLYFIN_ENTRIES="${JELLYFIN_ENTRIES}" \
+    go test \
+        -v \
+        -count=1 \
+        ./pkg/server/stremio \
+        -run '^TestDraculaJellyfinFormatter$'
 
-TEST_RC=$?
+    TEST_RC=$?
+
+    if [[ "${TEST_RC}" -eq 0 ]]; then
+        # `go test -run` exits 0 when nothing matches, so require the PASS line.
+        STAGE_TWO="$(
+            DRACULA_JELLYFIN_ENTRIES="${JELLYFIN_ENTRIES}" \
+            go test \
+                -v \
+                -count=1 \
+                ./pkg/server/jellyfin \
+                -run '^TestDraculaJellyfinMediaSourceNames$' \
+                2>&1
+        )"
+        TEST_RC=$?
+        printf '%s\n' "${STAGE_TWO}"
+
+        if [[ "${TEST_RC}" -eq 0 ]] \
+            && ! grep -q '^--- PASS: TestDraculaJellyfinMediaSourceNames ' <<<"${STAGE_TWO}"; then
+            echo "ERROR: the Jellyfin PlaybackInfo test did not run" >&2
+            TEST_RC=1
+        fi
+    fi
+else
+    DRACULA_FORMATTER_PATH="${FORMATTER}" \
+    DRACULA_FORMATTER_CASES_PATH="${CASES}" \
+    go test \
+        -v \
+        -count=1 \
+        ./pkg/server/stremio \
+        -run '^TestDraculaFormatterFixtures$'
+
+    TEST_RC=$?
+fi
 
 cleanup_formatter_test
 trap - EXIT INT TERM

@@ -28,6 +28,7 @@ import (
 
 	"github.com/dreulavelle/jhin/rank"
 
+	"streamnzb/pkg/auth"
 	"streamnzb/pkg/release"
 	"streamnzb/pkg/search/parser"
 	"streamnzb/pkg/search/ranking"
@@ -102,6 +103,14 @@ func draculaJellyfinInvariants(t *testing.T, tpl string, ctx FormatContext) []st
 	stars := renderResultTemplate(starsTpl, ctx, "")
 	if strings.Contains(head, "☆") {
 		problems = append(problems, "empty star glyph")
+	}
+	// The measured-language mark belongs to the language field only: never in the head,
+	// and only for measured, fully probed languages (a group cannot carry it).
+	if strings.Contains(head, "✓") {
+		problems = append(problems, "measured mark in the essential head")
+	}
+	if verified := ctx.LanguageSource == "measured" && len(ctx.Languages) > 0 && len(withoutStrings(ctx.Probed.AudioLanguages, ctx.Languages)) == 0; !verified && strings.Contains(label, "✓") {
+		problems = append(problems, "measured mark without measured, fully probed languages")
 	}
 	if stars != "" && !strings.HasSuffix(head, " "+stars) {
 		problems = append(problems, fmt.Sprintf("head %q does not end with the production stars %q", head, stars))
@@ -207,7 +216,7 @@ func TestDraculaJellyfinFormatter(t *testing.T) {
 				DualAudio:                 r.Intn(3) == 0,
 				Codec:                     pick("", "HEVC", "AVC", long),
 				BitDepth:                  pick("", "10bit"),
-				Group:                     pick("", "NTb", "  ", "·", "·····Team", "A · B", "L1\nL2", "u\u2028v", "世界字幕组", long),
+				Group:                     pick("", "NTb", "  ", "·", "·····Team", "A · B", "EN✓", "✓", "L1\nL2", "u\u2028v", "世界字幕组", long),
 				TopScoreWithoutResolution: r.Intn(120) - 10,
 				ScoreWithoutResolution:    r.Intn(120) - 10,
 			}
@@ -285,7 +294,7 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 		}},
 	}
 
-	entries := map[string][]map[string]any{}
+	entries := map[string][]PlaylistEntry{}
 	for _, pool := range pools {
 		t.Run(pool.name, func(t *testing.T) {
 			in := make([]triage.Candidate, 0, len(pool.specs))
@@ -325,6 +334,8 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 			}
 
 			jf := draculaPlaylistLabels(t, jellyfinTpl, cands, ctxs)
+			// The PlaybackInfo stage gets the real playlist entries, not entries rebuilt from contexts.
+			entries[pool.name] = (&Server{}).playlistViewOf(&playlistResult{Candidates: cands}, StreamSlotKey{}, &auth.Stream{ResultNameTemplate: jellyfinTpl}).Entries
 			prod := draculaPlaylistLabels(t, productionTpl, cands, ctxs)
 			distinctJF, distinctProd := map[string]bool{}, map[string]bool{}
 			for i, ctx := range ctxs {
@@ -344,12 +355,9 @@ func draculaJellyfinPools(t *testing.T, jellyfinTpl, productionTpl string) {
 				// no other release in the pool may carry one.
 				if want := specs[i].tail; want != "" && tail != want {
 					t.Errorf("%q: tail %q, want %q", jf[i], tail, want)
-				} else if want == "" && strings.Contains(tail, "✓") {
-					t.Errorf("%q: measured mark on a release that was never probed", jf[i])
 				}
 				distinctJF[jf[i]], distinctProd[prod[i]] = true, true
 				t.Logf("prod=%q jellyfin=%q", prod[i], jf[i])
-				entries[pool.name] = append(entries[pool.name], map[string]any{"Index": i, "Title": ctx.ReleaseTitle, "DisplayTitle": jf[i], "Size": ctx.Size})
 			}
 			// Better differentiation than production, not a uniqueness guarantee: the Movie
 			// and Anime pools hold releases production labels collide on, and the Jellyfin

@@ -171,7 +171,7 @@ Fields appear in this order: `LIB` (Library result) and `PACK` (season pack or c
 
 - HDR tokens are the ones the release name lists (`DV`, `HDR`, `HDR10+`, `HLG`, `SDR`). The label does not claim an HDR fallback or device compatibility.
 - Lossless and lossy audio stay distinguishable (`TrueHD`, `DTS-HD MA`, `FLAC` versus `DD+`, `DD`, `DTS`); at most two audio formats and one channel layout are shown.
-- Languages are listed as codes (`EN/FR/DE +3`). A trailing `✓` means the release's whole language list, including any codes hidden behind `+N`, was measured from the media file's own audio tracks, as in the normal formatter. No mark means that was not established for the full list: the codes may come from the release name or the indexer, and some may even have been measured. `DUAL` repeats the release name's dual-audio claim and is not a verification.
+- Languages are listed as codes (`EN/FR/DE +3`). A trailing `✓` means the release's whole language list, including any codes hidden behind `+N`, was measured from the media file's own audio tracks, as in the normal formatter; a `✓` in a release group name is never shown. No mark means that was not established for the full list: the codes may come from the release name or the indexer, and some may even have been measured. `DUAL` repeats the release name's dual-audio claim and is not a verification.
 - Sizes use decimal units in three ranges: below 1 GB StreamNZB's own MB form (`450 MB`), from 1 GB to below 9.95 GB one decimal (`2.8 GB`), and from 9.95 GB whole gigabytes, rounded once to the nearest (9.95 GB reads `10 GB`).
 - When nothing is known about a release the label reads `Unknown` rather than falling back to the raw release title.
 

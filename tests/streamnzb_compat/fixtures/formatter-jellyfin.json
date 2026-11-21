@@ -1176,7 +1176,7 @@
       "label": "1080p · DUAL"
     },
     {
-      "name": "Group: a language-looking name stays a group",
+      "name": "Group: a language-and-mark-looking name keeps its text but never the measured mark (unverified English)",
       "context": {
         "Resolution": "1080p",
         "Languages": [
@@ -1185,7 +1185,48 @@
         "LanguageSource": "reported",
         "Group": "EN✓"
       },
-      "label": "1080p · EN · EN✓"
+      "label": "1080p · EN · EN"
+    },
+    {
+      "name": "Group: the measured mark in a group is dropped when there is no language metadata",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN"
+    },
+    {
+      "name": "Group: a mark glued to the name keeps the rest of the group",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "GRP✓"
+      },
+      "label": "1080p · GRP"
+    },
+    {
+      "name": "Group: only the measured mark renders nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "✓✓"
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Languages: genuine measured verification survives a group carrying the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en"
+          ]
+        },
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN✓ · EN"
     },
     {
       "name": "Group: a leading run of middle dots, as the parser produces it, is dropped",

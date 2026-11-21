@@ -19,13 +19,6 @@ import (
 	"streamnzb/pkg/server/stremio"
 )
 
-type draculaJellyfinEntry struct {
-	Index        int
-	Title        string
-	DisplayTitle string
-	Size         int64
-}
-
 func TestDraculaJellyfinMediaSourceNames(t *testing.T) {
 	path := os.Getenv("DRACULA_JELLYFIN_ENTRIES")
 	if path == "" {
@@ -35,7 +28,7 @@ func TestDraculaJellyfinMediaSourceNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var pools map[string][]draculaJellyfinEntry
+	var pools map[string][]stremio.PlaylistEntry
 	if err := json.Unmarshal(data, &pools); err != nil {
 		t.Fatal(err)
 	}
@@ -47,11 +40,7 @@ func TestDraculaJellyfinMediaSourceNames(t *testing.T) {
 	for name, entries := range pools {
 		f := newFixture()
 		movie, _ := itemIDFor("movie", "tt0111161")
-		view := &stremio.PlaylistView{RuntimeSeconds: 7200}
-		for _, e := range entries {
-			view.Entries = append(view.Entries, stremio.PlaylistEntry{Index: e.Index, Title: e.Title, DisplayTitle: e.DisplayTitle, Size: e.Size})
-		}
-		f.catalog.playlist = view
+		f.catalog.playlist = &stremio.PlaylistView{RuntimeSeconds: 7200, Entries: entries}
 
 		var info playbackInfoResponse
 		decodeInto(t, f.do(http.MethodGet, "/jellyfin/Items/"+movie.encode()+"/PlaybackInfo", ""), &info)

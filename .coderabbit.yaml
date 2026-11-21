@@ -22,6 +22,7 @@ reviews:
     - "!generated/**"
     - "!formatter.txt"
     - "!formatter-debug.txt"
+    - "!formatter-jellyfin.txt"
     - "!.streamnzb-compat/**"
 
   path_instructions:

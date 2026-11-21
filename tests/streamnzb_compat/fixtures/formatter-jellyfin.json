@@ -1,0 +1,1272 @@
+{
+  "cases": [
+    {
+      "name": "Library 4K REMUX DV+HDR with measured languages",
+      "context": {
+        "Library": true,
+        "Resolution": "2160p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR"
+        ],
+        "Size": 68400000000,
+        "Audio": [
+          "Atmos",
+          "TrueHD"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "Languages": [
+          "en",
+          "fr"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "fr"
+          ]
+        },
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "FraMeSToR",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB 4K REMUX DV+HDR ★★★★★ · 68 GB · Atmos TrueHD 7.1 · EN/FR✓"
+    },
+    {
+      "name": "4K REMUX DV+HDR, reported language",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR"
+        ],
+        "Size": 68400000000,
+        "Audio": [
+          "Atmos",
+          "TrueHD"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "FraMeSToR",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 80
+      },
+      "label": "4K REMUX DV+HDR ★★★★ · 68 GB · Atmos TrueHD 7.1 · EN · HEVC 10bit"
+    },
+    {
+      "name": "4K WEB-DL DV+HDR10+ with every optional field (71 code points)",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR10+"
+        ],
+        "Size": 22100000000,
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "FLUX",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit · FLUX"
+    },
+    {
+      "name": "4K HDR10 encode",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "HDR"
+        ],
+        "Size": 15200000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "GRP",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "4K WEB-DL HDR ★ · 15 GB · DD+ 5.1 · EN · HEVC 10bit · GRP"
+    },
+    {
+      "name": "PACK 4K WEB-DL DV+HDR (season pack)",
+      "context": {
+        "Seasons": [
+          1
+        ],
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR"
+        ],
+        "Size": 94000000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "Group": "NTb",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 80
+      },
+      "label": "PACK 4K WEB-DL DV+HDR ★★★★ · 94 GB · DD+ 5.1 · EN · HEVC · NTb"
+    },
+    {
+      "name": "1080p WEB-DL, AAC without channels",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 1300000000,
+        "Audio": [
+          "AAC"
+        ],
+        "Codec": "HEVC",
+        "Group": "FLTTH",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB-DL ★★★★★ · 1.3 GB · AAC · HEVC · FLTTH"
+    },
+    {
+      "name": "1080p BluRay SDR",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Size": 14300000000,
+        "Audio": [
+          "DTS Lossless"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "AVC",
+        "Group": "ExampleGroup",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "1080p BluRay ★ · 14 GB · DTS-HD MA 5.1 · EN · AVC · ExampleGroup"
+    },
+    {
+      "name": "Anime BluRay dual audio",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Size": 2800000000,
+        "Audio": [
+          "FLAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "Languages": [
+          "ja",
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": true,
+        "Codec": "HEVC",
+        "Group": "FLE",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "1080p BluRay ★★ · 2.8 GB · FLAC 2.0 · JA/EN DUAL · HEVC · FLE"
+    },
+    {
+      "name": "Anime WEB",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 1400000000,
+        "Audio": [
+          "AAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "Languages": [
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "AVC",
+        "Group": "VARYG",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "1080p WEB-DL ★ · 1.4 GB · AAC 2.0 · JA · AVC · VARYG"
+    },
+    {
+      "name": "Anime multi-audio keeps three languages and the overflow count",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Size": 3100000000,
+        "Audio": [
+          "FLAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "Languages": [
+          "ja",
+          "en",
+          "de",
+          "fr",
+          "es"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": true,
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "GRP",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 0
+      },
+      "label": "1080p BluRay · 3.1 GB · FLAC 2.0 · JA/EN/DE +2 DUAL · HEVC 10bit · GRP"
+    },
+    {
+      "name": "MULTi release drops the group before the budget is exceeded",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Size": 31000000000,
+        "Audio": [
+          "Atmos",
+          "TrueHD"
+        ],
+        "Channels": [
+          "7.1"
+        ],
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": true,
+        "Codec": "HEVC",
+        "Group": "GRP",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "1080p BluRay ★ · 31 GB · Atmos TrueHD 7.1 · EN/FR/DE +3 DUAL · HEVC"
+    },
+    {
+      "name": "Unknown resolution still renders",
+      "context": {
+        "Quality": "WEB-DL",
+        "Size": 8000000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "de",
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Group": "GRP",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "WEB-DL ★ · 8.0 GB · DD+ 5.1 · DE/EN · GRP"
+    },
+    {
+      "name": "Compressed encode with a long group name",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEBRip",
+        "Size": 2100000000,
+        "Audio": [
+          "AAC"
+        ],
+        "Channels": [
+          "2.0"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "ExtremelyLongReleaseGroupNameTeam",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 0
+      },
+      "label": "1080p WEBRip · 2.1 GB · AAC 2.0 · EN · HEVC 10bit · ExtremelyLon…"
+    },
+    {
+      "name": "Episode is not a pack",
+      "context": {
+        "Seasons": [
+          1
+        ],
+        "Episode": 3,
+        "Episodes": [
+          3
+        ],
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 3400000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB-DL ★★★★★ · 3.4 GB"
+    },
+    {
+      "name": "Multi-episode range is not a pack",
+      "context": {
+        "Seasons": [
+          1
+        ],
+        "Episode": 1,
+        "Episodes": [
+          1,
+          2,
+          3
+        ],
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 3400000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB-DL ★★★★★ · 3.4 GB"
+    },
+    {
+      "name": "An episode number alone is not a pack",
+      "context": {
+        "Seasons": [
+          1
+        ],
+        "Episode": 3,
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 3400000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB-DL ★★★★★ · 3.4 GB"
+    },
+    {
+      "name": "An episode list alone is not a pack",
+      "context": {
+        "Seasons": [
+          1
+        ],
+        "Episodes": [
+          1,
+          2,
+          3
+        ],
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 3400000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "1080p WEB-DL ★★★★★ · 3.4 GB"
+    },
+    {
+      "name": "Complete series without a season is a pack",
+      "context": {
+        "Complete": true,
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Size": 120000000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 60
+      },
+      "label": "PACK 1080p BluRay ★★★ · 120 GB"
+    },
+    {
+      "name": "Library season pack shows both markers",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "Size": 42000000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 80
+      },
+      "label": "LIB PACK 1080p WEB-DL ★★★★ · 42 GB"
+    },
+    {
+      "name": "Library with no other metadata",
+      "context": {
+        "Library": true
+      },
+      "label": "LIB"
+    },
+    {
+      "name": "One filled star",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 20
+      },
+      "label": "1080p WEB-DL ★"
+    },
+    {
+      "name": "Rounds to zero stars: no star segment",
+      "context": {
+        "Resolution": "720p",
+        "Quality": "HDTV",
+        "Size": 900000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 9
+      },
+      "label": "720p HDTV · 900 MB"
+    },
+    {
+      "name": "Negative adjusted score: no star segment",
+      "context": {
+        "Resolution": "720p",
+        "Quality": "HDTV",
+        "Size": 900000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": -50
+      },
+      "label": "720p HDTV · 900 MB"
+    },
+    {
+      "name": "Nothing known renders Unknown",
+      "context": {},
+      "label": "Unknown"
+    },
+    {
+      "name": "Stars only",
+      "context": {
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "Unknown ★★★★★"
+    },
+    {
+      "name": "Size only",
+      "context": {
+        "Size": 2800000000
+      },
+      "label": "Unknown · 2.8 GB"
+    },
+    {
+      "name": "Group only",
+      "context": {
+        "Group": "NTb"
+      },
+      "label": "Unknown · NTb"
+    },
+    {
+      "name": "Size under 1 GB keeps the engine MB form",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 450000000
+      },
+      "label": "1080p · 450 MB"
+    },
+    {
+      "name": "Size exactly 1 GB shows one decimal",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 1000000000
+      },
+      "label": "1080p · 1.0 GB"
+    },
+    {
+      "name": "Size rounding up into 10 GB",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 9950000000
+      },
+      "label": "1080p · 10 GB"
+    },
+    {
+      "name": "Size at or above 10 GB rounds to the nearest whole GB (12.49 GB is 12, not 13)",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 12490000000
+      },
+      "label": "1080p · 12 GB"
+    },
+    {
+      "name": "Size rounds once, not twice (12.45 GB is 12)",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 12450000000
+      },
+      "label": "1080p · 12 GB"
+    },
+    {
+      "name": "Size rounds once, not twice (10.5 GB is 11)",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 10500000000
+      },
+      "label": "1080p · 11 GB"
+    },
+    {
+      "name": "HDR tokens are capped at three",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR",
+          "HDR10+",
+          "HLG"
+        ]
+      },
+      "label": "1080p WEB-DL DV+HDR+HDR10+"
+    },
+    {
+      "name": "An explicit SDR token is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "HDR": [
+          "SDR"
+        ]
+      },
+      "label": "1080p BluRay SDR"
+    },
+    {
+      "name": "Audio: Atmos over TrueHD",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "Atmos",
+          "TrueHD"
+        ],
+        "Channels": [
+          "7.1"
+        ]
+      },
+      "label": "1080p BluRay · Atmos TrueHD 7.1"
+    },
+    {
+      "name": "Audio: Lossy Atmos stays distinct from TrueHD",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ]
+      },
+      "label": "1080p BluRay · Atmos DD+ 5.1"
+    },
+    {
+      "name": "Audio: Dolby Digital Plus",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ]
+      },
+      "label": "1080p BluRay · DD+ 5.1"
+    },
+    {
+      "name": "Audio: DTS lossless is DTS-HD MA",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "DTS Lossless"
+        ],
+        "Channels": [
+          "5.1"
+        ]
+      },
+      "label": "1080p BluRay · DTS-HD MA 5.1"
+    },
+    {
+      "name": "Audio: DTS lossy is plain DTS",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "DTS Lossy"
+        ],
+        "Channels": [
+          "5.1"
+        ]
+      },
+      "label": "1080p BluRay · DTS 5.1"
+    },
+    {
+      "name": "Audio: AAC stereo",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "AAC"
+        ],
+        "Channels": [
+          "stereo"
+        ]
+      },
+      "label": "1080p BluRay · AAC stereo"
+    },
+    {
+      "name": "Audio: Audio is capped at two tokens and one channel layout",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Audio": [
+          "Atmos",
+          "TrueHD",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "7.1",
+          "5.1"
+        ]
+      },
+      "label": "1080p BluRay · Atmos TrueHD 7.1"
+    },
+    {
+      "name": "Languages: name-inferred language is not marked",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "de"
+        ],
+        "LanguageSource": "inferred"
+      },
+      "label": "1080p BluRay · DE"
+    },
+    {
+      "name": "Languages: measured and fully probed is marked, dual stays a claim",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "ja",
+          "en"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "ja",
+            "en"
+          ]
+        },
+        "DualAudio": true
+      },
+      "label": "1080p BluRay · JA/EN✓ DUAL"
+    },
+    {
+      "name": "Languages: measured source but one language unprobed is not marked",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "ja",
+          "en"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "ja"
+          ]
+        },
+        "DualAudio": true
+      },
+      "label": "1080p BluRay · JA/EN DUAL"
+    },
+    {
+      "name": "Languages: measured source with no probed languages is not marked",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "measured"
+      },
+      "label": "1080p BluRay · EN"
+    },
+    {
+      "name": "Languages: probed languages without a measured source are not marked",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Probed": {
+          "AudioLanguages": [
+            "en"
+          ]
+        }
+      },
+      "label": "1080p BluRay · EN"
+    },
+    {
+      "name": "Languages: dual flag without language data",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "DualAudio": true
+      },
+      "label": "1080p BluRay · DUAL"
+    },
+    {
+      "name": "Languages: six reported languages overflow",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": true
+      },
+      "label": "1080p BluRay · EN/FR/DE +3 DUAL"
+    },
+    {
+      "name": "Languages: six measured languages overflow with the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "fr",
+            "de",
+            "es",
+            "it",
+            "ja"
+          ]
+        }
+      },
+      "label": "1080p BluRay · EN/FR/DE✓ +3"
+    },
+    {
+      "name": "Languages: an unprobed fourth language hidden by +N withholds the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "fr",
+            "de"
+          ]
+        }
+      },
+      "label": "1080p BluRay · EN/FR/DE +1"
+    },
+    {
+      "name": "Codec and bit depth",
+      "context": {
+        "Resolution": "1080p",
+        "Quality": "BluRay",
+        "Codec": "AVC",
+        "BitDepth": "10bit"
+      },
+      "label": "1080p BluRay · AVC 10bit"
+    },
+    {
+      "name": "Blank codec and bit depth never leave a dangling separator",
+      "context": {
+        "Resolution": "1080p",
+        "Size": 2800000000,
+        "Codec": "\r\n",
+        "BitDepth": " "
+      },
+      "label": "1080p · 2.8 GB"
+    },
+    {
+      "name": "A field that does not fit is dropped, later shorter fields still fit",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR",
+          "HDR10+"
+        ],
+        "Size": 88880000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": true,
+        "Codec": "AVC",
+        "Group": "NTb",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 1080p REMUX DV+HDR+HDR10+ ★★★★★ · 89 GB · DD+ 5.1 · AVC · NTb"
+    },
+    {
+      "name": "Budget: the language field ending exactly at 72 code points is kept",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR",
+          "HDR10+"
+        ],
+        "Size": 88880000000,
+        "Audio": [
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "ja"
+        ],
+        "LanguageSource": "reported",
+        "DualAudio": false,
+        "Codec": "AVC",
+        "Group": "NTb",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 1080p REMUX DV+HDR+HDR10+ ★★★★★ · 89 GB · DD+ 5.1 · EN/FR/DE +3"
+    },
+    {
+      "name": "Pathological: every field maxed out stays within the budget",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Complete": true,
+        "Resolution": "1080p",
+        "Quality": "BluRay REMUX",
+        "HDR": [
+          "DV",
+          "HDR",
+          "HDR10+",
+          "HLG",
+          "SDR"
+        ],
+        "Size": 123456789012345,
+        "Audio": [
+          "Atmos",
+          "TrueHD",
+          "Dolby Digital Plus",
+          "DTS Lossless",
+          "HQ Clean Audio"
+        ],
+        "Channels": [
+          "7.1",
+          "5.1"
+        ],
+        "Languages": [
+          "en",
+          "ja",
+          "fr",
+          "de",
+          "es",
+          "it",
+          "pt",
+          "ru",
+          "ko",
+          "zh",
+          "nl",
+          "pl",
+          "sv",
+          "tr",
+          "ar",
+          "he",
+          "hi",
+          "th",
+          "id",
+          "vi",
+          "cs",
+          "hu",
+          "el",
+          "da",
+          "fi"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en",
+            "ja"
+          ]
+        },
+        "DualAudio": true,
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "VeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroupVeryLongGroup",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 1080p REMUX DV+HDR+HDR10+ ★★★★★ · 123457 GB · Atmos TrueHD 7.1"
+    },
+    {
+      "name": "Budget: a field that ends exactly at 72 code points is kept",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR10+"
+        ],
+        "Size": 22100000000,
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "世界字幕组",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit · 世界字幕组"
+    },
+    {
+      "name": "Budget: a field one code point over 72 is dropped",
+      "context": {
+        "Resolution": "2160p",
+        "Quality": "WEB-DL",
+        "HDR": [
+          "DV",
+          "HDR10+"
+        ],
+        "Size": 22100000000,
+        "Audio": [
+          "Atmos",
+          "Dolby Digital Plus"
+        ],
+        "Channels": [
+          "5.1"
+        ],
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Codec": "HEVC",
+        "BitDepth": "10bit",
+        "Group": "世界字幕组A",
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 40
+      },
+      "label": "4K WEB-DL DV+HDR10+ ★★ · 22 GB · Atmos DD+ 5.1 · EN · HEVC 10bit"
+    },
+    {
+      "name": "Out-of-vocabulary essentials are length-capped, never cut by the engine",
+      "context": {
+        "Library": true,
+        "Seasons": [
+          1
+        ],
+        "Resolution": "123456789p",
+        "Quality": "QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ",
+        "HDR": [
+          "AAAAAAAAAA",
+          "BBBBBBBBBB",
+          "CCCCCCCCCC"
+        ],
+        "Size": 2800000000,
+        "TopScoreWithoutResolution": 100,
+        "ScoreWithoutResolution": 100
+      },
+      "label": "LIB PACK 12345… QQQQQQQQQ… AAAAAAAAAA+BBBBBBBBB… ★★★★★ · 2.8 GB"
+    },
+    {
+      "name": "Group: empty",
+      "context": {
+        "Resolution": "1080p",
+        "Group": ""
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: 13 spaces is blank, not an ellipsis",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "             "
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: separators and spaces only render nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": " · · "
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Group: a long name with spaces is cut at twelve characters",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "Group With Spaces"
+      },
+      "label": "1080p · Group With S…"
+    },
+    {
+      "name": "Group: surrounding whitespace is trimmed before the length cut",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "  ExtremelyLongReleaseGroupName  "
+      },
+      "label": "1080p · ExtremelyLon…"
+    },
+    {
+      "name": "Group: a legitimate name with a space is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "Team Foo"
+      },
+      "label": "1080p · Team Foo"
+    },
+    {
+      "name": "Group: punctuation is kept",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "FLE-x265_v2"
+      },
+      "label": "1080p · FLE-x265_v2"
+    },
+    {
+      "name": "Group: the middle dot is the field delimiter and renders as a space",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A·B"
+      },
+      "label": "1080p · A B"
+    },
+    {
+      "name": "Group: an embedded delimiter run collapses to single spaces",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "x · y · z"
+      },
+      "label": "1080p · x y z"
+    },
+    {
+      "name": "Group: a long separator-prefixed name keeps its text, not a cut-off run of dots",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "············Team"
+      },
+      "label": "1080p · Team"
+    },
+    {
+      "name": "Group: DUAL with the dual-audio flag off is a group, not a claim",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "DUAL"
+      },
+      "label": "1080p · DUAL"
+    },
+    {
+      "name": "Group: a language-and-mark-looking name keeps its text but never the measured mark (unverified English)",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "reported",
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN · EN"
+    },
+    {
+      "name": "Group: the measured mark in a group is dropped when there is no language metadata",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN"
+    },
+    {
+      "name": "Group: a mark glued to the name keeps the rest of the group",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "GRP✓"
+      },
+      "label": "1080p · GRP"
+    },
+    {
+      "name": "Group: only the measured mark renders nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "✓✓"
+      },
+      "label": "1080p"
+    },
+    {
+      "name": "Languages: genuine measured verification survives a group carrying the mark",
+      "context": {
+        "Resolution": "1080p",
+        "Languages": [
+          "en"
+        ],
+        "LanguageSource": "measured",
+        "Probed": {
+          "AudioLanguages": [
+            "en"
+          ]
+        },
+        "Group": "EN✓"
+      },
+      "label": "1080p · EN✓ · EN"
+    },
+    {
+      "name": "Group: a leading run of middle dots, as the parser produces it, is dropped",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "·········Team"
+      },
+      "label": "1080p · Team"
+    },
+    {
+      "name": "Group: a bracketed group with an embedded delimiter keeps its words",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "Sub Group · X"
+      },
+      "label": "1080p · Sub Group X"
+    },
+    {
+      "name": "Group: a line break inside the group becomes a space",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A\nB"
+      },
+      "label": "1080p · A B"
+    },
+    {
+      "name": "Group: Unicode line and paragraph separators become spaces",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "A\u2028B\u2029C"
+      },
+      "label": "1080p · A B C"
+    },
+    {
+      "name": "Group: only line separators render nothing",
+      "context": {
+        "Resolution": "1080p",
+        "Group": "\u2028\r\n\u2029"
+      },
+      "label": "1080p"
+    }
+  ]
+}

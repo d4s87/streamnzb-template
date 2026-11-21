@@ -82,8 +82,9 @@ production formatter uses them for its stars (see
 coordinated raise of the minimum supported StreamNZB version, not a
 best-effort compatibility layer:
 
-- DraCuLa publishes one formatter at the existing `formatter.txt` URL. There
-  is no separate formatter for StreamNZB 6.3.0 or older.
+- DraCuLa publishes one normal formatter at the existing `formatter.txt` URL.
+  There is no separate normal formatter for StreamNZB 6.3.0 or older, and the
+  optional Jellyfin formatter has the same 6.4.0 minimum.
 - Upgrade StreamNZB to 6.4.0 or newer **before** importing or refreshing the
   formatter. Then refresh the Define Library, Profile and Formatter as the
   release notes direct.
@@ -173,7 +174,7 @@ DraCuLa profiles always carry a scoring map, so published profiles are required 
 
 ## Formatter compatibility
 
-The normal and debug formatters are built from readable JSON sources and published as `SNZBF1:` artifacts. Tests verify that the published formatter artifacts stay semantically synchronized with their readable sources.
+The normal, debug and Jellyfin formatters are built from readable JSON sources and published as `SNZBF1:` artifacts. Tests verify that the published formatter artifacts stay semantically synchronized with their readable sources.
 
 Pinned real-StreamNZB formatter regressions cover user-facing behaviors such as:
 
@@ -215,6 +216,28 @@ Since StreamNZB v6.1.0, `FormatContext.Subtitles` is also available: a flat, ded
 The language marker is source-aware. StreamNZB's `.Languages` is a merge of probed audio-track languages, the indexer's language tag and release-name parsing, and `.LanguageSource` names only the strongest source that contributed (`measured`, `reported`, `inferred`, or empty). So `measured` can sit next to a language the file never confirmed. `.Verified` alone is not enough either: it is true for any probed Library result, even one whose audio tracks were not read. DraCuLa shows `✓` only when `.LanguageSource` is `measured` and every displayed `.Languages` entry is present in `.Probed.AudioLanguages`; otherwise it keeps `⛿`. The subtitle-only line always uses `⛿`. In the current StreamNZB release only Library results carry probe data, so fresh indexer results never show `✓`.
 
 Known upstream limitation: StreamNZB's formatter-facing language normalization currently maps a reported `SLO` tag to `sk` (Slovak) rather than Slovenian `sl`. Confirmed unchanged in the StreamNZB 6.4.0 source. DraCuLa does not attempt a local workaround, because by the time `.Subtitles` reaches the formatter its source/provenance has already been lost — there is no way to distinguish a mis-normalized `SLO` from a legitimate Slovak `sk` without risking false results.
+
+### Jellyfin formatter
+
+`formatter-jellyfin.txt` ("DraCuLa Jellyfin") is an optional third formatter for StreamNZB's Jellyfin endpoint, built by the unchanged `scripts/build_formatter.py` from `tests/streamnzb_compat/formatter-jellyfin.source.json`. Behavior it relies on, read in the pinned v6.5.0 source and exercised against both v6.4.0 (`56fbe4914a08c2fc0960b3fce63c923fc24d8ee7`) and v6.5.0 (`63a37b614db9246cd65aec08e42b93a91e9068d0`):
+
+- Only `result_name_template` reaches Jellyfin. `playlistViewOf` renders the name half; the description template is never rendered for Jellyfin.
+- The rendered name is flattened by `singleLineLabel`: lines are split on `\n` and `\r`, trimmed, blank lines dropped and the rest joined with ` · `, then StreamNZB cuts the label at 160 runes (`maxSourceLabelRunes`) without warning or ellipsis. The result becomes `MediaSourceInfo.Name`, which is what a client's version picker shows; a failed or empty render falls back to the raw release title.
+- Formatter selection is `stream.FormatProfileName`, one per stream. A Jellyfin login is a stream, so StreamNZB 6.4.0 and 6.5.0 cannot choose a formatter by client; DraCuLa does not try to.
+
+The formatter therefore emits one line, budgets its own length to **72 code points** (Unicode code points, not display width) and never depends on the 160-rune cut. The essential head (`[LIB] [PACK] resolution quality HDR`, plus the production star fragment) is length-capped (resolution 5, quality 9 and HDR 20 characters before an ellipsis, so values from Jhin's closed vocabularies are never cut), and size, audio, languages, codec and group are appended in that order only while they fit; a field that does not fit is dropped and later, shorter fields are still tried. The release group is the one free-text field: its middle dots (the field delimiter, as in a bracketed `Sub Group · X` or a leading `·········Team` run), line breaks, Unicode line and paragraph separators and the measured-language mark `✓` become spaces (the parser does emit groups such as `EN✓`, so only the language field can ever show the mark), it is trimmed, and it is cut at 12 characters with an ellipsis, so a group cannot add a delimiter or a second line, and a blank group renders nothing. Different releases may still produce identical labels; the formatter does not mark the group to make labels uniquely decodable. Its description is empty: StreamNZB accepts that, builds a name-only format and uses the built-in description where one is rendered. It uses no tier, SeaDex or classification logic (no `.MatchedRules`), and its star expression is the production one, unchanged.
+
+Metadata semantics match the normal formatter. `✓` follows the same condition (`.LanguageSource == "measured"` and every language in `.Languages`, including any hidden behind the `+N` overflow, present in `.Probed.AudioLanguages`), so no mark only means the full list was not shown to be measured; `DUAL` is `.DualAudio`, the release name's claim (present in `FormatContext` on both versions); HDR tokens are listed, never interpreted; `PACK` is `.Seasons` or `.Complete` without `.Episode`/`.Episodes`, so Anime batches whose names carry neither are not marked. Sizes use decimal units in three ranges: below 1 GB StreamNZB's own `size` helper (`450 MB`), from 1 GB to below 9.95 GB one decimal, rounded once to 0.1 GB, and from 9.95 GB whole GB, rounded once to the nearest, so 9.95 GB reads `10 GB`.
+
+Regression coverage (`./scripts/test_formatter.sh --jellyfin` for the readable source, `--jellyfin-production` for the published share code; the compatibility harness runs the latter):
+
+- exact-label fixtures (`fixtures/formatter-jellyfin.json`, including a label of exactly 72 code points and a field dropped one code point over) covering 4K DV/HDR, REMUX and encodes, SDR, Anime dual and multi-audio, episodes, season packs, Library results, stars, missing metadata, size rounding, audio and language semantics and group normalization;
+- structural invariants over every fixture and 2,000 seeded random contexts, including out-of-vocabulary values: never empty, at most 72 code points, one line, well-formed separators, the production stars, deterministic output;
+- real ranking-pipeline pools (Movie, TV, Season pack, Anime) through the published profile and Define Library, compared with the production labels: identical stars, `LIB` and `✓` only where the data supports them, and distinct labels for releases the production labels collide on;
+- the same labels sent through StreamNZB's real Jellyfin PlaybackInfo handler (`pkg/server/jellyfin`, using the engine's own test fixture), asserting `MediaSourceInfo.Name` equals the rendered label, is non-empty, single-line, within 72 code points and not the raw title;
+- the production and debug formatters keep their non-empty descriptions (the empty description is allowed for this formatter only).
+
+The Jellyfin handler test reuses StreamNZB's own test helpers (`newFixture`, `itemIDFor`, `decodeInto`), so a StreamNZB pin move may need that file adjusted, like the other injected tests. A real Jellyfin client has not been scripted; one mobile client was checked by eye, and no universal client rendering is claimed.
 
 ## Dolby Vision Profile 8
 
